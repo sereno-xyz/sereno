@@ -1,4 +1,4 @@
-[zulu-jdk]: https://www.azul.com/downloads/zulu-community/?version=java-14&package=jdk
+[adoptopenjdk]: https://adoptopenjdk.net/
 [releases]: https://github.com/sereno-xyz/sereno/releases
 
 
@@ -15,11 +15,10 @@ The application is built on the JVM (using Clojure & ClojureScript)
 but on the end you as user of this application you only need two
 dependencies:
 
-- JDK11 or greater (JDK14 preferred)
-- PostgreSQL 12 (probably can work with 11 but don't tested)
+- JDK11 or greater (JDK15 preferred)
+- PostgreSQL 13 or 12 (probably can work with 11 but don't tested)
 
-Internally I use the [JDK14 provided by Azul][azul-jdk].
-
+Internally I use the [JDK15 provided by adoptopenjdk][adoptopenjdk].
 
 You can obtain the production ready bundly in two ways: building it
 from source or downloading it from the [Github Releases
@@ -71,10 +70,14 @@ using nginx or similar.
 content under HTTPS, if you want to expose it to other users on your
 organization consider using a HTTPS proxy (nginx or other).
 
+**NOTE:** The bundle is platform agnostic, and it tested under
+**x86_64** and **aarch64**.
+
 
 ## Options ##
 
 TODO
+
 
 ## Backups ##
 
