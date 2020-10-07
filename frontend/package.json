@@ -1,0 +1,44 @@
+{
+  "name": "sereno",
+  "version": "0.1.0",
+  "description": "The Open-Source prototyping tool",
+  "author": "SERENO LABS SL",
+  "license": "SEE LICENSE IN <LICENSE>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sereno/sereno"
+  },
+  "browserslist": [
+    "defaults"
+  ],
+  "scripts": {},
+  "devDependencies": {
+    "autoprefixer": "^9.8.6",
+    "clean-css": "^4.2.3",
+    "gulp": "4.0.2",
+    "gulp-gzip": "^1.4.2",
+    "gulp-if": "^3.0.0",
+    "gulp-mustache": "^5.0.0",
+    "gulp-rename": "^2.0.0",
+    "gulp-svg-sprite": "^1.5.0",
+    "mkdirp": "^1.0.4",
+    "postcss": "^7.0.32",
+    "rimraf": "^3.0.0",
+    "sass": "^1.26.9",
+    "shadow-cljs": "^2.10.21"
+  },
+  "dependencies": {
+    "chart.js": "^2.9.3",
+    "date-fns": "^2.15.0",
+    "humanize-duration": "^3.23.1",
+    "map-stream": "0.0.7",
+    "mousetrap": "^1.6.5",
+    "react": "17.0.0-rc.0",
+    "react-dom": "17.0.0-rc.0",
+    "react-select": "^3.1.0",
+    "rxjs": "7.0.0-beta.6",
+    "source-map-support": "^0.5.16",
+    "tdigest": "^0.1.1",
+    "xregexp": "^4.3.0"
+  }
+}

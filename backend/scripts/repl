@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -ex
+
+# clojure -Ojmx-remote -A:dev -e "(set! *warn-on-reflection* true)" -m rebel-readline.main
+# clojure -Ojmx-remote -A:dev -J-XX:+UnlockExperimentalVMOptions -J-XX:+UseZGC -J-Xms1g -J-Xmx1g -m rebel-readline.main
+clojure -J-Xms128m -J-Xmx128m -A:dev -M -e "(set! *warn-on-reflection* true)" -m rebel-readline.main
+

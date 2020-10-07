@@ -1,0 +1,47 @@
+---
+version: "3"
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.172.4.0/24
+
+volumes:
+  postgres_data:
+
+services:
+  app:
+    build:
+      context: "."
+
+    image: "sereno-app"
+    hostname: "sereno-app"
+    stop_signal: SIGINT
+
+    depends_on:
+      - db
+
+    environment:
+      - APP_DATABASE_URI=postgresql://db:5432/sereno
+      - APP_DATABASE_USERNAME=sereno
+      - APP_DATABASE_PASSWORD=sereno
+
+    ports:
+      - 4460:4460
+
+  db:
+    image: postgres:13
+    hostname: "sereno-postgresql"
+    restart: always
+    stop_signal: SIGINT
+
+    environment:
+      - POSTGRES_INITDB_ARGS=--data-checksums
+      - POSTGRES_DB=sereno
+      - POSTGRES_USER=sereno
+      - POSTGRES_PASSWORD=sereno
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data

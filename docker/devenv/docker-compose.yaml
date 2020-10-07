@@ -1,0 +1,60 @@
+---
+version: "3.5"
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.177.10.0/24
+
+volumes:
+  postgres_data:
+  user_data:
+
+services:
+  main:
+    privileged: true
+    image: "sereno-devenv"
+    build:
+      context: "."
+
+    container_name: "sereno-devenv-main"
+    command: "/home/init.sh"
+    stop_signal: SIGINT
+
+    depends_on:
+      - postgres
+
+    volumes:
+      - "user_data:/home/sereno"
+      - "${PWD}:/home/sereno/sereno"
+      - ./files/nginx.conf:/etc/nginx/nginx.conf
+
+    ports:
+      - 4448:4448
+      - 4449:4449
+      - 4460:4460
+      - 4490:4490
+
+    networks:
+      - default
+
+  postgres:
+    image: postgres:13
+    restart: always
+    stop_signal: SIGINT
+    container_name: "sereno-devenv-postgres"
+
+    environment:
+      - POSTGRES_INITDB_ARGS=--data-checksums
+      - POSTGRES_DB=sereno
+      - POSTGRES_USER=sereno
+      - POSTGRES_PASSWORD=sereno
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    networks:
+      - default
+

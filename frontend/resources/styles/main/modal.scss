@@ -1,0 +1,586 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+//
+// Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
+
+.modal-wrapper {
+  display: flex;
+
+  .full-width {
+    flex-grow: 1;
+    width: 100%;
+  }
+
+  p { font-size: $fs16; }
+
+  .error-message {
+    color: $color-danger;
+  }
+
+  .close {
+    position: absolute;
+    cursor: pointer;
+    right: 25px;
+    top: 25px;
+
+    svg {
+      fill: $color-gray-30;
+      height: 20px;
+      width: 20px;
+
+      &:hover {
+        fill: $color-danger;
+      }
+    }
+  }
+
+  .row {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    flex-grow: 1;
+    width: 100%;
+  }
+
+}
+
+.modal-overlay {
+  align-items: center;
+  background-color: rgba($color-black, 0.6);
+  display: flex;
+  justify-content: center;
+  position: fixed;
+  height: 100%;
+  left: 0;
+  top: 0;
+  width: 100%;
+  z-index: 1000;
+}
+
+.modal {
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  width: 448px;
+  background-color: $color-white;
+
+
+  .modal-header {
+    align-items: center;
+    background-color: $color-white;
+    border-radius: 8px 8px 0px 0px;
+    color: $color-black;
+    display: flex;
+    height: 63px;
+    justify-content: space-between;
+  }
+
+  .modal-header-title {
+    display: flex;
+    align-items: center;
+    font-size: $fs24;
+    padding-left: 16px;
+
+    h2 {
+      margin: 0;
+    }
+  }
+
+  .modal-close-button {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    height: 30px;
+    justify-content: center;
+    margin-right: 16px;
+    width: 30px;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  .modal-content {
+    display: flex;
+    flex-direction: column;
+    padding: 10px 20px;
+    border-top: 1px solid $color-gray-10;
+    h3 {
+      color: $color-gray-40;
+      font-size: $fs16;
+    }
+
+    p {
+      margin: 7px 0px;
+    }
+  }
+
+  .modal-footer {
+    display: flex;
+    height: 63px;
+    padding: 0px 16px;
+    border-top: 1px solid $color-gray-10;
+
+    .action-buttons {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      justify-content: flex-start;
+      align-items: center;
+      margin: 0px;
+
+      input {
+        margin-bottom: 0px;
+      }
+    }
+  }
+
+  .columns {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-evenly;
+
+    .column {
+      flex-direction: column;
+      flex-grow: 1;
+      min-width: 260px;
+      max-width: 260px;
+      padding: 0px 5px;
+
+      &:not(:last-child) {
+        margin-right: 15px;
+      }
+    }
+
+    @media (max-width: 700px) {
+      flex-direction: column;
+
+      .column:not(:last-child) {
+        margin-right: inherit;
+      }
+    }
+  }
+
+  .full-width-message {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 10px;
+  }
+}
+
+.monitor-form-modal {
+  width: 900px;
+
+  textarea {
+    white-space: nowrap;
+    overflow: auto;
+    height: 160px;
+  }
+
+  .columns .column {
+    flex-direction: column;
+    flex-grow: 1;
+    padding: 0px 10px;
+    max-width: inherit;
+  }
+
+  .monitor-test {
+    margin-left: 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    .check-button {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 5px;
+      cursor: pointer;
+    }
+
+    .result {
+      cursor: default;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      span:nth-child(1) {
+        display: flex;
+        min-width: 25px;
+      }
+    }
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    &.deactivated {
+      svg {
+        fill: $color-gray-20;
+      }
+
+      .check-button {
+        cursor: default;
+      }
+    }
+
+    &.failed {
+      svg {
+        fill: $color-danger;
+      }
+      .result {
+        color: $color-danger;
+      }
+    }
+
+    &.success {
+      svg {
+        fill: $color-success-dark;
+      }
+      .result {
+        color: $color-success-dark;
+      }
+    }
+  }
+}
+
+.confirm-dialog {
+  .action-buttons {
+    width: 100%;
+    display: flex;
+
+    > a {
+      border-radius: 2px;
+      text-decoration: none;
+      display: flex;
+      height: 40px;
+      align-items: center;
+      justify-tent: center;
+      cursor: pointer;
+      &:not(:last-child) {
+        margin-right: 20px;
+      }
+    }
+  }
+
+  .accept-button {
+    padding: 0.5rem 2rem;
+    border: 1px solid $color-danger-dark;
+    background: $color-danger;
+    color: $color-white;
+    font-weight: 500;
+    margin-bottom: 0;
+    cursor: pointer;
+
+    &:hover {
+      background: $color-danger-dark;
+    }
+
+    &.disabled {
+      background: $color-danger-lighter;
+      border-color: $color-danger-lighter;
+      color: $color-gray-60;
+    }
+  }
+
+  .form-row {
+    margin: 15px 0px;
+
+    .error {
+      margin-top: 10px;
+      font-size: $fs16;
+      color: $color-danger;
+    }
+  }
+
+}
+
+.email-change-modal {
+  .generic-form {
+    width: 100%;
+  }
+
+  .modal-content {
+    max-height: 500px;
+    max-width: 500px;
+  }
+
+  .row {
+    color: $color-gray-40;
+    font-weight: 500;
+    font-size: $fs18;
+  }
+}
+
+.monitor-log-modal {
+  .modal-content {
+    max-width: 600px;
+    height: 100vh;
+
+    h2 {
+      margin-top: 0px;
+      text-align: center;
+      padding: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid $color-gray-20;
+    }
+  }
+
+  .pager {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 50px;
+
+    > * {
+      padding: 10px;
+    }
+  }
+
+  .table {
+    display: flex;
+    flex-direction: column;
+    margin-right: 10px;
+    width: 100%;
+
+    .load-more-button {
+      padding: 10px;
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+      height: 20px;
+    }
+
+    .table-body {
+      max-height: 900px;
+      overflow-y: auto;
+
+
+      @media (max-height: 900px) {
+        max-height: 650px;
+      }
+      @media (max-height: 800px) {
+        max-height: 550px;
+      }
+
+      @media (max-height: 700px) {
+        max-height: 450px;
+      }
+
+      @media (max-height: 600px) {
+        max-height: 350px;
+      }
+
+      @media (max-height: 500px) {
+        max-height: 350px;
+      }
+    }
+
+    .table-header,
+    .table-body-item {
+      display: flex;
+      padding: 0px;
+      margin: 0px;
+      list-style: none;
+
+      &.status-up {
+        svg {
+          fill: $color-success;
+        }
+      }
+
+      &.status-down {
+        svg {
+          fill: $color-danger;
+        }
+      }
+
+      > li {
+        color: $color-gray-40;
+        display: flex;
+        height: 2.5rem;
+        align-items: center;
+        padding-left: 20px;
+
+        &.icon {
+          width: 60px;
+        }
+
+        &.latency {
+          width: 100px;
+        }
+
+        &.created-at {
+          // width: 200px;
+          flex-grow: 1;
+          min-width: 170px;
+        }
+
+        &.reason {
+          width: 150px;
+        }
+      }
+
+      @media (max-width: 540px) {
+        > li {
+          padding-left: 0px;
+          font-size: $fs14;
+
+          &.icon {
+            min-width: 40px;
+          }
+
+          &.latency {
+            min-width: 60px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          &.reason {
+            min-width: 60px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          &.created-at {
+            min-width: 150px;
+          }
+
+        }
+      }
+    }
+
+    .table-header {
+      font-weight: 500;
+    }
+
+    .table-body-item {
+      svg {
+        width: 20px;
+        height: 20px;
+      }
+    }
+  }
+}
+
+
+
+.contact-type-selection {
+  .modal-content {
+    max-width: 600px;
+  }
+
+  h2 { text-align: center; }
+
+
+  svg {
+    width: 60px;
+    height: 60px;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0px;
+    margin: 0px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  li {
+    padding: 0px 50px;
+    margin: 0px;
+    display: flex;
+    width: 400px;
+
+    cursor: pointer;
+
+    &:not(:last-child) {
+      border-bottom: 1px solid $color-gray-10;
+    }
+
+    &:hover {
+      background-color: rgba($color-gray-30, 0.1);
+    }
+
+  }
+
+  .icon {
+    padding: 10px;
+    margin-right: 10px;
+  }
+
+  .label {
+    font-size: $fs32;
+    display: flex;
+    align-items: center;
+  }
+}
+
+.contact-modal {
+  .contact-test {
+    margin-left: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    &.deactivated {
+      svg {
+        fill: $color-gray-20;
+      }
+
+      .check-button {
+        cursor: default;
+      }
+    }
+
+    &.failed {
+      svg {
+        fill: $color-danger;
+      }
+      .result {
+        color: $color-danger;
+      }
+    }
+
+    &.success {
+      svg {
+        fill: $color-success-dark;
+      }
+      .result {
+        color: $color-success-dark;
+      }
+    }
+
+    .check-button {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 5px;
+    }
+
+    .result {
+      cursor: default;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      span:nth-child(1) {
+        display: flex;
+        min-width: 25px;
+      }
+    }
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+
+  }
+}

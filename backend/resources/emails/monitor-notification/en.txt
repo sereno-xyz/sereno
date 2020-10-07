@@ -1,0 +1,10 @@
+The monitor {{monitor-name}} has changed the state from
+{{old-status|upper}} to {{new-status|upper}}.
+
+This is a generic notification about state change of one of your
+monitors.
+
+If you don't want receive anymore notifications about this monitor in
+this email, please go to this url:
+
+{{public-uri}}/#/auth/verify-token?token={{token}}

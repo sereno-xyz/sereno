@@ -1,0 +1,108 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+//
+// Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
+
+body {
+  display: flex;
+  flex-direction: column;
+  font-family: "Inter", sans-serif;
+  height: 100%;
+  overflow: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+img {
+  height: auto;
+  width: 100%;
+}
+
+svg {
+  * {
+    transition: none;
+  }
+}
+
+*:focus {
+  outline: none;
+  box-shadow: 0;
+}
+
+a {
+  cursor: pointer;
+  color: $color-primary-dark;
+  text-decoration: none;
+
+  &:hover {
+    color: $color-primary;
+    text-decoration: none;
+  }
+}
+
+p {
+  font-size: $fs13;
+  margin-bottom: 1rem;
+  line-height: $base-lh-sm;
+}
+
+li {
+  line-height: $base-lh-sm;
+}
+
+ul {
+  margin-bottom: 1rem;
+}
+
+strong {
+  font-weight: bold;
+}
+
+h1 {
+  font-size: $fs34;
+  font-weight: 500;
+  line-height: $title-lh-sm;
+}
+
+h2 {
+  font-size: $fs26;
+  font-weight: 400;
+  line-height: $title-lh-sm;
+}
+
+h3 {
+  font-size: $fs22;
+  font-weight: 300;
+}
+
+h4 {
+  font-size: $fs18;
+  font-weight: 300;
+}
+
+input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+     margin: 0;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
+}
+
+.loader {
+  @keyframes loader {
+    0%   {transform: rotate(0deg);}
+    100% {transform: rotate(360deg);}
+  }
+
+  svg {
+    animation-name: loader;
+    animation-duration: 2s;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+  }
+}

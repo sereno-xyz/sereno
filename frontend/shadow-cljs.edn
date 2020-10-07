@@ -1,0 +1,27 @@
+{:deps {:aliases [:dev]}
+ :http {:port 4448}
+ :jvm-opts ["-Xmx512m" "-Xms512m"]
+
+ :builds
+ {:main
+  {:target :browser
+   :output-dir "resources/public/js/"
+   :asset-path "/js"
+   :devtools {:browser-inject :main
+              :watch-dir "resources/public"}
+   :build-options {:manifest-name "manifest.json"}
+
+   :modules
+   {:main {:entries [app.main]
+           :init-fn app.main/init}}
+
+   :compiler-options
+   {:output-feature-set :es-next
+    :output-wrapper false}
+
+   :release
+   {:compiler-options
+    {:fn-invoke-direct true
+     :source-map true
+     :anon-fn-naming-policy :off
+     :source-map-detail-level :all}}}}}

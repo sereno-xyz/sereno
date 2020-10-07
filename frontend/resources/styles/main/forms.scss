@@ -1,0 +1,156 @@
+.button {
+  padding: 0.5rem 2rem;
+  border: 1px solid $color-gray-10;
+  font-weight: 500;
+  margin-bottom: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  text-decoration: none;
+  color: $color-gray-60;
+  background-color: $color-gray-5;
+  height: 40px;
+  margin: 0px 5px;
+
+  &:hover {
+    text-decoration: none;
+    color: $color-gray-60;
+    background-color: $color-gray-10;
+  }
+}
+
+.form-container {
+  form {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .form-links {
+    display: flex;
+    flex-direction: column;
+    a {
+      color: $color-gray-10;
+    }
+  }
+
+  .form-columns {
+    display: flex;
+    flex-direction: row;
+
+    > .column {
+      width: 100%;
+      padding: 10px;
+    }
+  }
+
+  .form-field {
+    display: flex;
+    flex-direction: column;
+
+    .error {
+      color: $color-danger;
+      font-size: $fs16;
+      padding: 5px;
+    }
+
+    &.invalid {
+      input, select, > div {
+        border: 1px solid $color-danger;
+        color: $color-danger !important;
+      }
+    }
+  }
+
+  .form-row {
+    color: $color-gray-40;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+    flex-grow: 1;
+    font-size: $fs16;
+
+    label {
+      font-weight: 500;
+    }
+
+    &.submit-row {
+      margin-top: 20px;
+    }
+  }
+
+  .action-buttons {
+    margin-top: 10px;
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  label {
+    padding-bottom: 5px;
+  }
+
+  input[type=password],
+  input[type=text] {
+    padding: 10px;
+    border-radius: 2px;
+    border: 1px solid $color-gray-20;
+    background-color: $color-white;
+  }
+
+  textarea {
+    padding: 10px;
+    border-radius: 2px;
+    border: 1px solid $color-gray-20;
+    background-color: $color-white;
+  }
+
+  select {
+    padding: 10px;
+    border-radius: 2px;
+    border: 1px solid $color-gray-20;
+    background-color: $color-white;
+
+    appearance: none;
+    cursor: pointer;
+
+    option {
+      font-size: $fs16;
+    }
+  }
+
+  button,
+  input[type=button],
+  input[type=submit] {
+    height: 40px;
+    cursor: pointer;
+    padding: 3px;
+    min-width: 150px;
+    padding: 0px 10px;
+    border-radius: 2px;
+    border: 1px solid $color-gray-10;
+  }
+
+  input:focus,
+  select:focus {
+    border: 1px solid $color-primary-dark;
+  }
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: $color-primary-dark;
+  -webkit-box-shadow: 0 0 0px 1000px white inset;
+  font-size: $fs16;
+
+  transition: background-color 5000s ease-in-out 0s;
+}
+

@@ -1,0 +1,85 @@
+.login-layout {
+  background-color: $color-primary-dark;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.recovery-request-form,
+.recovery-form,
+.register-form,
+.login-form {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 400px;
+  width: 100%;
+  justify-content: center;
+
+  form {
+    width: 350px;
+  }
+
+  .form-row {
+    color: $color-white;
+  }
+
+  .form-title {
+    display: flex;
+    margin-bottom: 20px;
+
+    h1 {
+      color: $color-white;
+      font-family: "Montserrat";
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      margin-right: 15px;
+    }
+
+    svg {
+      fill: $color-white;
+      width: 40px;
+      height: 40px;
+    }
+  }
+
+  .form-field .error {
+    color: $color-danger-light;
+    font-weight: 500;
+  }
+
+  .submit-row {
+    align-items: center;
+  }
+
+  .form-links {
+    margin-top: 20px;
+  }
+}
+
+.login-with-google {
+  display: flex;
+  color: $color-white;
+  margin: 10px;
+  padding: 10px;
+
+  &:hover {
+    color: $color-white;
+  }
+
+  svg {
+    fill: $color-white;
+    width: 20px;
+    height: 20px;
+  }
+
+  span {
+    padding-left: 10px;
+  }
+}
