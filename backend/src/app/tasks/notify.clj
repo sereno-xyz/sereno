@@ -86,8 +86,12 @@
 (defn- send-email-notification
   [{:keys [pool tokens] :as cfg} contact monitor result]
   (us/assert ::email-contact contact)
-  (let [unsub-token ((:create tokens) {:iss :unsub-contact
+  (let [unsub-token ((:create tokens) {:iss :unsub-monitor
                                        :exp (dt/in-future {:minutes 30})
+                                       :monitor-id (:id monitor)
+                                       :contact-id (:id contact)})
+        del-token   ((:create tokens) {:iss :delete-contact
+                                       :exp (dt/in-future {:hours 48})
                                        :contact-id (:id contact)})
         track-token ((:create tokens) {:iss :contact
                                        :exp (dt/in-future {:hours 48})
@@ -98,7 +102,8 @@
                    :new-status (:status result)
                    :monitor-name (:name monitor)
                    :public-uri (:public-uri cfg)
-                   :token unsub-token
+                   :ubsub-token unsub-token
+                   :del-token del-token
                    :to (get-in contact [:params :email])
                    :track-id (:id contact)
                    :track-payload track-token})))

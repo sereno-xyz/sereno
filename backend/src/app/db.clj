@@ -81,6 +81,10 @@
 
     {:name "0010-add-profile-counters-table"
      :fn (mg/resource "app/db/sql/0010-add-profile-counters-table.sql")}
+
+    {:name "0011-mod-contact-table"
+     :fn (mg/resource "app/db/sql/0011-mod-contact-table.sql")}
+
     ]})
 
 (s/def ::uri ::us/not-empty-string)

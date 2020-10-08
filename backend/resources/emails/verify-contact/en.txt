@@ -1,0 +1,10 @@
+Hello!
+
+You have been invited to be a notification contact on sereno platform by
+the {{invited-by}} ({{invited-by-email}}).
+
+To verify and accept to be a notification contact, accept with this link:
+{{ public-uri }}/#/auth/verify-token?token={{token}}
+
+Enjoy!
+The sereno team.

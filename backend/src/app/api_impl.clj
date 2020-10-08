@@ -334,8 +334,8 @@
 (s/def ::verify-profile-token
   (s/keys :req-un [::token]))
 
-(defn verify-profile-token
-  {:spec ::verify-profile-token :auth false}
+(defn verify-token
+  {:spec ::verify-token :auth false}
   [{:keys [pool tokens] :as cfg} {:keys [token] :as params}]
   (let [claims ((:verify tokens) token)]
     (db/with-atomic [conn pool]
@@ -368,7 +368,19 @@
 
     claims))
 
-(defmethod process-token :unsub-contact
+(defmethod process-token :verify-contact
+  [{:keys [conn] :as cfg} {:keys [contact-id] :as claims}]
+  (db/update! conn :contact
+              {:verified-at (dt/now)}
+              {:id contact-id}))
+
+(defmethod process-token :unsub-monitor
+  [{:keys [conn] :as cfg} {:keys [contact-id monitor-id] :as claims}]
+  (db/delete! conn :monitor-contact-rel {:monitor-id monitor-id
+                                         :contact-id contact-id})
+  claims)
+
+(defmethod process-token :delete-contact
   [{:keys [conn] :as cfg} {:keys [contact-id] :as claims}]
   (db/delete! conn :contact {:id contact-id})
   claims)
@@ -869,48 +881,91 @@
       (ex/raise :type :validation
                 :code :contact-quote-reached))))
 
+
+
 ;; --- Mutation: Create contact
 
-(s/def ::email-contact-params
-  (s/keys :req-un [::us/email]))
-
-(defn- prepare-email-contact-params
-  [params]
-  (-> (us/conform ::email-contact-params params)
-      (select-keys [:email])))
-
-(s/def ::mattermost-contact-params
-  (s/keys :req-un [::us/uri]))
-
-(defn- prepare-mattermost-contact-params
-  [params]
-  (-> (us/conform ::mattermost-contact-params params)
-      (select-keys [:uri])))
+(defmulti impl-create-contact (fn [cfg props] (:type props)))
+(defmulti impl-conform-contact (fn [props] (:type props)))
 
 (s/def ::create-contact
   (s/keys :req-un [::name ::params ::type ::profile-id]))
 
 (defn create-contact
   {:spec ::create-contact :auth true}
-  [{:keys [pool]} {:keys [type name profile-id params]}]
+  [{:keys [pool] :as cfg} {:keys [profile-id] :as props}]
   (db/with-atomic [conn pool]
     (let [id      (uuid/next)
+          cfg     (assoc cfg :conn conn)
           profile (get-profile conn profile-id)
-          params  (case type
-                    "email" (prepare-email-contact-params params)
-                    "mattermost" (prepare-mattermost-contact-params params)
-                    (ex/raise :type :validation
-                              :code :invalid-contact-type
-                              :context {:type type}))]
+          props   (assoc props :id id :profile profile)]
 
+      ;; Validate quotas
       (validate-contacts-quotes! conn profile)
-      (db/insert! conn :contact
+
+      ;; Do the main logic
+      (impl-create-contact cfg props))))
+
+(s/def ::email-contact-params
+  (s/keys :req-un [::us/email]))
+
+(s/def ::mattermost-contact-params
+  (s/keys :req-un [::us/uri]))
+
+(defmethod impl-conform-contact "email"
+  [{:keys [params] :as props}]
+  (-> (us/conform ::email-contact-params params)
+      (select-keys [:email])))
+
+(defmethod impl-conform-contact "mattermost"
+  [{:keys [params] :as props}]
+  (-> (us/conform ::mattermost-contact-params params)
+      (select-keys [:uri])))
+
+(defmethod impl-conform-contact :default
+  [props]
+  (ex/raise :type :validation
+            :code :invalid-contact-type
+            :context {:type type}))
+
+(defmethod impl-create-contact "email"
+  [{:keys [conn tokens] :as cfg} {:keys [type id name profile-id profile] :as props}]
+  (let [params  (impl-conform-contact props)
+        claims  {:iss :verify-contact
+                 :exp (dt/plus (dt/now) #app/duration "24h")
+                 :contact-id id}
+        token   ((:create tokens) claims)]
+
+    (emails/send! conn emails/verify-contact
+                    {:to (:email params)
+                     :public-uri (:public-uri cfg)
+                     :invited-by (:fullname profile)
+                     :invited-by-email (:email profile)
+                     :token token})
+
+    (db/insert! conn :contact
                   {:id id
                    :owner-id profile-id
                    :name name
                    :type type
-                   :params (db/tjson params)})
-      nil)))
+                   :params (db/tjson params)})))
+
+(defmethod impl-create-contact "mattermost"
+  [{:keys [conn]} {:keys [type id name profile-id] :as props}]
+  (let [params (impl-conform-contact props)]
+    (db/insert! conn :contact
+                {:id id
+                 :owner-id profile-id
+                 :name name
+                 :type type
+                 :validated-at (dt/now)
+                 :params (db/tjson params)})))
+
+(defmethod impl-create-contact :default
+  [props]
+  (ex/raise :type :validation
+            :code :invalid-contact-type
+            :context {:type type}))
 
 
 ;; --- Mutation: Update email contact
@@ -920,17 +975,12 @@
 
 (defn update-contact
   {:spec ::update-contact :auth true}
-  [{:keys [pool]} {:keys [id type profile-id name is-paused params]}]
+  [{:keys [pool]} {:keys [id type profile-id name is-paused params] :as props}]
   (db/with-atomic [conn pool]
-    (let [item   (db/get-by-params conn :contact
+    (let [params (impl-conform-contact props)
+          item   (db/get-by-params conn :contact
                                    {:id id :owner-id profile-id}
-                                   {:for-update true})
-          params (case type
-                   "email" (prepare-email-contact-params params)
-                   "mattermost" (prepare-mattermost-contact-params params)
-                   (ex/raise :type :validation
-                             :code :invalid-contact-type
-                             :context {:type type}))]
+                                   {:for-update true})]
 
       (when-not item
         (ex/raise :type :not-found
@@ -947,6 +997,7 @@
                    :is-paused is-paused
                    :params (db/tjson params)}
                   {:id id :owner-id profile-id})
+
       nil)))
 
 

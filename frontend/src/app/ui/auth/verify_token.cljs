@@ -43,10 +43,26 @@
     (st/emit! (r/nav :profile-settings)
               (ptk/event :retrieve-profile))))
 
+(defmethod handle-token :verify-contact
+  [token]
+  (let [msg "Contact verified successfully!"]
+    (ts/schedule 100 #(st/emit! (ev/show-message {:type :success
+                                                  :content msg
+                                                  :timeout 3000})))
+    (st/emit! (r/nav :auth-login))))
 
-(defmethod handle-token :unsub-contact
+(defmethod handle-token :unsub-monitor
   [token]
   (let [msg "Unsubscribed successfully."]
+    (ts/schedule 100 #(st/emit! (ev/show-message {:type :success
+                                                  :content msg
+                                                  :timeout 3000})))
+    (st/emit! (r/nav :auth-login))))
+
+
+(defmethod handle-token :delete-contact
+  [token]
+  (let [msg "Unsubscribed completelly from sereno notifications."]
     (ts/schedule 100 #(st/emit! (ev/show-message {:type :success
                                                   :content msg
                                                   :timeout 3000})))
@@ -75,7 +91,7 @@
      (fn []
        (->> (rx/of token)
             (rx/delay 1000)
-            (rx/mapcat #(rp/req! :verify-profile-token {:token %}))
+            (rx/mapcat #(rp/req! :verify-token {:token %}))
             (rx/subs
              (fn [tdata] (handle-token tdata))
              (fn [e]

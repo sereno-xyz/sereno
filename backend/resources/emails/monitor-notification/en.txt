@@ -4,7 +4,11 @@ The monitor {{monitor-name}} has changed the state from
 This is a generic notification about state change of one of your
 monitors.
 
-If you don't want receive anymore notifications about this monitor in
-this email, please go to this url:
 
-{{public-uri}}/#/auth/verify-token?token={{token}}
+----
+
+If you don't want receive anymore notifications about this monitor in
+this email, follow this url: {{public-uri}}/#/auth/verify-token?token={{ubsub-token}}
+
+If you don't want receive anymore notifications to this email, follow
+this url: {{public-uri}}/#/auth/verify-token?token={{del-token}

@@ -42,3 +42,6 @@
 
 (def change-email
   (emails/build ::change-email))
+
+(def verify-contact
+  (emails/build ::verify-contact))
