@@ -90,7 +90,6 @@
 
 (mf/defc profile-limits-section
   [{:keys [profile]}]
-
   (cljs.pprint/pprint profile)
   [:section.profile-limits
    [:h2 "Plan & Limits"]
@@ -122,7 +121,7 @@
      [:div.field.name
       [:span.label "Monitors"]]
      [:div.field.value
-      [:span.label (:counters-monitors profile)]
+      [:span.label (str (:counters-monitors profile 0))]
       [:div.context
        (if-let [num (:quotas-max-monitors profile)]
          [:span.label " max " num]
@@ -132,11 +131,11 @@
      [:div.field.name
       [:span.label "Notifications (email)"]]
      [:div.field.value
-      [:span.label (:counters-email-notifications profile)]
+      [:span.label (str (:counters-email-notifications profile 0))]
       [:div.context
        [:span.label "this month, "]
        (if-let [num (:quotas-max-email-notifications profile)]
-         [:span.label "max " num " per month "]
+         [:span.label "max " (str num) " per month "]
          [:span.label "without limit"])]]]
 
     ]])
@@ -222,6 +221,7 @@
 (mf/defc profile-page
   [props]
   (let [profile (mf/deref st/profile-ref)]
+    (mf/use-effect (st/emitf (ptk/event :retrieve-profile)))
     [:section.profile
      [:div.single-column-1200
       [:& options {:profile profile}]

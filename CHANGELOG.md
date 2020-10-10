@@ -11,6 +11,7 @@
 - Prevent duplicate contact creation.
 - Rework internal email sending.
 - Integrate with AWS SES bounce/complaint notifications.
+- Fix some issues on profile limits and quota section.
 
 
 ## v1-2020.10.07-0
