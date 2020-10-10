@@ -70,8 +70,8 @@
      [["/metrics" {:handler (partial mtx/handler cfg)
                    :method :get}]
       ["/webhook"
-       ["/mailjet" {:handler (:mailjet webhooks)
-                    :method :post}]]
+       ["/awssns" {:handler (:awssns webhooks)
+                   :method :post}]]
       ["/api"
        ["/login" {:handler login-handler
                   :method :post}]

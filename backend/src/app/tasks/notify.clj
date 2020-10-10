@@ -86,27 +86,26 @@
 (defn- send-email-notification
   [{:keys [pool tokens] :as cfg} contact monitor result]
   (us/assert ::email-contact contact)
-  (let [unsub-token ((:create tokens) {:iss :unsub-monitor
-                                       :exp (dt/in-future {:minutes 30})
-                                       :monitor-id (:id monitor)
-                                       :contact-id (:id contact)})
-        del-token   ((:create tokens) {:iss :delete-contact
-                                       :exp (dt/in-future {:hours 48})
-                                       :contact-id (:id contact)})
-        track-token ((:create tokens) {:iss :contact
-                                       :exp (dt/in-future {:hours 48})
-                                       :profile-id (:owner-id contact)
-                                       :contact-id (:id contact)})]
+  (let [utoken ((:create tokens) {:iss :unsub-monitor
+                                  :exp (dt/in-future {:minutes 30})
+                                  :monitor-id (:id monitor)
+                                  :contact-id (:id contact)})
+        dtoken ((:create tokens) {:iss :delete-contact
+                                  :exp (dt/in-future {:hours 48})
+                                  :contact-id (:id contact)})
+        cdata  ((:create tokens) {:iss :contact
+                                  :exp (dt/in-future {:days 7})
+                                  :profile-id (:owner-id contact)
+                                  :contact-id (:id contact)})]
     (emails/send! pool emails/monitor-notification
                   {:old-status (:status monitor)
                    :new-status (:status result)
                    :monitor-name (:name monitor)
                    :public-uri (:public-uri cfg)
-                   :ubsub-token unsub-token
-                   :del-token del-token
+                   :ubsub-token utoken
+                   :del-token dtoken
                    :to (get-in contact [:params :email])
-                   :track-id (:id contact)
-                   :track-payload track-token})))
+                   :custom-data cdata})))
 
 (defn annotate-and-check-email-send-limits!
   [cfg profile-id]

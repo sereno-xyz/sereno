@@ -46,6 +46,12 @@
            {:message "Email not validated."})
 
     (and (= (:type error) :validation)
+         (= (:code error) :profile-not-activated))
+    (rx/of (em/show {:content "Profile not activated"
+                     :type :error
+                     :timeout 2000}))
+
+    (and (= (:type error) :validation)
          (= (:code error) :account-without-password))
     (rx/of (em/show {:content "Account without password."
                      :type :error

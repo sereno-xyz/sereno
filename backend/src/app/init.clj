@@ -50,6 +50,15 @@
    {:client-id (:google-client-id cfg/config)
     :client-secret (:google-client-secret cfg/config)}
 
+   :app.config/smtp
+   {:host (:smtp-host cfg/config "localhost")
+    :port (:smtp-port cfg/config 25)
+    :default-reply-to (:smtp-default-reply-to cfg/config "no-reply@sereno.xyz")
+    :default-from (:smtp-default-from cfg/config "no-reply@sereno.xyz")
+    :tls (:smtp-tls cfg/config)
+    :username (:smtp-username cfg/config)
+    :password (:smtp-password cfg/config)}
+
    :app.metrics/registry
    {}
 
@@ -148,9 +157,8 @@
    {"monitor"  (ig/ref :app.tasks.monitor/handler)
     "sendmail" (ig/ref :app.tasks.sendmail/handler)
     "notify"   (ig/ref :app.tasks.notify/handler)
-    "handle-bounces"  (ig/ref :app.tasks.handle-bounces/handler)
-    "clean-old-tasks" (ig/ref :app.tasks.maintenance/clean-old-tasks)
-    "vacuum-tabes"    (ig/ref :app.tasks.maintenance/vacuum-tables)}
+    "clean-old-tasks"  (ig/ref :app.tasks.maintenance/clean-old-tasks)
+    "vacuum-tables"    (ig/ref :app.tasks.maintenance/vacuum-tables)}
 
    :app.tasks.monitor/handler
    {:pool (ig/ref :app.db/pool)
@@ -163,10 +171,6 @@
    :app.tasks.maintenance/vacuum-tables
    {:pool (ig/ref :app.db/pool)}
 
-   :app.tasks.handle-bounces/handler
-   {:pool (ig/ref :app.db/pool)
-    :tokens (ig/ref :app.tokens/instance)}
-
    :app.tasks.notify/handler
    {:pool (ig/ref :app.db/pool)
     :tokens (ig/ref :app.tokens/instance)
@@ -174,30 +178,21 @@
     :http-client (ig/ref :app.http/client)}
 
    :app.tasks.sendmail/handler
-   {:backend (:sendmail-backend cfg/config "console")
-    :api-key (:sendmail-backend-apikey cfg/config "")
-    :username (:sendmail-backend-username cfg/config "")
-    :password (:sendmail-backend-password cfg/config "")
-    :reply-to (:sendmail-reply-to cfg/config "no-reply@sereno.xyz")
-    :from (:sendmail-from cfg/config "no-reply@sereno.xyz")
-    :http-client (ig/ref :app.http/client)
-    :smtp {:host (:smtp-host cfg/config)
-           :port (:smtp-port cfg/config)
-           :user (:smtp-user cfg/config)
-           :pass (:smtp-password cfg/config)
-           :tls  (:smtp-tls cfg/config)
-           :ssl  (:smtp-ssl cfg/config)}}
+   {:http-client (ig/ref :app.http/client)
+    :backend (:sendmail-backend cfg/config "console")
+    :smtp (ig/ref :app.config/smtp)}
 
    :app.tasks.mailjet-webhook/handler
    {:pool (ig/ref :app.db/pool)
     :http-client (ig/ref :app.http/client)}
 
    :app.webhooks/handlers
-   {:mailjet (ig/ref :app.webhooks.mailjet/handler)}
+   {:awssns (ig/ref :app.webhooks.awssns/handler)}
 
-   :app.webhooks.mailjet/handler
+   :app.webhooks.awssns/handler
    {:pool (ig/ref :app.db/pool)
-    :shared-key (:mailjet-webhook-shared-key cfg/config "sample-key")}
+    :http-client (ig/ref :app.http/client)
+    :shared-key (:webhook-shared-key cfg/config "sample-key")}
    })
 
 (defonce system {})

@@ -302,9 +302,7 @@
         (->> (rp/req! :create-contact params)
              (rx/tap on-success)
              (rx/map #(ptk/event :fetch-contacts))
-             (rx/catch (fn [err]
-                         (on-error err)
-                         (rx/empty))))))))
+             (rx/catch on-error))))))
 
 (s/def ::is-paused ::us/boolean)
 (s/def ::update-contact

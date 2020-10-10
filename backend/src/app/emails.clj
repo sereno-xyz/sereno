@@ -27,21 +27,21 @@
   (let [email (email-factory context)]
     (tasks/submit! conn {:name "sendmail"
                          :delay 0
-                         :max-retries 3
+                         :max-retries 1
                          :priority 200
                          :props email})))
 
 (def register
-  (emails/build ::register))
+  (emails/template-factory ::register))
 
 (def password-recovery
-  (emails/build ::password-recovery))
+  (emails/template-factory ::password-recovery))
 
 (def monitor-notification
-  (emails/build ::monitor-notification))
+  (emails/template-factory ::monitor-notification))
 
 (def change-email
-  (emails/build ::change-email))
+  (emails/template-factory ::change-email))
 
 (def verify-contact
-  (emails/build ::verify-contact))
+  (emails/template-factory ::verify-contact))

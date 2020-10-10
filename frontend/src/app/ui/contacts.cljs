@@ -14,6 +14,7 @@
    [app.common.spec :as us]
    [app.common.uuid :as uuid]
    [app.events :as ev]
+   [app.events.messages :as em]
    [app.store :as st]
    [app.repo :as rp]
    [app.ui.dropdown :refer [dropdown]]
@@ -59,15 +60,33 @@
   [{:keys [item] :as props}]
   (let [on-close (st/emitf (modal/hide))
 
+        on-success
+        (mf/use-callback
+         (st/emitf
+          (modal/hide)
+          (em/show {:content "Contact created succesfuly; a verification email sent."
+                    :type :success})))
+
+        on-error
+        (mf/use-callback
+         (fn [{:keys [code type] :as error}]
+           (if (and (= type :validation)
+                    (= code :contact-already-exists))
+             (st/emit! (em/show {:content "Contact already exist!"
+                                 :type :error}))
+             (rx/throw error))))
+
         on-submit
         (mf/use-callback
          (fn [form]
            (let [params (prepare-submit-data @form)
                  params (with-meta params
-                          {:on-success on-close})]
-             (if item
-               (st/emit! (ev/update-contact params))
-               (st/emit! (ev/create-contact params))))))
+                          {:on-success on-success
+                           :on-error on-error})]
+             (st/emit!
+              (if item
+                (ev/update-contact params)
+                (ev/create-contact params))))))
 
         initial
         (mf/use-memo
@@ -106,6 +125,7 @@
          [:div.form-row
           [:& fm/input
            {:name :email
+            :disabled (boolean item)
             :type "text"
             :label "Email address"}]]]
 
@@ -209,14 +229,34 @@
                                       :on-accept on-accept}))))))]
 
     [:div.row {:class (dom/classnames
+                       :disabled (not (:validated-at item))
                        :paused   (:is-paused item)
                        :disabled (:is-disabled item))}
      [:div.type i/envelope]
      [:div.title {:title (:email item)} (:name item)]
      [:div.options
-      (if (:is-paused item)
-        [:a {:title "Enable" :on-click toggle-paused} i/play]
-        [:a {:title "Pause / Disable" :on-click toggle-paused} i/pause])
+      (if (:validated-at item)
+        (if (:is-paused item)
+          [:a {:title "Enable" :on-click toggle-paused} i/play]
+          [:a {:title "Pause / Disable" :on-click toggle-paused} i/pause])
+        [:span.warning {:title "Contact pending validation"} i/exclamation])
+
+      (cond
+        (some? (:disable-reason item))
+        (let [reason (:pause-reason item)
+              type   (:type reason)]
+          [:span.warning
+           {:title (str/format "Disable reason: %s | Incidence num: %s"
+                               (name type) (:bounces item))}
+           i/exclamation])
+
+        (some? (:pause-reason item))
+        (let [reason (:pause-reason item)
+              type   (:type reason)]
+          [:span.warning
+           {:title (str/format "Pause reason: %s" (name type))}
+           i/exclamation]))
+
       [:a {:title "Edit" :on-click edit} i/edit]
       [:a {:title "Delete" :on-click delete} i/trash-alt]]]))
 

@@ -85,6 +85,18 @@
     {:name "0011-mod-contact-table"
      :fn (mg/resource "app/db/sql/0011-mod-contact-table.sql")}
 
+    {:name "0012-add-profile-incident-table"
+     :fn (mg/resource "app/db/sql/0012-add-profile-incident-table.sql")}
+
+    {:name "0013-mod-contact-table-add-email-index"
+     :fn (mg/resource "app/db/sql/0013-mod-contact-table-add-email-index.sql")}
+
+    {:name "0014-del-contact-bounce-table"
+     :fn (mg/resource "app/db/sql/0014-del-contact-bounce-table.sql")}
+
+    {:name "0015-del-generic-token-table"
+     :fn (mg/resource "app/db/sql/0015-del-generic-token-table.sql")}
+
     ]})
 
 (s/def ::uri ::us/not-empty-string)

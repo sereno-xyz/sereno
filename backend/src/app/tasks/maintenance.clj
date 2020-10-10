@@ -20,6 +20,10 @@
 
 ;; TODO: clear not activated profiles
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Task: Vacuum Tables
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defmethod ig/pre-init-spec ::vacuum-tables [_]
   (s/keys :req-un [::db/pool]))
 
@@ -27,7 +31,7 @@
   [_ {:keys [pool] :as cfg}]
   (fn [tdata]
     (db/exec-one! pool ["VACUUM FREEZE monitor_entry"])
-    (db/exec-one! pool ["VACUUM FREEZE contact_bounce"])))
+    (db/exec-one! pool ["VACUUM FREEZE profile_incident"])))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Task: Tasks Cleaner

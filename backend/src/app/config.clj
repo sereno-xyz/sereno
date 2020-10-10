@@ -32,17 +32,14 @@
 (s/def ::public-uri ::us/string)
 (s/def ::secret-key ::us/string)
 (s/def ::sendmail-backend ::us/string)
-(s/def ::sendmail-backend-apikey ::us/string)
-(s/def ::sendmail-backend-password ::us/string)
-(s/def ::sendmail-backend-username ::us/string)
-(s/def ::sendmail-from ::us/email)
-(s/def ::sendmail-reply-to ::us/email)
+(s/def ::smtp-default-from ::us/email)
+(s/def ::smtp-default-reply-to ::us/email)
 (s/def ::smtp-host ::us/string)
 (s/def ::smtp-password (s/nilable ::us/string))
+(s/def ::smtp-username (s/nilable ::us/string))
 (s/def ::smtp-port ::us/integer)
 (s/def ::smtp-ssl ::us/boolean)
 (s/def ::smtp-tls ::us/boolean)
-(s/def ::smtp-user (s/nilable ::us/string))
 
 (s/def ::config
   (s/keys :opt-un [::http-server-port
@@ -51,16 +48,14 @@
                    ::database-uri
                    ::secret-key
                    ::default-profile-type
-                   ::sendmail-backend
-                   ::sendmail-backend-apikey
-                   ::sendmail-backend-username
-                   ::sendmail-backend-password
-                   ::sendmail-reply-to
-                   ::sendmail-from
                    ::error-reporter-webhook-uri
+                   ::sendmail-backend
+                   ::smtp-default-reply-to
+                   ::smtp-default-from
                    ::smtp-host
                    ::smtp-port
-                   ::smtp-user
+                   ::smtp-from
+                   ::smtp-username
                    ::smtp-password
                    ::smtp-ssl
                    ::smtp-tls

@@ -1081,16 +1081,14 @@ section.contacts {
         }
 
         &.disabled {
-          color: $color-gray-10;
-          svg { fill: $color-gray-10; }
+          color: $color-gray-20;
+          svg { fill: $color-gray-20; }
         }
-
 
         &.paused {
           color: $color-gray-30;
           svg { fill: $color-gray-30; }
         }
-
 
         &.header {
           font-weight: 500;
@@ -1116,8 +1114,13 @@ section.contacts {
           justify-content: center;
           align-items: center;
           width: 120px;
-          > a:not(:last-child) {
+          > :not(:last-child) {
             margin-right: 15px;
+          }
+
+          .warning {
+            cursor: help;
+            svg { fill: $color-warning; }
           }
         }
 

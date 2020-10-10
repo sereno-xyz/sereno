@@ -33,7 +33,7 @@
           (parse-json [body]
             (try
               (let [reader (io/reader body)]
-                (json/read reader :key-fn keyword))
+                (json/read reader))
               (catch Exception e
                 (ex/raise :type :parse
                           :message "Unable to parse json from request body."

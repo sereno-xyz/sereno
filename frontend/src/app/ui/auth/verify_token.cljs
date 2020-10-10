@@ -49,7 +49,7 @@
     (ts/schedule 100 #(st/emit! (ev/show-message {:type :success
                                                   :content msg
                                                   :timeout 3000})))
-    (st/emit! (r/nav :auth-login))))
+    (st/emit! (r/nav :contacts))))
 
 (defmethod handle-token :unsub-monitor
   [token]

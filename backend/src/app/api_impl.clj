@@ -331,7 +331,7 @@
 
 (defmulti process-token (fn [cfg token] (:iss token)))
 
-(s/def ::verify-profile-token
+(s/def ::verify-token
   (s/keys :req-un [::token]))
 
 (defn verify-token
@@ -371,8 +371,10 @@
 (defmethod process-token :verify-contact
   [{:keys [conn] :as cfg} {:keys [contact-id] :as claims}]
   (db/update! conn :contact
-              {:verified-at (dt/now)}
-              {:id contact-id}))
+              {:validated-at (dt/now)}
+              {:id contact-id})
+
+  claims)
 
 (defmethod process-token :unsub-monitor
   [{:keys [conn] :as cfg} {:keys [contact-id monitor-id] :as claims}]
@@ -904,7 +906,9 @@
       (validate-contacts-quotes! conn profile)
 
       ;; Do the main logic
-      (impl-create-contact cfg props))))
+      (impl-create-contact cfg props)
+
+      nil)))
 
 (s/def ::email-contact-params
   (s/keys :req-un [::us/email]))
@@ -942,13 +946,19 @@
                      :invited-by (:fullname profile)
                      :invited-by-email (:email profile)
                      :token token})
-
-    (db/insert! conn :contact
+    (try
+      (db/insert! conn :contact
                   {:id id
                    :owner-id profile-id
                    :name name
                    :type type
-                   :params (db/tjson params)})))
+                   :params (db/tjson params)})
+      (catch org.postgresql.util.PSQLException e
+        (if (= "23505" (.getSQLState e))
+          (ex/raise :type :validation
+                    :code :contact-already-exists
+                    :cause e)
+          (throw e))))))
 
 (defmethod impl-create-contact "mattermost"
   [{:keys [conn]} {:keys [type id name profile-id] :as props}]
@@ -971,11 +981,11 @@
 ;; --- Mutation: Update email contact
 
 (s/def ::update-contact
-  (s/keys :req-un [::id ::type ::name ::params ::is-paused ::profile-id]))
+  (s/keys :req-un [::id ::type ::name ::is-paused ::profile-id]))
 
 (defn update-contact
   {:spec ::update-contact :auth true}
-  [{:keys [pool]} {:keys [id type profile-id name is-paused params] :as props}]
+  [{:keys [pool]} {:keys [id type profile-id name is-paused] :as props}]
   (db/with-atomic [conn pool]
     (let [params (impl-conform-contact props)
           item   (db/get-by-params conn :contact
@@ -994,8 +1004,7 @@
       (db/update! conn :contact
                   {:name name
                    :type type
-                   :is-paused is-paused
-                   :params (db/tjson params)}
+                   :is-paused is-paused}
                   {:id id :owner-id profile-id})
 
       nil)))
@@ -1024,10 +1033,16 @@
 ;; --- Query: Retrieve contacts
 
 (defn decode-contact-row
-  [{:keys [params] :as row}]
+  [{:keys [params pause-reason disable-reason] :as row}]
   (cond-> (dissoc row :ref)
     (db/pgobject? params)
-    (assoc :params (db/decode-transit-pgobject params))))
+    (assoc :params (db/decode-transit-pgobject params))
+
+    (db/pgobject? pause-reason)
+    (assoc :pause-reason (db/decode-transit-pgobject pause-reason))
+
+    (db/pgobject? disable-reason)
+    (assoc :disable-reason (db/decode-transit-pgobject disable-reason))))
 
 (s/def ::retrieve-contacts
   (s/keys :req-un [::profile-id]))
