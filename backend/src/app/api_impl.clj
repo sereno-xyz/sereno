@@ -147,6 +147,7 @@
                 {:owner-id (:id profile)
                  :name (str "Primary contact (" (:email profile) ")")
                  :type "email"
+                 :validated-at (dt/now)
                  :params (db/tjson params)})
     profile))
 
