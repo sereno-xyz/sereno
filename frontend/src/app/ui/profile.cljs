@@ -90,7 +90,6 @@
 
 (mf/defc profile-limits-section
   [{:keys [profile]}]
-  (cljs.pprint/pprint profile)
   [:section.profile-limits
    [:h2 "Plan & Limits"]
    [:div.table
