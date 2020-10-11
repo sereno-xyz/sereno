@@ -4,6 +4,8 @@
 
 **Unreleased**
 
+## v1-2020.10.11-0
+
 - Add contact verification process.
 - Add single contact unsubscribe link to notification emails.
 - Add complete unsubscribe link to notification emails.
