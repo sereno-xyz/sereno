@@ -152,7 +152,9 @@
         (for [email emails]
           {:type :complaint
            :email email
-           :mdata (assoc mdata :email email)})))))
+           :mdata (assoc mdata :email email)}))
+
+      nil)))
 
 (defn- parse-json
   [v]
