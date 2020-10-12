@@ -4,6 +4,10 @@
 
 **Unreleased**
 
+- Properly ignore unhandled events from awssns (webhook).
+- Add rate limit default config to devenv nginx.
+
+
 ## v1-2020.10.11-0
 
 - Add contact verification process.
