@@ -68,8 +68,8 @@
    {:value "43200" :label "12 hours"}])
 
 (defn get-cadence-options
-  [{:keys [quotas-min-cadence] :as profile}]
-  (let [min-cadence (or quotas-min-cadence 300)]
+  [{:keys [limits-min-cadence] :as profile}]
+  (let [min-cadence (or limits-min-cadence 300)]
     (filter (fn [{:keys [value] :as item}]
               (or (nil? value)
                   (<= min-cadence (d/parse-integer value))))
@@ -204,13 +204,13 @@
         on-error   (fn [form err]
                      (cond
                        (and (= :validation (:type err))
-                            (= :monitor-quota-reached (:code err)))
-                       (rx/of (ev/show-message {:content "Monitors quota reached."
+                            (= :monitor-limits-reached (:code err)))
+                       (rx/of (ev/show-message {:content "Monitors limits reached."
                                                 :type :error
                                                 :timeout 3000}))
 
                        (and (= :validation (:type err))
-                            (= :cadence-quota-reached (:code err)))
+                            (= :cadence-limits-reached (:code err)))
                        (do
                          (swap! form assoc-in [:errors :cadence]
                                 {:message "Cadence not allowed."})

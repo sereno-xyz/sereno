@@ -103,7 +103,7 @@
      [:div.field.name
       [:span.label "Min Check Interval"]]
      [:div.field.value
-      (let [num (:quotas-min-cadence profile)]
+      (let [num (:limits-min-cadence profile)]
         [:span.label (dt/humanize-duration (* num 1000) {:largest 1})])]]
 
     [:div.row
@@ -112,7 +112,7 @@
      [:div.field.value
       [:span.label (:counters-contacts profile)]
       [:div.context
-       (if-let [num (:quotas-max-contacts profile)]
+       (if-let [num (:limits-max-contacts profile)]
          [:span.label " max " num]
          [:span.label " without limit"])]]]
 
@@ -122,7 +122,7 @@
      [:div.field.value
       [:span.label (str (:counters-monitors profile 0))]
       [:div.context
-       (if-let [num (:quotas-max-monitors profile)]
+       (if-let [num (:limits-max-monitors profile)]
          [:span.label " max " num]
          [:span.label "without limit"])]]]
 
@@ -133,7 +133,7 @@
       [:span.label (str (:counters-email-notifications profile 0))]
       [:div.context
        [:span.label "this month, "]
-       (if-let [num (:quotas-max-email-notifications profile)]
+       (if-let [num (:limits-max-email-notifications profile)]
          [:span.label "max " (str num) " per month "]
          [:span.label "without limit"])]]]
 

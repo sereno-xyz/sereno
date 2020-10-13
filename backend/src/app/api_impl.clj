@@ -403,10 +403,10 @@
 
 (def sql:retrieve-profile
   "select p.*,
-          pt.min_cadence as quotas_min_cadence,
-          pt.max_contacts as quotas_max_contacts,
-          pt.max_monitors as quotas_max_monitors,
-          pt.max_email_notifications as quotas_max_email_notifications,
+          pt.min_cadence as limits_min_cadence,
+          pt.max_contacts as limits_max_contacts,
+          pt.max_monitors as limits_max_monitors,
+          pt.max_email_notifications as limits_max_email_notifications,
           pc.created_at as counters_period,
           pc.email_notifications as counters_email_notifications,
           (select count(*) from monitor where owner_id = p.id) as counters_monitors,
@@ -463,22 +463,22 @@
                 :code :invalid-cadence-value))
     (dt/cron expr)))
 
-(defn- validate-monitor-quotas!
+(defn- validate-monitor-limits!
   [conn profile]
   (let [result (db/exec-one! conn ["select count(*) as total
                                       from monitor
                                      where owner_id=?" (:id profile)])]
     (when (>= (:total result 0)
-              (or (:quotas-max-monitors profile) ##Inf))
+              (or (:limits-max-monitors profile) ##Inf))
       (ex/raise :type :validation
-                :code :monitor-quota-reached))))
+                :code :monitor-limits-reached))))
 
-(defn- validate-cadence-quotas!
+(defn- validate-cadence-limits!
   [profile cadence]
-  (let [min-cadence  (or (:quotas-min-cadence profile) 60)]
+  (let [min-cadence  (or (:limits-min-cadence profile) 60)]
     (when (> min-cadence cadence)
       (ex/raise :type :validation
-                :code :cadence-quota-reached))))
+                :code :cadence-limits-reached))))
 
 (s/def ::method ::us/keyword)
 (s/def ::uri ::us/uri)
@@ -522,8 +522,8 @@
                     "http" (prepare-http-monitor-params params)
                     (ex/raise :type :not-implemented))]
 
-      (validate-monitor-quotas! conn profile)
-      (validate-cadence-quotas! profile cadence)
+      (validate-monitor-limits! conn profile)
+      (validate-cadence-limits! profile cadence)
 
       (db/insert! conn :monitor
                   {:id id
@@ -581,7 +581,7 @@
           cron    (parse-and-validate-cadence! cadence)
           offset  (dt/get-cron-offset cron (:created-at monitor))]
 
-      (validate-cadence-quotas! profile-id cadence)
+      (validate-cadence-limits! profile-id cadence)
       (when-not monitor
         (ex/raise :type :not-found
                   :code :object-does-not-found))
@@ -875,16 +875,15 @@
 ;; Contacts
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn- validate-contacts-quotas!
+(defn- validate-contacts-limits!
   [conn profile]
   (let [result (db/exec-one! conn ["select count(*) as total
                                       from contact
                                      where owner_id=?" (:id profile)])]
     (when (>= (:total result 0)
-              (or (:quotas-max-contacts profile) ##Inf))
+              (or (:limits-max-contacts profile) ##Inf))
       (ex/raise :type :validation
-                :code :contact-quota-reached))))
-
+                :code :contact-limits-reached))))
 
 
 ;; --- Mutation: Create contact
@@ -904,8 +903,8 @@
           profile (get-profile conn profile-id)
           props   (assoc props :id id :profile profile)]
 
-      ;; Validate quotas
-      (validate-contacts-quotas! conn profile)
+      ;; Validate limits
+      (validate-contacts-limits! conn profile)
 
       ;; Do the main logic
       (impl-create-contact cfg props)
