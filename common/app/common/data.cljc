@@ -203,5 +203,3 @@
 (defn coalesce
   [val default]
   (or val default))
-
-

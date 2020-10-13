@@ -12,7 +12,9 @@
    [rumext.alpha :as mf]
    [cuerdas.core :as str]
    [app.common.data :as d]
+   [app.common.exceptions :as ex]
    [app.util.object :as obj]
+   [app.util.timers :as tm]
    [app.util.forms :as fm]
    [app.util.object :as obj]
    [app.util.i18n :as i18n :refer [t]]
@@ -83,127 +85,6 @@
         [:span.hint hint])
       children]]))
 
-(def select-styles
-  {:container (fn [provided state]
-                 (-> provided
-                     ;; (obj/set! "display" "flex")
-                     ;; (obj/set! "flexGrow" "1")
-                     (obj/set! "width" "100%")))
-
-   :control (fn [provided state]
-              (-> provided
-                  (obj/set! "padding" "2px")
-                  (obj/set! "border" "1px solid #b1b2b5")
-                  (obj/set! "borderRadius" "2px")))})
-
-(defn- select-on-blur
-  [form event]
-  (when-not (get-in @form [:touched name])
-    (swap! form assoc-in [:touched name] true)))
-
-(defn- select-on-change
-  [form name item]
-  (let [value (obj/get item "value")]
-    (swap! form (fn [state]
-                  (-> state
-                      (assoc-in [:data name] value)
-                      (update :errors dissoc name))))))
-
-(defn- select-on-change-multiple
-  [form name item]
-  (let [item  (or item #js [])
-        value (into #{} (amap item i ret (obj/get (aget item i) "value")))]
-    (swap! form (fn [state]
-                  (-> state
-                      (assoc-in [:data name] value)
-                      (update :errors dissoc name))))))
-
-(mf/defc select
-  [{:keys [options label default name value-fn form]
-    :or {value-fn identity}
-    :as props}]
-  (let [form      (or form (mf/use-ctx form-ctx))
-        touched?  (get-in @form [:touched name])
-        error     (get-in @form [:errors name])
-
-        value     (or (get-in @form [:data name]) default)
-        value     (clj->js (value-fn value))
-        on-blur   (partial select-on-blur form name)
-        on-change (partial select-on-change form name)
-
-        props     (-> props
-                      (dissoc :form :children :label :value-fn :default)
-                      (assoc :styles select-styles)
-                      (assoc :onBlur on-blur)
-                      (assoc :onChange on-change)
-                      (assoc :value value)
-                      (obj/clj->props))]
-
-    [:div.form-field
-     [:label label]
-     [:> Select props]
-     (when (and touched? (:message error))
-       [:span.error (:message error)])]))
-
-(mf/defc select-multiple
-  [{:keys [options label default name value-fn form]
-    :or {value-fn identity}
-    :as props}]
-  (let [form      (or form (mf/use-ctx form-ctx))
-        touched?  (get-in @form [:touched name])
-        error     (get-in @form [:errors name])
-        value     (or (get-in @form [:data name]) default)
-        value     (clj->js (map value-fn value))
-        on-blur   (partial select-on-blur form name)
-        on-change (partial select-on-change-multiple form name)
-
-        props     (-> props
-                      (dissoc :form :children :label :value-fn)
-                      (assoc :styles select-styles)
-                      (assoc :isMulti true)
-                      (assoc :onBlur on-blur)
-                      (assoc :onChange on-change)
-                      (assoc :value value)
-                      (obj/clj->props))]
-
-    [:div.form-field
-     [:label label]
-     [:> Select props]
-     (when (and touched? (:message error))
-       [:span.error (:message error)])]))
-
-(mf/defc tags-select
-  [{:keys [options label name form] :as props}]
-  (let [form      (or form (mf/use-ctx form-ctx))
-        value-fn  #(array-map :label % :value %)
-        options   (clj->js (map value-fn options))
-
-        touched?  (get-in @form [:touched name])
-        error     (get-in @form [:errors name])
-        value     (or (get-in @form [:data name]) [])
-        value     (clj->js (map value-fn value))
-
-
-        on-blur    (partial select-on-blur form name)
-        on-change  (partial select-on-change-multiple form name)
-
-        props (-> props
-                  (dissoc :form :children :label)
-                  (assoc :options options)
-                  (assoc :styles select-styles)
-                  (assoc :isMulti true)
-                  (assoc :onBlur on-blur)
-                  (assoc :onChange on-change)
-                  (assoc :value value)
-                  (obj/clj->props))]
-
-    [:div.form-field
-     (when label
-       [:label label])
-     [:> CreatableSelect props]
-     (when (and touched? (:message error))
-       [:span.error (:message error)])]))
-
 (mf/defc submit-button
   [{:keys [label form] :as props}]
   (let [form (or form (mf/use-ctx form-ctx))]
@@ -222,19 +103,92 @@
                         (on-submit form event))}
     children]])
 
-(mf/defc select2
-  [{:keys [options label default name multiple value-fn form]
-    :or {value-fn identity
-         multiple false}
-    :as props}]
-  (let [form      (or form (mf/use-ctx form-ctx))
+(def select-styles
+  {:container (fn [provided state]
+                 (-> provided
+                     ;; (obj/set! "display" "flex")
+                     ;; (obj/set! "flexGrow" "1")
+                     (obj/set! "width" "100%")))
+
+   :control (fn [provided state]
+              (-> provided
+                  (obj/set! "padding" "2px")
+                  (obj/set! "border" "1px solid #b1b2b5")
+                  (obj/set! "borderRadius" "2px")))})
+
+(mf/defc tags-select
+  {::mf/wrap-props false
+   ::mf/wrap [#(mf/deferred % tm/raf)]}
+  [props]
+  (let [form      (or (obj/get props "form")
+                      (mf/use-ctx form-ctx))
+        label     (obj/get props "label")
+        name      (obj/get props "name")
+        options   (obj/get props "options")
+
+        value-fn  #(js-obj "label" % "value" %)
+        options   (into-array (map value-fn options))
+
+        touched?  (get-in @form [:touched name])
+        error     (get-in @form [:errors name])
+
+        value     (or (get-in @form [:data name]) [])
+        value     (into-array (map value-fn value))
+
+        on-blur
+        (mf/use-callback
+         (mf/deps form)
+         (fn [event]
+           (when-not (get-in @form [:touched name])
+             (swap! form assoc-in [:touched name] true))))
+
+        on-change
+        (mf/use-callback
+         (mf/deps form)
+         (fn [item]
+           (let [value (into #{} (amap item i ret (obj/get (aget item i) "value")))]
+             (swap! form (fn [state]
+                           (-> state
+                               (assoc-in [:data name] value)
+                               (update :errors dissoc name)))))))
+
+        props (-> (obj/without props [:from :children :label])
+                  (obj/merge #js {:options options
+                                  :defaultInputValue ""
+                                  :styles select-styles
+                                  :isMulti true
+                                  :onBlur on-blur
+                                  :onChange on-change
+                                  :value value}))]
+    [:div.form-field
+     (when label [:label label])
+     [:> CreatableSelect props]
+     (when (and touched? (:message error))
+       [:span.error (:message error)])]))
+
+(mf/defc select
+  {::mf/wrap-props false
+   ::mf/wrap [#(mf/deferred % tm/raf)]}
+  [props]
+  (let [form      (or (obj/get props "form")
+                      (mf/use-ctx form-ctx))
+
+        default   (obj/get props "default")
+        value-fn  (obj/get props "value-fn")
+        label     (obj/get props "label")
+        options   (obj/get props "options")
+        name      (obj/get props "name")
+        mult      (or (obj/get props "multiple") false)
+
         focus?    (mf/use-state false)
         on-focus  #(reset! focus? true)
 
-        touched?   (get-in @form [:touched name])
-        error      (get-in @form [:errors name])
+        touched?  (get-in @form [:touched name])
+        error     (get-in @form [:errors name])
 
         value     (or (get-in @form [:data name]) default)
+        value-fn  (comp clj->js value-fn)
+
 
         on-blur
         (fn [event]
@@ -242,33 +196,49 @@
           (when-not (get-in @form [:touched name])
             (swap! form assoc-in [:touched name] true)))
 
+        read-if-edn
+        (mf/use-callback
+         (fn [v]
+           (if (and (string? v)
+                    (str/starts-with? v "edn:"))
+             (d/read-string (subs v 4))
+             v)))
+
         on-change
         (fn [item]
           (let [value (if (array? item)
-                        (into [] (amap item i ret (obj/get (aget item i) "value")))
-                        (obj/get item "value"))]
+                        (into #{} (comp (map #(obj/get % "value"))
+                                        (map read-if-edn)) item)
+                        (read-if-edn (obj/get item "value")))]
             (swap! form (fn [state]
                           (-> state
                               (assoc-in [:data name] value)
                               (update :errors dissoc name))))))
 
-        props (-> props
-                  (dissoc :form :children :label :multiple :value-fn)
-                  (assoc :styles select-styles)
-                  (assoc :isMulti multiple)
-                  (assoc :onBlur on-blur)
-                  (assoc :inFocus on-focus)
-                  (assoc :onChange on-change)
-                  (assoc :value
-                         (cond
-                           (vector? value)
-                           (clj->js (map value-fn value))
+        value (cond
+                (set? value)
+                (into-array (map value-fn value))
 
-                           (not (nil? value))
-                           (clj->js (value-fn value))))
-                  (obj/clj->props))]
+                (not (nil? value))
+                (value-fn value)
 
+                :else "")
 
+        options (into-array
+                 (for [item options]
+                   #js {:label (:label item)
+                        :value (str "edn:" (pr-str (:value item)))}))
+
+        props (-> (obj/without props [:form :children :label :value-fn :options])
+                  (obj/merge! #js {:styles select-styles
+                                   :isMulti mult
+                                   :inputValue ""
+                                   :onBlur on-blur
+                                   :inFocus on-focus
+                                   :onChange on-change
+                                   :options options
+                                   :value value}))
+        ]
     [:div.form-field
      [:label label]
      [:> Select props]

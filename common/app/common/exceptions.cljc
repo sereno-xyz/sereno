@@ -32,16 +32,17 @@
   [& args]
   `(throw (error ~@args)))
 
-(defn ignoring*
-  [f]
-  (try
-    (f)
-    (catch #?(:clj Exception :cljs :default) e
-      nil)))
+(defn try*
+  [f on-error]
+  (try (f) (catch #?(:clj Exception :cljs :default) e (on-error e))))
 
 ;; http://clj-me.cgrand.net/2013/09/11/macros-closures-and-unexpected-object-retention/
 ;; Explains the use of ^:once metadata
 
 (defmacro ignoring
   [& exprs]
-  `(ignoring* (^:once fn* [] ~@exprs)))
+  `(try* (^:once fn* [] ~@exprs) (constantly nil)))
+
+(defmacro try
+  [& exprs]
+  `(try* (^:once fn* [] ~@exprs) identity))

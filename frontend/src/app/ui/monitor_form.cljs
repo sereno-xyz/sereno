@@ -26,8 +26,39 @@
    [potok.core :as ptk]
    [rumext.alpha :as mf]))
 
+(let [header-re #"([\w\d_\-]+)\:\s*([^\n]+)"
+      conform   (fn [s]
+                  (cond
+                    (s/valid? (s/map-of string? string?) s)
+                    s
+
+                    (string? s)
+                    (let [items (re-seq header-re s)]
+                      (cond
+                        (empty? s)
+                        {}
+
+                        (nil? items)
+                        ::s/invalid
+
+                        :else
+                        (reduce (fn [acc [a b c]]
+                                  (assoc acc (str/lower b) c))
+                                {}
+                                items)))
+                    :else
+                    ::s/invalid))
+      unform   (fn [s]
+                 (reduce-kv (fn [base k v]
+                              (if (empty? base)
+                                (str k ": " v)
+                                (str base "\n" k ": " v)))
+                            ""
+                            s))]
+  (s/def ::headers-map (s/conformer conform unform)))
+
 (def cadence-options
-  [{:value nil     :label "---"}
+  [{:value ""      :label "---"}
    {:value "60"    :label "1 minute"}
    {:value "120"   :label "2 minutes"}
    {:value "300"   :label "5 minutes"}
@@ -124,7 +155,7 @@
         :label "Label:"}]]
 
      [:div.form-row
-      [:& fm/select2
+      [:& fm/select
        {:options  (vec coptions)
         :value-fn (fn [id]
                     (d/seek #(= (str id) (:value %)) coptions))
@@ -138,48 +169,18 @@
         :name :tags}]]
 
      [:div.form-row
-      [:& fm/select2
+      [:& fm/select
        {:label "Conctacts:"
-        :options (mapv #(array-map :value (:id %)
-                                   :label (:name %))
-                       (vals contacts))
+        :options (map #(array-map :value (:id %)
+                                  :label (:name %))
+                      (vals contacts))
 
         :value-fn (fn [id]
                     (let [contact (get contacts id)]
-                      {:value id :label (:name contact)}))
+                      #js {:value id :label (:name contact)}))
+
         :name :contacts
         :multiple true}]]]))
-
-(let [header-re #"([\w\d_\-]+)\:\s*([^\n]+)"
-      conform   (fn [s]
-                  (cond
-                    (s/valid? (s/map-of string? string?) s)
-                    s
-
-                    (string? s)
-                    (let [items (re-seq header-re s)]
-                      (cond
-                        (empty? s)
-                        {}
-
-                        (nil? items)
-                        ::s/invalid
-
-                        :else
-                        (reduce (fn [acc [a b c]]
-                                  (assoc acc (str/lower b) c))
-                                {}
-                                items)))
-                    :else
-                    ::s/invalid))
-      unform   (fn [s]
-                 (reduce-kv (fn [base k v]
-                              (if (empty? base)
-                                (str k ": " v)
-                                (str base "\n" k ": " v)))
-                            ""
-                            s))]
-  (s/def ::headers-map (s/conformer conform unform)))
 
 (s/def ::type #{"http"})
 (s/def ::name ::us/not-empty-string)
@@ -241,7 +242,7 @@
               :name     (:name item)
               :type     (:type item)
               :cadence  (:cadence item)
-              :contacts (:contacts item [])
+              :contacts (:contacts item #{})
               :method   (or (:method params) :get)
               :headers  (or (:headers params) {})
               :tags     (or (:tags item) #{})
@@ -250,7 +251,7 @@
              {:method :get
               :cadence 300
               :type "http"
-              :contacts []})))
+              :contacts #{}})))
 
         form (fm/use-form :spec ::http-monitor-form
                           :initial initial)]
@@ -277,12 +278,12 @@
            :label "URI:"}]]
 
         [:div.form-row
-         [:& fm/select2
+         [:& fm/select
           {:label "Request method:"
            :options [{:label "GET" :value :get}
                      {:label "HEAD" :value :head}]
            :value-fn (fn [val]
-                       {:label (str/upper (name val)) :value val})
+                       #js {:label (str/upper (name val)) :value val})
 
            :name :method}]]
 

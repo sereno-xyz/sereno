@@ -693,6 +693,8 @@
 
 ;; --- Query: Retrieve Monitors
 
+;; TODO: move pgarray logic to db ns.
+
 (defn decode-monitor-row
   [{:keys [params tags contacts] :as row}]
   (cond-> row
@@ -703,10 +705,9 @@
          (= "text" (.getBaseTypeName ^PgArray tags)))
     (assoc :tags (set (.getArray ^PgArray tags)))
 
-
     (and (instance? PgArray contacts)
          (= "uuid" (.getBaseTypeName ^PgArray contacts)))
-    (assoc :contacts (vec (.getArray ^PgArray contacts)))))
+    (assoc :contacts (set (.getArray ^PgArray contacts)))))
 
 (s/def ::retrieve-monitors
   (s/keys :req-un [::profile-id]))

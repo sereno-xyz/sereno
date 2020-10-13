@@ -34,7 +34,8 @@
   ([v fmt] (format v fmt nil))
   ([v fmt {:keys [locale]
            :or {locale "default"}}]
-   (dt-format v fmt #js {:locale (gobj/get locales locale)})))
+   (when v
+     (dt-format v fmt #js {:locale (gobj/get locales locale)}))))
 
 (defn format-iso
   [v]

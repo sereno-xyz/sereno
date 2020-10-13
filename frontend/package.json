@@ -28,6 +28,7 @@
     "shadow-cljs": "^2.10.21"
   },
   "dependencies": {
+    "camelcase": "^6.1.0",
     "chart.js": "^2.9.3",
     "date-fns": "^2.15.0",
     "humanize-duration": "^3.23.1",
