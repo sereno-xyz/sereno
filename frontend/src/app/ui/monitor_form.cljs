@@ -58,20 +58,18 @@
   (s/def ::headers-map (s/conformer conform unform)))
 
 (def cadence-options
-  [{:value ""      :label "---"}
-   {:value "60"    :label "1 minute"}
+  [{:value "60"    :label "1 minute"}
    {:value "120"   :label "2 minutes"}
    {:value "300"   :label "5 minutes"}
    {:value "1800"  :label "30 minutes"}
    {:value "3600"  :label "1 hour"}
    {:value "7200"  :label "2 hours"}
    {:value "21600" :label "6 hours"}
-   {:value "43200" :label "12 hours"}
-   {:value "86400" :label "1 day"}])
+   {:value "43200" :label "12 hours"}])
 
 (defn get-cadence-options
-  [{:keys [quotes-min-cadence] :as profile}]
-  (let [min-cadence (or quotes-min-cadence 300)]
+  [{:keys [quotas-min-cadence] :as profile}]
+  (let [min-cadence (or quotas-min-cadence 300)]
     (filter (fn [{:keys [value] :as item}]
               (or (nil? value)
                   (<= min-cadence (d/parse-integer value))))
@@ -206,13 +204,13 @@
         on-error   (fn [form err]
                      (cond
                        (and (= :validation (:type err))
-                            (= :monitor-quote-reached (:code err)))
-                       (rx/of (ev/show-message {:content "Monitors quote reached."
+                            (= :monitor-quota-reached (:code err)))
+                       (rx/of (ev/show-message {:content "Monitors quota reached."
                                                 :type :error
                                                 :timeout 3000}))
 
                        (and (= :validation (:type err))
-                            (= :cadence-quote-reached (:code err)))
+                            (= :cadence-quota-reached (:code err)))
                        (do
                          (swap! form assoc-in [:errors :cadence]
                                 {:message "Cadence not allowed."})

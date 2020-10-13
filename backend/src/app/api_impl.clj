@@ -463,22 +463,22 @@
                 :code :invalid-cadence-value))
     (dt/cron expr)))
 
-(defn- validate-monitor-quotes!
+(defn- validate-monitor-quotas!
   [conn profile]
   (let [result (db/exec-one! conn ["select count(*) as total
                                       from monitor
                                      where owner_id=?" (:id profile)])]
     (when (>= (:total result 0)
-              (or (:quotes-max-monitors profile) ##Inf))
+              (or (:quotas-max-monitors profile) ##Inf))
       (ex/raise :type :validation
-                :code :monitor-quote-reached))))
+                :code :monitor-quota-reached))))
 
-(defn- validate-cadence-quotes!
+(defn- validate-cadence-quotas!
   [profile cadence]
-  (let [min-cadence  (or (:quotes-min-cadence profile) 60)]
+  (let [min-cadence  (or (:quotas-min-cadence profile) 60)]
     (when (> min-cadence cadence)
       (ex/raise :type :validation
-                :code :cadence-quote-reached))))
+                :code :cadence-quota-reached))))
 
 (s/def ::method ::us/keyword)
 (s/def ::uri ::us/uri)
@@ -522,8 +522,8 @@
                     "http" (prepare-http-monitor-params params)
                     (ex/raise :type :not-implemented))]
 
-      (validate-monitor-quotes! conn profile)
-      (validate-cadence-quotes! profile cadence)
+      (validate-monitor-quotas! conn profile)
+      (validate-cadence-quotas! profile cadence)
 
       (db/insert! conn :monitor
                   {:id id
@@ -581,7 +581,7 @@
           cron    (parse-and-validate-cadence! cadence)
           offset  (dt/get-cron-offset cron (:created-at monitor))]
 
-      (validate-cadence-quotes! profile-id cadence)
+      (validate-cadence-quotas! profile-id cadence)
       (when-not monitor
         (ex/raise :type :not-found
                   :code :object-does-not-found))
@@ -875,15 +875,15 @@
 ;; Contacts
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn- validate-contacts-quotes!
+(defn- validate-contacts-quotas!
   [conn profile]
   (let [result (db/exec-one! conn ["select count(*) as total
                                       from contact
                                      where owner_id=?" (:id profile)])]
     (when (>= (:total result 0)
-              (or (:quotes-max-contacts profile) ##Inf))
+              (or (:quotas-max-contacts profile) ##Inf))
       (ex/raise :type :validation
-                :code :contact-quote-reached))))
+                :code :contact-quota-reached))))
 
 
 
@@ -905,7 +905,7 @@
           props   (assoc props :id id :profile profile)]
 
       ;; Validate quotas
-      (validate-contacts-quotes! conn profile)
+      (validate-contacts-quotas! conn profile)
 
       ;; Do the main logic
       (impl-create-contact cfg props)
