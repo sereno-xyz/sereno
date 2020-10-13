@@ -6,6 +6,12 @@
 
 - Properly ignore unhandled events from awssns (webhook).
 - Add rate limit default config to devenv nginx.
+- Properly handle websocket connection lifecycle.
+- Internal naming consistency fixes.
+- Many bugfixes related to monitor creation.
+- Fix unexpected exception when show monitor detail whithout the first
+  monitor run (monitored-at field is `nil`).
+- Refactor & Cleanup on select components.
 
 
 ## v1-2020.10.11-0

@@ -51,6 +51,7 @@ function build {
            --mount source=serenodev_user_data,type=volume,target=/home/sereno \
            --mount source=`pwd`,type=bind,target=/home/sereno/sereno \
            -w /home/sereno/sereno/$1 \
+           -e SHADOWCLJS_EXTRA_PARAMS=${SHADOWCLJS_EXTRA_PARAMS} \
            $IMAGE ./scripts/build.sh
 }
 
