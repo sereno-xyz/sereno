@@ -201,12 +201,7 @@
     ptk/WatchEvent
     (watch [_ state s]
       (->> (rp/req! :retrieve-profile)
-           (rx/map profile-retrieved)
-           (rx/catch (fn [error]
-                       (if (= (:type error) :not-found)
-                         (rx/of (r/nav :auth-login))
-                         (rx/empty))))))))
-
+           (rx/map profile-retrieved)))))
 
 ;; --- Update Profile
 
@@ -725,9 +720,6 @@
              (rx/filter #(= :message (:type %)))
              (rx/map :payload)
              (rx/map #(ptk/data-event ::websocket-message %))
-             (rx/catch (fn [error]
-                         (js/console.error error)
-                         ws))
              (rx/take-until stp))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

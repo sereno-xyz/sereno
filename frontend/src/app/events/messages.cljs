@@ -24,28 +24,6 @@
   (s/keys :req-un [::content ::type]
           :opt-un [::timeout]))
 
-(declare hide)
-
-(defn show
-  [data]
-  (us/assert ::show-params data)
-  (ptk/reify ::show
-    ptk/UpdateEvent
-    (update [_ state]
-      (let [message (cond-> (assoc data :status :visible)
-                      (nil? (:timeout data))
-                      (assoc :timeout 3000))]
-        (assoc state :message message)))
-
-    ptk/WatchEvent
-    (watch [_ state stream]
-      (let [message (get state :message)
-            stoper  (rx/filter (ptk/type? ::show-message) stream)]
-          (->> (rx/of (hide))
-               (rx/delay (:timeout message))
-               (rx/take-until stoper))))))
-
-
 (defn hide
   []
   (ptk/reify ::hide
@@ -59,3 +37,21 @@
         (->> (rx/of #(dissoc % :message))
              (rx/delay +message-animation-timeout+)
              (rx/take-until stoper))))))
+
+(defn show
+  [data]
+  (us/assert ::show-params data)
+  (ptk/reify ::show
+    ptk/UpdateEvent
+    (update [_ state]
+      (let [message (assoc data :status :visible)]
+        (assoc state :message message)))
+
+    ptk/WatchEvent
+    (watch [_ state stream]
+      (let [message (get state :message)
+            stoper  (rx/filter (ptk/type? ::show-message) stream)]
+        (when (pos? (:timeout message))
+          (->> (rx/of (hide))
+               (rx/delay (:timeout message))
+               (rx/take-until stoper)))))))

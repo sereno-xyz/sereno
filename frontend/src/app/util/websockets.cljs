@@ -13,7 +13,8 @@
    [goog.events :as ev]
    [app.config :as cfg]
    [beicon.core :as rx]
-   [potok.core :as ptk])
+   [potok.core :as ptk]
+   ["reconnecting-websocket" :as RWebSocket])
   (:import
    goog.Uri
    goog.net.WebSocket
@@ -35,21 +36,17 @@
 (defn websocket
   [uri]
   (letfn [(on-create [sink]
-            (let [ws (WebSocket. #js {:autoReconnect true})
-                  lk1 (ev/listen ws EventType.MESSAGE
-                                 #(sink (unchecked-get % "message")))
-                  ;; lk4 (ev/listen ws EventType.ERROR
-                  ;;                (fn [e]))
-                  ;; lk3 (ev/listen ws EventType.OPENED
-                  ;;                (fn []))
-                  lk2 (ev/listen ws EventType.ERROR
-                                 #(sink (ex-info "Error on websocket" {:type :error :payload %})))]
-              (.open ^js ws uri)
+            (let [ws  (RWebSocket. uri)
+                  lk1 (ev/listen ws "message"
+                                 (fn [event]
+                                   (let [event (.getBrowserEvent ^js event)]
+                                     (sink (unchecked-get event "data")))))
+                  ;; lk2 (ev/listen ws "error" (fn [e] (js/console.log "E" e)))
+                  ]
               (fn []
                 (.close ^js ws)
                 (ev/unlistenByKey lk1)
-                ;; (ev/unlistenByKey lk3)
-                ;; (ev/unlistenByKey lk4)
-                (ev/unlistenByKey lk2))))]
+                ;; (ev/unlistenByKey lk2)
+                )))]
 
     (rx/create on-create)))

@@ -11,6 +11,7 @@
   (:require
    [app.common.uuid :as uuid]
    [app.events :as ev]
+   [app.events.messages :as em]
    [app.store :as st]
    [app.ui.auth.login :refer [login-page]]
    [app.ui.auth.recovery :refer [recovery-page]]
@@ -151,13 +152,29 @@
   [error]
   (ts/schedule 0 #(st/emit! ev/logout)))
 
+(defmethod ptk/handle-error :internal-error
+  [{:keys [status] :as error}]
+  (cond
+    (= status 429)
+    (ts/schedule
+     (st/emitf (em/show {:content "Too many requests, wait a little bit and retry."
+                         :type :error
+                         :timeout 5000})))
+
+    :else
+    (ts/schedule
+     (st/emitf (em/show {:content "Unable to connect to backend, wait a little bit and refresh."
+                         :type :error})))))
+
 (defmethod ptk/handle-error :default
   [error]
   (if (instance? ExceptionInfo error)
     (ptk/handle-error (ex-data error))
     (do
+      (js/console.group "Generic Error:")
       (js/console.error (pr-str error))
       (js/console.error (.-stack error))
+      (js/console.endGroup "Generic error")
       (ts/schedule 100 #(st/emit! (ev/show-message
                                    {:content "Something wrong has happened."
                                     :type :error
