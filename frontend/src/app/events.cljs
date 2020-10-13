@@ -712,7 +712,7 @@
   (ptk/reify ::initialize-websocket
     ptk/WatchEvent
     (watch [_ state stream]
-      (let [stp (rx/filter (ptk/type? :logout) stream)
+      (let [stp (rx/filter #(= % ::finalize-websocket) stream)
             ws  (-> (ws/uri "/ws/notifications")
                     (ws/websocket))]
         (->> ws

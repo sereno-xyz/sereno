@@ -65,12 +65,11 @@
         profile (mf/deref st/profile-ref)]
 
     (mf/use-effect
-     (mf/deps profile)
+     (mf/deps (:id profile))
      (fn []
        (when (and profile (not= uuid/zero (:id profile)))
-         (st/emit! (ptk/event :initialize-websocket)))
-       (fn []
-         (st/emit! ::ev/finalize-websocket))))
+         (st/emit! (ptk/event :initialize-websocket))
+         (st/emitf ::ev/finalize-websocket))))
 
     [:section.main-layout
      [:& header {:section section
