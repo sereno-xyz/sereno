@@ -47,7 +47,7 @@ if [ -f ./environ ]; then
 fi
 
 set -x
-\$JAVA_CMD \$JVM_OPTS -classpath \$CP -Dlog4j.configurationFile=./log4j2.xml "\$@" clojure.main -m app.init
+\$JAVA_CMD \$JVM_OPTS -classpath \$CP -Dlog4j.configurationFile=log4j2.xml "\$@" clojure.main -m app.init
 EOF
 
 chmod +x ./target/dist/run.sh
