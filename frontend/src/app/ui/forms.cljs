@@ -232,7 +232,7 @@
         props (-> (obj/without props [:form :children :label :value-fn :options])
                   (obj/merge! #js {:styles select-styles
                                    :isMulti mult
-                                   :inputValue ""
+                                   :defaultInputValue ""
                                    :onBlur on-blur
                                    :inFocus on-focus
                                    :onChange on-change
