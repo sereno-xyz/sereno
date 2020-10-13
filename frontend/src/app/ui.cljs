@@ -139,14 +139,14 @@
 (defmethod ptk/handle-error :validation
   [error]
   (ts/schedule
-   #(st/emit! (ev/show-message {:content "Unexpected validation error."
-                                :type :error
-                                :timeout 2000})))
-  (js/console.error (if (map? error) (pr-str error) error))
+   (st/emitf (em/show {:content "Unexpected validation error."
+                       :type :error
+                       :timeout 5000})))
   (when-let [explain (:explain error)]
-    (println "============ SERVER RESPONSE ERROR ================")
-    (println explain)
-    (println "============ END SERVER RESPONSE ERROR ================")))
+    (js/console.group "Server Error")
+    (js/console.error (if (map? error) (pr-str error) error))
+    (js/console.error explain)
+    (js/console.endGroup "Server Error")))
 
 (defmethod ptk/handle-error :authentication
   [error]
@@ -175,7 +175,7 @@
       (js/console.error (pr-str error))
       (js/console.error (.-stack error))
       (js/console.endGroup "Generic error")
-      (ts/schedule 100 #(st/emit! (ev/show-message
-                                   {:content "Something wrong has happened."
-                                    :type :error
-                                    :timeout 5000}))))))
+      (ts/schedule (st/emitf (em/show
+                              {:content "Something wrong has happened."
+                               :type :error
+                               :timeout 5000}))))))
