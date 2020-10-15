@@ -10,31 +10,9 @@
 (ns app.util.icons
   (:require [rumext.alpha]))
 
-(def base-uri "/fontawesome/sprites/solid.svg")
-(def base-uri2 "/fontawesome/sprites/brands.svg")
-
 (defmacro icon-xref
   [id]
-  (let [href (str base-uri "#" (name id))]
+  (let [href (str "#icon-" (name id))]
     `(rumext.alpha/html
       [:svg {:width 500 :height 500}
        [:use {:xlinkHref ~href}]])))
-
-(defmacro define-solid-icon
-  [id]
-  (let [href (str base-uri "#" (name id))
-        sym  (symbol (name id))]
-    `(def ~sym
-       (rumext.alpha/html
-        [:svg {:width 500 :height 500}
-         [:use {:xlinkHref ~href}]]))))
-
-
-(defmacro define-brand-icon
-  [id]
-  (let [href (str base-uri2 "#" (name id))
-        sym  (symbol (name id))]
-    `(def ~sym
-       (rumext.alpha/html
-        [:svg {:width 500 :height 500}
-         [:use {:xlinkHref ~href}]]))))

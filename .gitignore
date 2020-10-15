@@ -23,6 +23,7 @@ node_modules
 /frontend/out/
 /frontend/.shadow-cljs
 /frontend/resources/public/*
+frontend/resources/images/sprites/*
 /exporter/target
 /exporter/.shadow-cljs
 /docker/frontend/dist

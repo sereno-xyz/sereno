@@ -217,19 +217,22 @@ gulp.task("scss:main", scssPipeline({
 
 gulp.task("scss", gulp.parallel("scss:main"));
 
-// gulp.task("svg:sprite", function() {
-//   return gulp.src(paths.resources + "images/icons/*.svg")
-//     .pipe(rename({prefix: "icon-"}))
-//     .pipe(svgSprite({mode:{symbol: {inline: false}}}))
-//     .pipe(gulp.dest(paths.output + "images/svg-sprite/"));
-// });
+gulp.task("svg:sprite", function() {
+  return gulp.src(paths.resources + "images/icons/*.svg")
+    .pipe(rename({prefix: "icon-"}))
+    .pipe(svgSprite({
+      mode: {symbol: {inline: true}}
+      // svg: {xmlDeclaration: false}
+    }))
+    .pipe(gulp.dest(paths.resources + "images/sprites/"));
+});
 
 gulp.task("template:main", templatePipeline({
   input: paths.resources + "templates/index.mustache",
   output: paths.output
 }));
 
-gulp.task("templates", gulp.series("template:main"));
+gulp.task("templates", gulp.series("svg:sprite", "template:main"));
 
 /***********************************************
  * Development
@@ -237,11 +240,6 @@ gulp.task("templates", gulp.series("template:main"));
 
 gulp.task("clean", function(next) {
   rimraf(paths.output, next);
-});
-
-gulp.task("copy:assets:fontawesome", function() {
-  return gulp.src(paths.resources + "fontawesome/**/*")
-    .pipe(gulp.dest(paths.output + "fontawesome/"));
 });
 
 gulp.task("copy:assets:images", function() {
@@ -255,7 +253,6 @@ gulp.task("copy:assets:fonts", function() {
 });
 
 gulp.task("copy:assets", gulp.parallel("copy:assets:fonts",
-                                       "copy:assets:fontawesome",
                                        "copy:assets:images"));
 
 gulp.task("dev:dirs", function(next) {
@@ -266,10 +263,10 @@ gulp.task("watch:main", function() {
   gulp.watch(paths.scss, gulp.series("scss"));
   gulp.watch([paths.resources + "templates/*.mustache",
               paths.resources + "locales.json"],
-             gulp.series("templates"));
+             gulp.series("template:main"));
 });
 
-gulp.task("build", gulp.parallel("scss", "templates", "copy:assets"));
+gulp.task("build", gulp.series("scss", "templates", "copy:assets"));
 
 gulp.task("watch", gulp.series(
   "dev:dirs",
