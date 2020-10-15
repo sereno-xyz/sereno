@@ -102,8 +102,8 @@
                    :new-status (:status result)
                    :monitor-name (:name monitor)
                    :public-uri (:public-uri cfg)
-                   :ubsub-token utoken
-                   :del-token dtoken
+                   :unsubscribe-token utoken
+                   :delete-token dtoken
                    :to (get-in contact [:params :email])
                    :custom-data cdata})))
 

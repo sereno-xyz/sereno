@@ -1,14 +1,10 @@
-The monitor {{monitor-name}} has changed the state from
-{{old-status|upper}} to {{new-status|upper}}.
+The monitor {{monitor-name}} has changed the state from {{old-status|upper}} to {{new-status|upper}}.
 
-This is a generic notification about state change of one of your
-monitors.
+This is a generic notification about state change of one of your monitors.
 
 
 ----
 
-If you don't want receive anymore notifications about this monitor in
-this email, follow this url: {{public-uri}}/#/auth/verify-token?token={{ubsub-token}}
+If you don't want receive anymore notifications about this monitor in this email, follow this url: {{public-uri}}/#/auth/verify-token?token={{unsubscribe-token}}
 
-If you don't want receive anymore notifications to this email, follow
-this url: {{public-uri}}/#/auth/verify-token?token={{del-token}
+If you don't want receive anymore notifications to this email, follow this url: {{public-uri}}/#/auth/verify-token?token={{delete-token}}
