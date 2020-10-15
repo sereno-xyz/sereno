@@ -10,6 +10,7 @@
 (ns app.ui
   (:require
    [app.common.uuid :as uuid]
+   [app.config :as cfg]
    [app.events :as ev]
    [app.events.messages :as em]
    [app.store :as st]
@@ -18,16 +19,17 @@
    [app.ui.auth.recovery-request :refer [recovery-request-page]]
    [app.ui.auth.register :refer [register-page]]
    [app.ui.auth.verify-token :refer [verify-token-page]]
+   [app.ui.contacts :refer [contacts-page]]
    [app.ui.header :refer [header]]
    [app.ui.monitor-detail :refer [monitor-detail-page]]
    [app.ui.monitor-list :refer [monitor-list-page]]
    [app.ui.notifications :refer [notifications]]
    [app.ui.profile :refer [profile-page]]
-   [app.ui.contacts :refer [contacts-page]]
    [app.ui.static :refer [not-found-page not-authorized-page goodbye-page]]
    [app.util.i18n :as i18n :refer [t tr]]
    [app.util.timers :as ts]
    [cuerdas.core :as str]
+   [expound.alpha :as expound]
    [potok.core :as ptk]
    [rumext.alpha :as mf]))
 
@@ -147,6 +149,21 @@
     (js/console.error explain)
     (js/console.endGroup "Server Error")))
 
+(defmethod ptk/handle-error :assertion
+  [{:keys [data stack message context] :as error}]
+  (js/console.group message)
+  (js/console.info (str/format "ns: '%s'\nname: '%s'\nfile: '%s:%s'"
+                                (:ns context)
+                                (:name context)
+                                (str cfg/public-uri "/js/cljs-runtime/" (:file context))
+                                (:line context)))
+  (js/console.groupCollapsed "Stack Trace")
+  (js/console.info stack)
+  (js/console.groupEnd "Stack Trace")
+
+  (js/console.error (with-out-str (expound/printer data)))
+  (js/console.groupEnd message))
+
 (defmethod ptk/handle-error :authentication
   [error]
   (ts/schedule 0 #(st/emit! ev/logout)))
@@ -178,3 +195,11 @@
                               {:content "Something wrong has happened."
                                :type :error
                                :timeout 5000}))))))
+
+(defonce uncaught-error-handler
+  (letfn [(on-error [event]
+            (ptk/handle-error (unchecked-get event "error"))
+            (.preventDefault ^js event))]
+    (.addEventListener js/window "error" on-error)
+    (fn []
+      (.removeEventListener js/window "error" on-error))))

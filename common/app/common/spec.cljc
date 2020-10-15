@@ -143,19 +143,50 @@
 ;; --- Macros
 
 (defn spec-assert
-  [spec x]
-  (s/assert* spec x))
+  [spec x message]
+  (if (s/valid? spec x)
+    x
+    (ex/raise :type :assertion
+              :data (s/explain-data spec x)
+              :message message
+              #?@(:cljs [:stack (.-stack (ex-info message {}))]))))
+
+(defn spec-assert*
+  [spec x message context]
+  (if (s/valid? spec x)
+    x
+    (ex/raise :type :assertion
+              :data (s/explain-data spec x)
+              :context context
+              :message message
+              #?@(:cljs [:stack (.-stack (ex-info message {}))]))))
+
 
 (defmacro assert
   "Development only assertion macro."
   [spec x]
   (when *assert*
-    `(spec-assert ~spec ~x)))
+    (let [nsdata  (:ns &env)
+          context (when nsdata
+                    {:ns (str (:name nsdata))
+                     :name (pr-str spec)
+                     :line (:line &env)
+                     :file (:file (:meta nsdata))})
+          message (str "Spec Assertion: '" (pr-str spec) "'")]
+      `(spec-assert* ~spec ~x ~message ~context))))
 
 (defmacro verify
   "Always active assertion macro (does not obey to :elide-asserts)"
   [spec x]
-  `(spec-assert ~spec ~x))
+  (let [nsdata  (:ns &env)
+        context (when nsdata
+                  {:ns (str (:name nsdata))
+                   :name (pr-str spec)
+                   :line (:line &env)
+                   :file (:file (:meta nsdata))})
+        message (str "Spec Assertion: '" (pr-str spec) "'")]
+    `(spec-assert* ~spec ~x ~message ~context)))
+
 
 ;; --- Public Api
 
@@ -170,3 +201,13 @@
                                     (expound/printer edata))
                          :data (::s/problems edata)))))
     result))
+
+(defmacro instrument!
+  [& {:keys [sym spec]}]
+  (when *assert*
+    (let [message (str "Spec failed on: " sym)]
+      `(let [origf# ~sym
+             mdata# (meta (var ~sym))]
+         (set! ~sym (fn [& params#]
+                      (spec-assert* ~spec params# ~message mdata#)
+                      (apply origf# params#)))))))

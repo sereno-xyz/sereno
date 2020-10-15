@@ -2,7 +2,7 @@
 ;; License, v. 2.0. If a copy of the MPL was not distributed with this
 ;; file, You can obtain one at http://mozilla.org/MPL/2.0/.
 ;;
-;; Copyright (c) 2016 Andrey Antukh <niwi@niwi.nz>
+;; Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
 
 (ns app.common.exceptions
   "A helpers for work with exceptions."
@@ -25,7 +25,7 @@
   [& {:keys [type code message hint cause] :as params}]
   (s/assert ::error-params params)
   (let [message (or message hint "")
-        payload (dissoc params :cause :message)]
+        payload (dissoc params :cause)]
     (ex-info message payload cause)))
 
 (defmacro raise
