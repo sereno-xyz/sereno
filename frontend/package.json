@@ -13,7 +13,7 @@
   ],
   "scripts": {},
   "devDependencies": {
-    "autoprefixer": "^9.8.6",
+    "autoprefixer": "^10.0.1",
     "clean-css": "^4.2.3",
     "gulp": "4.0.2",
     "gulp-gzip": "^1.4.2",
@@ -22,9 +22,10 @@
     "gulp-rename": "^2.0.0",
     "gulp-svg-sprite": "^1.5.0",
     "mkdirp": "^1.0.4",
-    "postcss": "^7.0.32",
+    "postcss": "^8.1.1",
     "rimraf": "^3.0.0",
     "sass": "^1.26.9",
+    "source-map-support": "^0.5.16",
     "shadow-cljs": "^2.10.21"
   },
   "dependencies": {
@@ -32,14 +33,15 @@
     "chart.js": "^2.9.3",
     "date-fns": "^2.15.0",
     "humanize-duration": "^3.23.1",
+    "lodash.omit": "^4.5.0",
     "map-stream": "0.0.7",
     "mousetrap": "^1.6.5",
     "react": "17.0.0-rc.0",
     "react-dom": "17.0.0-rc.0",
     "react-select": "^3.1.0",
+    "recharts": "2.0.0-beta.7",
     "reconnecting-websocket": "^4.4.0",
     "rxjs": "7.0.0-beta.6",
-    "source-map-support": "^0.5.16",
     "tdigest": "^0.1.1",
     "xregexp": "^4.3.0"
   }
