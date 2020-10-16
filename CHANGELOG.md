@@ -4,6 +4,10 @@
 
 **Unreleased**
 
+
+
+## v1-2020.10.16-0
+
 - Properly ignore unhandled events from awssns (webhook).
 - Add rate limit default config to devenv nginx.
 - Properly handle websocket connection lifecycle.
