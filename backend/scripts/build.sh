@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 CLASSPATH=`(clojure -Spath)`
-NEWCP="./resources:./app.jar"
+NEWCP="./resources:./main:./common"
 
 rm -rf ./target/dist
 mkdir -p ./target/dist/deps
@@ -14,11 +14,13 @@ for item in $(echo $CLASSPATH | tr ":" "\n"); do
     fi
 done
 
+
 cp ./resources/log4j2-bundle.xml ./target/dist/log4j2.xml
 
-clojure -Ajar
+cp -r ../common ./target/dist/common
+cp -r ./src ./target/dist/main
+cp -r ./resources/emails ./target/dist/common/emails
 
-cp ./target/app.jar ./target/dist/app.jar
 echo $NEWCP > ./target/dist/classpath;
 
 tee -a ./target/dist/run.sh  >> /dev/null <<EOF
@@ -47,7 +49,7 @@ if [ -f ./environ ]; then
 fi
 
 set -x
-\$JAVA_CMD \$JVM_OPTS -classpath \$CP -Dlog4j.configurationFile=log4j2.xml "\$@" clojure.main -m app.init
+exec \$JAVA_CMD \$JVM_OPTS -classpath \$CP -Dlog4j.configurationFile=log4j2.xml "\$@" clojure.main -m app.init
 EOF
 
 chmod +x ./target/dist/run.sh

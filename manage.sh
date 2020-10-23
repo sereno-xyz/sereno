@@ -91,11 +91,7 @@ function build-bundle {
     echo "##############################################################";
 }
 
-function log-devenv {
-    docker-compose -p serenodev -f docker/devenv/docker-compose.yaml logs -f --tail=50
-}
-
-function build-prodenv {
+function build-image {
     local BUNDLE_FILE=$1;
     if [ ! -f $BUNDLE_FILE ]; then
         echo "File '$BUNDLE_FILE' does not exists.";
@@ -118,13 +114,7 @@ function build-prodenv {
     popd
 
     pushd ./docker/prodenv;
-    docker-compose -p sereno-prodenv -f ./docker-compose.yml build
-    popd
-}
-
-function start-prodenv {
-    pushd ./docker/prodenv;
-    docker-compose -p sereno-prodenv -f ./docker-compose.yml up
+    docker build -t localhost/sereno:latest .
     popd
 }
 
@@ -132,14 +122,14 @@ function usage {
     echo "SERENO build & release manager v$REV"
     echo "USAGE: $0 OPTION"
     echo "Options:"
-    echo "- build-devenv    Build docker development oriented image; (can specify external user id in parameter)"
+    echo "- build-devenv    Build docker development oriented image."
     echo "- start-devenv    Start the development oriented docker-compose service."
     echo "- stop-devenv     Stops the development oriented docker-compose service."
-    echo "- drop-devenv     Remove the development oriented docker-compose containers, volumes and clean images."
+    echo "- drop-devenv     Drop the development oriented docker-compose containers, volumes and clean images."
     echo "- run-devenv      Attaches to the running devenv container and starts development environment"
     echo "                  based on tmux (frontend at localhost:3449, backend at localhost:6060)."
-    echo "- build-prodenv   [NO DOC]"
-    echo "- start-prodenv   [NO DOC]"
+    echo "- build-image     [NO DOC]"
+    echo "- build-bundle    [NO DOC]"
     echo ""
 }
 
@@ -160,30 +150,19 @@ case $1 in
     drop-devenv)
         drop-devenv ${@:2}
         ;;
-    log-devenv)
-        log-devenv ${@:2}
-        ;;
 
     # production builds
     build-frontend)
         build-frontend
         ;;
-
     build-backend)
         build-backend
         ;;
-
     build-bundle)
         build-bundle ${@:2}
         ;;
-
-    # Prod Env
-    start-prodenv)
-        start-prodenv
-        ;;
-
-    build-prodenv)
-        build-prodenv ${@:2}
+    build-image)
+        build-image ${@:2}
         ;;
 
     *)

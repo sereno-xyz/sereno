@@ -1,5 +1,5 @@
 ---
-version: "3"
+version: "3.5"
 
 networks:
   default:
@@ -13,12 +13,9 @@ volumes:
 
 services:
   app:
-    build:
-      context: "."
-
-    image: "sereno-app"
+    image: "niwinz/sereno:latest"
     hostname: "sereno-app"
-    stop_signal: SIGINT
+    stop_signal: SIGTERM
 
     depends_on:
       - db

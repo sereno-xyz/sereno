@@ -29,14 +29,6 @@ external dependency.
 - Profile Types (interval and no. monitors limits).
 
 
-**Future Ideas:**
-
-- Access multiple users to single account.
-- Public Status Pages.
-- Real browser checks.
-- Complex (multi step) browsing checks.
-
-
 If you miss your favourite feature/integration, please consider
 opening an issue with the feature request. And if you have time and
 interest in contributing I'm open to accept patches via Github Pull
