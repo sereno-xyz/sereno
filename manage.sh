@@ -46,7 +46,7 @@ function build {
 
     docker volume create serenodev_user_data;
 
-    echo "Running development image $IMAGE to build frontend."
+    echo "Running development image $IMAGE to build $1."
     docker run -t --rm \
            --mount source=serenodev_user_data,type=volume,target=/home/sereno \
            --mount source=`pwd`,type=bind,target=/home/sereno/sereno \
@@ -67,27 +67,27 @@ function build-bundle {
     build "frontend";
     build "backend";
 
-    rm -rf ./bundle
-    mkdir -p ./bundle/resources
+    rm -rf ./bundle;
+    mkdir -p ./bundle/resources;
 
-    rsync -av ./backend/target/dist/ ./bundle/
+    rsync -av ./backend/target/dist/ ./bundle/;
     rsync -av ./frontend/target/dist/ ./bundle/resources/public/;
 
     find ./bundle/resources -iname '*.map' |xargs rm;
     rm -rf ./bundle/resources/public/fonts;
-    rm -rf ./bundle/resources/public/fontawesome/svgs;
-    rm -rf ./bundle/resources/public/fontawesome/sprites/regular.svg;
+    rm -rf ./bundle/resources/public/fa
 
-    NAME="sereno-$(date '+%Y.%m.%d-%H%M')"
+    local default_name="sereno-$(date '+%Y.%m.%d-%H%M')";
+    local name=${1:-$default_name};
 
     pushd bundle/
-    tar -cvf ../$NAME.tar *;
+    tar -cvf ../$name.tar *;
     popd
 
-    xz -vez4f -T4 $NAME.tar
+    xz -vez4f -T4 $name.tar;
 
     echo "##############################################################";
-    echo "# Generated $NAME.tar.xz";
+    echo "# Generated $name.tar.xz";
     echo "##############################################################";
 }
 
@@ -174,7 +174,7 @@ case $1 in
         ;;
 
     build-bundle)
-        build-bundle
+        build-bundle ${@:2}
         ;;
 
     # Prod Env
