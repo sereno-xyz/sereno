@@ -31,9 +31,7 @@
   "dependencies": {
     "camelcase": "^6.1.0",
     "chart.js": "^2.9.4",
-    "date-fns": "^2.15.0",
     "humanize-duration": "^3.23.1",
-    "lodash.omit": "^4.5.0",
     "luxon": "^1.25.0",
     "map-stream": "0.0.7",
     "mousetrap": "^1.6.5",
@@ -41,7 +39,6 @@
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "react-select": "^3.1.0",
-    "recharts": "2.0.0-beta.7",
     "reconnecting-websocket": "^4.4.0",
     "rxjs": "7.0.0-beta.6",
     "tdigest": "^0.1.1",

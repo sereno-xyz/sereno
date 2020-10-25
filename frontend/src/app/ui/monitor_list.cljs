@@ -24,7 +24,7 @@
    [app.util.dom :as dom]
    [app.util.forms :as fm]
    [app.util.router :as r]
-   [app.util.time :as tm]
+   [app.util.time :as dt]
    [beicon.core :as rx]
    [cljs.spec.alpha :as s]
    [clojure.set :as set]
@@ -128,7 +128,7 @@
          (mf/deps item)
          (fn [event]
            (let [target (dom/get-target event)]
-             (.setAttribute target "title" (tm/timeago (:modified-at item))))))]
+             (.setAttribute target "title" (dt/timeago (:modified-at item))))))]
 
     [:li {:key (:id item)
           :class (dom/classnames
@@ -158,9 +158,9 @@
 
       [:div.monitor-updated
        {:on-mouse-enter on-hover
-        :title (tm/timeago (:modified-at item))}
+        :title (dt/timeago (:modified-at item))}
        (if-let [ma (:monitored-at item)]
-         (tm/format ma "PPpp")
+         (dt/format ma :datetime-med)
          "---")]
 
       [:div.monitor-options

@@ -9,48 +9,57 @@
 
 (ns app.util.time
   (:require
-   ["date-fns/parseISO" :as dt-parse-iso]
-   ["date-fns/format" :as dt-format]
-   ["date-fns/formatISO" :as dt-format-iso]
-   ["date-fns/formatDistanceToNow" :as dt-format-distance]
-   ["date-fns/locale/fr" :as dt-fr-locale]
-   ["date-fns/locale/en-US" :as dt-en-locale]
-   ["humanize-duration" :as hmd]
-   [goog.object :as gobj]))
+   ["luxon" :as lxn]
+   ["humanize-duration" :as hmd]))
 
-(def ^:private locales
-  #js {:default dt-en-locale
-       :en dt-en-locale
-       :en_US dt-en-locale
-       :fr dt-fr-locale
-       :fr_FR dt-fr-locale})
+(def DateTime lxn/DateTime)
+
+(extend-protocol Inst
+  DateTime
+  (inst-ms* [inst] (.toMillis ^js inst)))
+
+(extend-protocol IComparable
+  DateTime
+  (-compare [it other]
+    (if ^boolean (.equals it other)
+      0
+      (if (< (inst-ms it) (inst-ms other)) -1 1))))
 
 (defn now
   "Return the current Instant."
   []
-  (js/Date.))
+  (.local ^js DateTime))
+
+(defn- resolve-format
+  [v]
+  (case v
+    :datetime-short (.-DATETIME_SHORT ^js DateTime)
+    :datetime-med   (.-DATETIME_MED ^js DateTime)
+    :datetime-full  (.-DATETIME_FULL ^js DateTime)
+    :date-full      (.-DATE_FULL ^js DateTime)
+    v))
 
 (defn format
-  ([v fmt] (format v fmt nil))
-  ([v fmt {:keys [locale]
-           :or {locale "default"}}]
+  ([v] (format v :datatime-short))
+  ([v fmt]
    (when v
-     (dt-format v fmt #js {:locale (gobj/get locales locale)}))))
+     (let [f (resolve-format fmt)]
+       (.toLocaleString ^js v f)))))
 
 (defn format-iso
-  [v]
-  (dt-format-iso v))
+  [d]
+  (.toISO ^js d))
 
 (defn parse
   [s]
-  (dt-parse-iso s))
+  (.fromISO ^js DateTime s))
 
 (def ^:private humanizer-options
   #js {:language "shortEn"
        :spacer ""
        :round true
        :largest 2
-       :languages #js {:shortEn #js {:y (constantly "y")
+       :languages #js {:shortEn #js {:y  (constantly "y")
                                      :mo (constantly "mo")
                                      :w  (constantly "w")
                                      :d  (constantly "d")

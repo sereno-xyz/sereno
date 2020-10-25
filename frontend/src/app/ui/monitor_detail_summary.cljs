@@ -149,7 +149,7 @@
        [:div.details-field "Monitored"]
        [:div.details-field
         {:on-mouse-enter on-hover}
-        (dt/format (:monitored-at monitor) "PPpp")]]
+        (dt/format (:monitored-at monitor) :datetime-med)]]
       [:div.details-row
        [:div.details-field "Uptime (%)"]
        [:div.details-field (mth/precision uptime 2) "%"]]

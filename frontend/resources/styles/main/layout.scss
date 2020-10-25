@@ -488,13 +488,14 @@
 
         > li {
           color: var(--color-gray-40);
+          font-size: var(--default-font-size);
           display: flex;
           height: 2.5rem;
           align-items: center;
-          padding-left: 20px;
+          padding-left: 5px;
 
           &.icon {
-            min-width: 40px;
+            min-width: 35px;
           }
 
           &.status {
@@ -503,15 +504,21 @@
           }
 
           &.latency {
-            width: 100px;
+            min-width: 70px;
           }
 
           &.created-at {
-            min-width: 170px;
+            min-width: 200px;
           }
 
           &.reason {
             width: 150px;
+          }
+
+          @media (max-width: 600px) {
+            &.created-at {
+              min-width: 160px;
+            }
           }
 
           @media (max-width: 420px) {

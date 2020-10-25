@@ -13,8 +13,7 @@
   (:require
    [cuerdas.core :as str]
    [goog.object :as gobj]
-   ["camelcase" :as camelcase]
-   ["lodash/omit" :as omit]))
+   ["camelcase" :as camelcase]))
 
 (defn get
   ([obj k]
@@ -40,14 +39,6 @@
   [a]
   (js/Object.assign #js {} a))
 
-(defn without
-  [obj keys]
-  (let [keys (cond
-               (vector? keys) (into-array keys)
-               (array? keys) keys
-               :else (throw (js/Error. "unexpected input")))]
-    (omit obj keys)))
-
 (defn merge!
   ([a b]
    (js/Object.assign a b))
@@ -68,3 +59,12 @@
 (defn clj->props
   [props]
   (clj->js props :keyword-fn (comp camelcase name)))
+
+
+(defn without
+  [obj keys]
+  (reduce (fn [obj key]
+            (js-delete obj key)
+            obj)
+          obj
+          keys))

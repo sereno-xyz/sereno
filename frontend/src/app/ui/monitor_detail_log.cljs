@@ -69,7 +69,7 @@
                       "down" i/chevron-circle-down
                       nil)]
           [:li.status (str/upper (:status item))]
-          [:li.created-at (dt/format (:created-at item) "PPp")]
+          [:li.created-at (dt/format (:created-at item) :datetime-med)]
           [:li.latency {:title (:reason item "")} (str (:latency item) "ms")]
           [:li.reason (:reason item "---")]])
        [:div.load-more-button
