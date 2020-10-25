@@ -20,6 +20,7 @@ RUN set -ex; \
         wget \
         sudo \
         tmux \
+        procps \
         vim \
         curl \
         bash \
