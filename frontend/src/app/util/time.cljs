@@ -45,13 +45,30 @@
   [s]
   (dt-parse-iso s))
 
+(def ^:private humanizer-options
+  #js {:language "shortEn"
+       :spacer ""
+       :round true
+       :largest 2
+       :languages #js {:shortEn #js {:y (constantly "y")
+                                     :mo (constantly "mo")
+                                     :w  (constantly "w")
+                                     :d  (constantly "d")
+                                     :h  (constantly "h")
+                                     :m  (constantly "m")
+                                     :s  (constantly "s")
+                                     :ms (constantly "ms")}}})
+
+(def ^js js-humanize
+  (.humanizer hmd humanizer-options))
+
 (defn humanize-duration
-  ([ms] (humanize-duration ms nil))
+  ([ms] (js-humanize ms))
   ([ms {:keys [locale largest round]
-        :or {largest 2 locale "en" round true}}]
-   (hmd ms #js {:language locale
-                :largest largest
-                :round round})))
+        :or {largest 2 round true}}]
+   (js-humanize ms #js {:language "shortEn"
+                        :largest largest
+                        :round round})))
 
 (defn format-time-distance
   [t1 t2]

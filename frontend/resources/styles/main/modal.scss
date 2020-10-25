@@ -15,7 +15,7 @@
   p { font-size: $fs16; }
 
   .error-message {
-    color: $color-danger;
+    color: var(--color-danger);
   }
 
   .close {
@@ -25,12 +25,12 @@
     top: 25px;
 
     svg {
-      fill: $color-gray-30;
+      fill: var(--color-gray-30);
       height: 20px;
       width: 20px;
 
       &:hover {
-        fill: $color-danger;
+        fill: var(--color-danger);
       }
     }
   }
@@ -48,7 +48,7 @@
 
 .modal-overlay {
   align-items: center;
-  background-color: rgba($color-black, 0.6);
+  background-color: var(--color-modal-overlay);
   display: flex;
   justify-content: center;
   position: fixed;
@@ -64,14 +64,14 @@
   display: flex;
   flex-direction: column;
   width: 448px;
-  background-color: $color-white;
-
+  background-color: var(--color-white);
+  margin: 3px;
 
   .modal-header {
     align-items: center;
-    background-color: $color-white;
+    background-color: var(--color-white);
     border-radius: 8px 8px 0px 0px;
-    color: $color-black;
+    color: var(--color-black);
     display: flex;
     height: 63px;
     justify-content: space-between;
@@ -107,9 +107,9 @@
     display: flex;
     flex-direction: column;
     padding: 10px 20px;
-    border-top: 1px solid $color-gray-10;
+    border-top: 1px solid var(--color-gray-10);
     h3 {
-      color: $color-gray-40;
+      color: var(--color-gray-40);
       font-size: $fs16;
     }
 
@@ -122,7 +122,7 @@
     display: flex;
     height: 63px;
     padding: 0px 16px;
-    border-top: 1px solid $color-gray-10;
+    border-top: 1px solid var(--color-gray-10);
 
     .action-buttons {
       display: flex;
@@ -141,7 +141,8 @@
   .columns {
     display: flex;
     flex-direction: row;
-    justify-content: space-evenly;
+    max-height: 70vh;
+    overflow-y: auto;
 
     .column {
       flex-direction: column;
@@ -190,6 +191,12 @@
     width: 50%;
   }
 
+  @media (max-width: 700px) {
+    .columns .column {
+      width: 100%;
+    }
+  }
+
   .monitor-test {
     margin-left: 15px;
     display: flex;
@@ -222,7 +229,7 @@
 
     &.deactivated {
       svg {
-        fill: $color-gray-20;
+        fill: var(--color-gray-20);
       }
 
       .check-button {
@@ -232,19 +239,19 @@
 
     &.failed {
       svg {
-        fill: $color-danger;
+        fill: var(--color-danger);
       }
       .result {
-        color: $color-danger;
+        color: var(--color-danger);
       }
     }
 
     &.success {
       svg {
-        fill: $color-success-dark;
+        fill: var(--color-success-dark);
       }
       .result {
-        color: $color-success-dark;
+        color: var(--color-success-dark);
       }
     }
   }
@@ -271,21 +278,21 @@
 
   .accept-button {
     padding: 0.5rem 2rem;
-    border: 1px solid $color-danger-dark;
-    background: $color-danger;
-    color: $color-white;
+    border: 1px solid var(--color-danger-dark);
+    background: var(--color-danger);
+    color: var(--color-white);
     font-weight: 500;
     margin-bottom: 0;
     cursor: pointer;
 
     &:hover {
-      background: $color-danger-dark;
+      background: var(--color-danger-dark);
     }
 
     &.disabled {
-      background: $color-danger-lighter;
-      border-color: $color-danger-lighter;
-      color: $color-gray-60;
+      background: var(--color-danger-lighter);
+      border-color: var(--color-danger-lighter);
+      color: var(--color-gray-60);
     }
   }
 
@@ -295,7 +302,7 @@
     .error {
       margin-top: 10px;
       font-size: $fs16;
-      color: $color-danger;
+      color: var(--color-danger);
     }
   }
 
@@ -312,7 +319,7 @@
   }
 
   .row {
-    color: $color-gray-40;
+    color: var(--color-gray-40);
     font-weight: 500;
     font-size: $fs18;
   }
@@ -328,7 +335,7 @@
       text-align: center;
       padding: 10px;
       padding-bottom: 10px;
-      border-bottom: 1px solid $color-gray-20;
+      border-bottom: 1px solid var(--color-gray-20);
     }
   }
 
@@ -391,18 +398,18 @@
 
       &.status-up {
         svg {
-          fill: $color-success;
+          fill: var(--color-success);
         }
       }
 
       &.status-down {
         svg {
-          fill: $color-danger;
+          fill: var(--color-danger);
         }
       }
 
       > li {
-        color: $color-gray-40;
+        color: var(--color-gray-40);
         display: flex;
         height: 2.5rem;
         align-items: center;
@@ -505,12 +512,12 @@
     cursor: pointer;
 
     &:not(:last-child) {
-      border-bottom: 1px solid $color-gray-10;
+      border-bottom: 1px solid var(--color-gray-10);
     }
 
-    &:hover {
-      background-color: rgba($color-gray-30, 0.1);
-    }
+    // &:hover {
+    //   background-color: rgba(var(--color-gray-30), 0.1);
+    // }
 
   }
 
@@ -527,62 +534,53 @@
 }
 
 .contact-modal {
-  .contact-test {
-    margin-left: 10px;
+}
+
+
+.telegram-link-info {
+  .qrcode {
+    margin-top: 15px;
     display: flex;
-    justify-content: center;
     align-items: center;
+    flex-direction: column;
 
-    &.deactivated {
-      svg {
-        fill: $color-gray-20;
-      }
-
-      .check-button {
-        cursor: default;
-      }
+    img {
+      width: 300px;
+      height: 300px;
     }
 
-    &.failed {
-      svg {
-        fill: $color-danger;
-      }
-      .result {
-        color: $color-danger;
-      }
-    }
-
-    &.success {
-      svg {
-        fill: $color-success-dark;
-      }
-      .result {
-        color: $color-success-dark;
-      }
-    }
-
-    .check-button {
+    .link {
       display: flex;
       justify-content: center;
-      align-items: center;
-      padding: 5px;
-    }
 
-    .result {
-      cursor: default;
-      padding: 10px;
-      display: flex;
-      align-items: center;
-      span:nth-child(1) {
-        display: flex;
-        min-width: 25px;
+      a {
+        width: 197px;
+        overflow: hidden;
+
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+
       }
     }
 
-    svg {
-      width: 20px;
-      height: 20px;
-    }
+    .options {
+      display: flex;
+      width: 100%;
+      justify-content: center;
 
+      > span {
+        cursor: pointer;
+        &.active {
+          font-weight: 600;
+          color: var(--color-primary-dark);
+        }
+
+        &:first-child {
+          margin-right: 10px;
+        }
+      }
+    }
   }
 }
+

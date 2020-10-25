@@ -46,10 +46,5 @@
        [:span "Profile"]]
       ]]
     [:section.right-menu.authenticated
-     #_[:a.user-icon
-      {:title (:email profile)
-       :on-click #(st/emit! (r/nav :profile))}
-      i/user]
-     [:a {:title "Logout"
-          :on-click #(st/emit! ev/logout)} i/sign-out-alt
-      [:span.label "logout"]]]]])
+     [:a.logout {:title "Logout" :on-click #(st/emit! ev/logout)}
+      i/sign-out-alt]]]])

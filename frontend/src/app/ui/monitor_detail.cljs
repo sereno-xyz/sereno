@@ -51,16 +51,18 @@
        (when (not= section :monitor-log)
          [:*
           (if (= "paused" (:status monitor))
-            [:a.inline-button {:on-click resume} "Resume"]
-            [:a.inline-button {:on-click pause} "Pause"])
-          [:a.inline-button {:on-click edit} "Edit"]])
+            [:a.inline-button {:on-click resume} i/play "Resume"]
+            [:a.inline-button {:on-click pause} i/pause "Pause"])
+          [:a.inline-button {:on-click edit} i/edit "Edit"]])
 
        (if (= section :monitor-log)
          [:a.inline-button
           {:on-click go-detail}
-          "Detail"]
+          i/chevron-left
+          "Go back"]
          [:a.inline-button
           {:on-click go-log}
+          i/list-alt
           "Log"])]]]))
 
 (defn monitor-ref

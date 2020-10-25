@@ -12,10 +12,12 @@
   (:require-macros [app.util.icons :refer [icon-xref]])
   (:require [rumext.alpha :as mf]))
 
+(def history (icon-xref :history))
 (def times (icon-xref :times))
 (def download (icon-xref :download))
 (def upload (icon-xref :upload))
 (def edit (icon-xref :edit))
+(def list-alt (icon-xref :list-alt))
 (def chevron-left (icon-xref :chevron-left))
 (def chevron-circle-down (icon-xref :chevron-circle-down))
 (def chevron-circle-up (icon-xref :chevron-circle-up))

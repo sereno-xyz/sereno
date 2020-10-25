@@ -1,7 +1,7 @@
 .dropdown {
   position: absolute;
   max-height: 30rem;
-  background-color: $color-white;
+  background-color: var(--color-white);
   border-radius: 4px;
   box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.25);
   z-index: 12;
@@ -13,14 +13,14 @@
 
   hr {
     margin: 0;
-    border-color: rgba($color-gray-5, 0.4);
-    background-color: rgba($color-white, 0);
+    border-color: var(--color-gray-5-05);
+    background-color: rgba(0,0,0,0);
   }
 
   li {
     display: flex;
     align-items: center;
-    color: $color-gray-60;
+    color: var(--color-gray-60);
     cursor: pointer;
     font-size: $fs12;
     height: 40px;
@@ -34,12 +34,12 @@
       svg {
         width: 20px;
         height: 20px;
-        fill: $color-gray-30;
+        fill: var(--color-gray-30);
       }
     }
 
     &:hover {
-      background-color: $color-primary-lighter;
+      background-color: var(--color-primary-lighter);
     }
   }
 }

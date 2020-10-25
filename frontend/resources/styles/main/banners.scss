@@ -9,11 +9,11 @@
     flex-direction: column;
 
     &.opaque {
-      color: $color-gray-30;
+      color: var(--color-gray-30);
     }
 
     &.warning {
-      color: $color-warning;
+      color: var(--color-warning);
     }
   }
 }
@@ -44,7 +44,7 @@
     cursor: pointer;
 
     svg {
-      fill: $color-white;
+      fill: var(--color-white);
       height: 18px;
       width: 18px;
     }
@@ -52,16 +52,16 @@
 
   .content {
     align-items: center;
-    color: $color-white;
+    color: var(--color-white);
     display: flex;
     justify-content: center;
     max-width: 60%;
 
     .icon {
       display: flex;
-      margin-right: $medium;
+      margin-right: 15px;
       svg {
-        fill: $color-white;
+        fill: var(--color-white);
         height: 20px;
         width: 20px;
       }
@@ -73,19 +73,19 @@
   }
 
   &.error {
-    background-color: $color-danger;
+    background-color: var(--color-danger);
   }
 
   &.success {
-    background-color: $color-success;
+    background-color: var(--color-success);
   }
 
   &.warning {
-    background-color: $color-warning;
+    background-color: var(--color-warning);
   }
 
   &.info {
-    background-color: $color-info;
+    background-color: var(--color-info);
   }
 
   &.quick {

@@ -104,17 +104,27 @@
     children]])
 
 (def select-styles
-  {:container (fn [provided state]
-                 (-> provided
-                     ;; (obj/set! "display" "flex")
-                     ;; (obj/set! "flexGrow" "1")
-                     (obj/set! "width" "100%")))
+  #js {:container (fn [provided state]
+                    (-> provided
+                        ;; (obj/set! "display" "flex")
+                        ;; (obj/set! "flexGrow" "1")
+                        ;; (obj/set! "borderRadius" "2px")
+                        (obj/set! "width" "100%")))
 
-   :control (fn [provided state]
-              (-> provided
-                  (obj/set! "padding" "2px")
-                  (obj/set! "border" "1px solid #b1b2b5")
-                  (obj/set! "borderRadius" "2px")))})
+       :multiValue (fn [provided state]
+                     (-> (obj/clone provided)
+                         (obj/set! "borderRadius" "var(--default-border-radius)")
+                         (obj/set! "backgroundColor" "var(--color-gray-5)")
+                         (obj/set! "padding" "2px")))
+
+
+       :control (fn [provided state]
+                  (-> (obj/clone provided)
+                      (obj/set! "maxHeight" "40px")
+                      (obj/set! "padding" "0px")
+                      (obj/set! "border" "1px solid var(--color-gray-5)")
+                      (obj/set! "fontSize" "var(--default-font-size)")
+                      (obj/set! "borderRadius" "2px")))})
 
 (mf/defc tags-select
   {::mf/wrap-props false

@@ -34,11 +34,12 @@ svg {
 
 a {
   cursor: pointer;
-  color: $color-primary-dark;
+  color: var(--color-gray-50);
+  font-weight: 500;
   text-decoration: none;
 
   &:hover {
-    color: $color-primary;
+    color: var(--color-primary);
     text-decoration: none;
   }
 }
@@ -68,19 +69,23 @@ h1 {
 }
 
 h2 {
-  font-size: $fs26;
+  font-size: var(--default-h2-font-size);
   font-weight: 400;
   line-height: $title-lh-sm;
 }
 
 h3 {
-  font-size: $fs22;
+  font-size: var(--default-h3-font-size);
   font-weight: 300;
 }
 
 h4 {
-  font-size: $fs18;
+  font-size: var(--default-h4-font-size);
   font-weight: 300;
+}
+
+label {
+  font-size: var(--default-font-size);
 }
 
 input[type=number]::-webkit-inner-spin-button,

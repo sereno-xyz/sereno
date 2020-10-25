@@ -9,27 +9,27 @@
 
 (ns app.ui.monitor-detail-summary
   (:require
-   [okulary.core :as l]
-   [app.common.math :as mth]
+   ["chart.js" :as cht]
    [app.common.data :as d]
    [app.common.exceptions :as ex]
+   [app.common.math :as mth]
    [app.common.uuid :as uuid]
    [app.events :as ev]
-   [app.store :as st]
    [app.repo :as rp]
-   [app.ui.monitor-form]
-   [app.ui.monitor-detail-log]
+   [app.store :as st]
    [app.ui.forms :as forms]
    [app.ui.icons :as i]
    [app.ui.modal :as modal]
+   [app.ui.monitor-detail-log]
+   [app.ui.monitor-form]
    [app.util.dom :as dom]
    [app.util.router :as r]
    [app.util.time :as dt]
    [beicon.core :as rx]
    [cuerdas.core :as str]
+   [okulary.core :as l]
    [potok.core :as ptk]
-   [rumext.alpha :as mf]
-   ["chart.js" :as cht]))
+   [rumext.alpha :as mf]))
 
 (mf/defc latency-chart-section
   {::mf/wrap [mf/memo]}
@@ -189,13 +189,13 @@
                                                     :interval value})))))]
 
     (mf/use-effect
+     (mf/deps monitor)
      (fn []
        (st/emit! (ptk/event :initialize-monitor-summary {:id (:id monitor)}))
-       (fn []
-         (st/emit! ::ev/finalize-monitor-summary))))
+       (st/emitf (ptk/event :finalize-monitor-summary {:id (:id monitor)}))))
 
     [:div.main-content
-     [:h3 "Summary"]
+     [:h3 i/info "Summary"]
 
      [:div.topside-options
       [:div.timeframe-selector

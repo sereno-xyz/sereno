@@ -45,11 +45,10 @@
      (mf/deps (:id monitor))
      (fn []
        (st/emit! (ptk/event :initialize-monitor-status-history monitor))
-       (fn []
-         (st/emit! ::ev/finalize-monitor-status-history))))
+       (st/emitf (ptk/event :finalize-monitor-status-history monitor))))
 
     [:div.main-content
-     [:h3 "Status History"]
+     [:h3 i/history "Status History"]
      [:div.history-table
       [:ul.table-header
        [:li.icon ""]
