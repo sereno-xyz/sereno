@@ -24,6 +24,10 @@
 (defonce store  (ptk/store {:resolve ptk/resolve}))
 (defonce stream (ptk/input-stream store))
 
+(defmethod ptk/resolve :default
+  [type params]
+  (ptk/data-event type params))
+
 ;; Refs
 
 (def route-ref
@@ -43,6 +47,10 @@
 
 (def contacts-ref
   (l/derived :contacts state))
+
+(defn contact-ref
+  [id]
+  (l/derived (l/in [:contacts id]) state))
 
 (defn emit!
   ([] nil)

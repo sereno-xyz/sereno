@@ -74,14 +74,14 @@
 (mf/defc monitor-detail-page
   {::mf/wrap [mf/memo]}
   [{:keys [id section] :as props}]
-  (mf/use-effect
-   (fn []
-     (st/emit! (ptk/event :initialize-monitor-detail {:id id}))
-     (fn []
-       (st/emit! (ptk/data-event :finalize-monitor-detail {:id id})))))
-
   (let [monitor-ref (mf/use-memo (mf/deps id) #(monitor-ref id))
         monitor     (mf/deref monitor-ref)]
+
+    (mf/use-effect
+     (fn []
+       (st/emit! (ptk/event :initialize-monitor-detail {:id id}))
+       (st/emitf (ptk/event :finalize-monitor-detail {:id id}))))
+
     (when monitor
       [:main.monitor-detail-section
        [:section

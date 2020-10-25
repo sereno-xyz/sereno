@@ -40,3 +40,4 @@
 (def google (icon-xref :google))
 (def logo (icon-xref :logo))
 (def mattermost (icon-xref :mattermost))
+(def telegram (icon-xref :telegram))

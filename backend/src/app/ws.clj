@@ -56,7 +56,7 @@
                          ch  (a/chan 1 xf)]
 
                      ;; Subscribe to internal msgbus
-                     (msgbus ch)
+                     ((:subscribe msgbus) ch)
 
                      ;; Start connection rcv/snd loop
                      (start-rcv-loop! (assoc params :in in :out out :ev ch :conn conn))))

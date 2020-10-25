@@ -10,6 +10,7 @@
 (ns app.ui
   (:require
    [app.common.uuid :as uuid]
+   [app.common.exceptions :as ex]
    [app.config :as cfg]
    [app.events :as ev]
    [app.events.messages :as em]
@@ -188,9 +189,10 @@
     (ptk/handle-error (ex-data error))
     (do
       (js/console.group "Generic Error:")
-      (js/console.error (pr-str error))
-      (js/console.error (.-stack error))
-      (js/console.endGroup "Generic error")
+      (ex/ignoring
+       (js/console.error (pr-str error))
+       (js/console.error (.-stack error)))
+      (js/console.groupEnd "Generic error")
       (ts/schedule (st/emitf (em/show
                               {:content "Something wrong has happened."
                                :type :error

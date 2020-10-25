@@ -12,6 +12,7 @@
    [app.common.spec :as us]
    [app.common.exceptions :as ex]
    [app.config :as cfg]
+   [app.telegram :as tgm]
    [app.db :as db]
    [app.tokens :as tkn]
    [app.emails :as emails]
@@ -34,11 +35,17 @@
 (s/def ::status ::us/string)
 (s/def ::name ::us/string)
 (s/def ::params map?)
+(s/def ::http-client fn?)
+(s/def ::public-uri string?)
+(s/def ::tokens ::tkn/service)
+(s/def ::telegram (s/nilable ::tgm/service))
+
+(defmethod ig/pre-init-spec ::handler [_]
+  (s/keys :req-un [::db/pool ::tokens ::public-uri ::http-client ::telegram]))
 
 (s/def ::contact (s/keys :req-un [::id ::type ::params]))
 (s/def ::monitor (s/keys :req-un [::id ::status ::name]))
-(s/def ::result  (s/keys :req-un [::status]
-                         :opt-in [::reason]))
+(s/def ::result  (s/keys :req-un [::status] :opt-in [::reason]))
 
 (s/def ::notify-props
   (s/keys :req-un [::monitor ::result ::contact]))
@@ -48,14 +55,8 @@
   (fn [{:keys [props] :as task}]
     (us/assert ::notify-props props)
     (let [{:keys [contact monitor result]} props]
-      (notify! cfg contact monitor result))))
-
-(s/def ::http-client fn?)
-(s/def ::public-uri string?)
-(s/def ::tokens ::tkn/service)
-
-(defmethod ig/pre-init-spec ::handler [_]
-  (s/keys :req-un [::db/pool ::tokens ::public-uri ::http-client]))
+      (notify! cfg contact monitor result)
+      nil)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Email Notification
@@ -66,7 +67,8 @@
 (declare send-email-notification)
 (declare annotate-and-check-email-send-limits!)
 
-(s/def :internal.contacts.email/id uuid?)
+(s/def :internal.contacts.email/id ::us/uuid)
+(s/def :internal.contacts.email/subscription-id ::us/uuid)
 (s/def :internal.contacts.email/type #{"email"})
 (s/def :internal.contacts.email/params
   (s/keys :req-un [::us/email]))
@@ -74,12 +76,13 @@
 (s/def ::email-contact
   (s/keys :req-un [:internal.contacts.email/id
                    :internal.contacts.email/type
+                   :internal.contacts.email/subscription-id
                    :internal.contacts.email/params]))
 
 (defmethod notify! "email"
   [{:keys [pool tokens] :as cfg} contact monitor result]
   (db/with-atomic [conn pool]
-    (let [cfg   (assoc cfg :conn conn)]
+    (let [cfg (assoc cfg :conn conn)]
       (annotate-and-check-email-send-limits! cfg (:owner-id monitor))
       (send-email-notification cfg contact monitor result))))
 
@@ -88,8 +91,7 @@
   (us/assert ::email-contact contact)
   (let [utoken ((:create tokens) {:iss :unsub-monitor
                                   :exp (dt/in-future {:minutes 30})
-                                  :monitor-id (:id monitor)
-                                  :contact-id (:id contact)})
+                                  :id (:subscription-id contact)})
         dtoken ((:create tokens) {:iss :delete-contact
                                   :exp (dt/in-future {:hours 48})
                                   :contact-id (:id contact)})
@@ -161,6 +163,33 @@
     (when (not= (:status rsp) 200)
       (ex/raise :type :internal
                 :code :mattermost-webhook-not-reachable
-                :response rsp))
-    nil))
+                :response rsp))))
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Telegram Notification
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(s/def :internal.contacts.telegram/subscription-id ::us/uuid)
+(s/def :internal.contacts.telegram/chat-id ::us/integer)
+(s/def :internal.contacts.telegram/id ::us/uuid)
+
+(s/def :internal.contacts.telegram/params
+  (s/keys :req-un [:internal.contacts.telegram/chat-id]))
+
+(s/def ::telegram-contact
+  (s/keys :req-un [:internal.contacts.telegram/params
+                   :internal.contacts.telegram/subscription-id
+                   :internal.contacts.telegram/id]))
+
+(defmethod notify! "telegram"
+  [{:keys [telegram] :as cfg} contact monitor result]
+  (us/assert ::telegram-contact contact)
+  (when telegram
+    (let [chat-id (get-in contact [:params :chat-id])
+          text    (str/format "*%s* status change from __%s__ to __*%s*__"
+                              (:name monitor)
+                              (str/upper (:status monitor))
+                              (str/upper (:status result)))]
+      ((:send-message telegram) {:chat-id chat-id
+                                 :content text}))))

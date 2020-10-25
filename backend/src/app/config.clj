@@ -40,6 +40,8 @@
 (s/def ::smtp-port ::us/integer)
 (s/def ::smtp-ssl ::us/boolean)
 (s/def ::smtp-tls ::us/boolean)
+(s/def ::telegram-token ::us/string)
+(s/def ::telegram-id ::us/integer)
 
 (s/def ::config
   (s/keys :opt-un [::http-server-port
@@ -59,6 +61,9 @@
                    ::smtp-password
                    ::smtp-ssl
                    ::smtp-tls
+                   ::telegram-username
+                   ::telegram-id
+                   ::telegram-token
                    ::public-uri
                    ::google-client-secret
                    ::google-client-id]))

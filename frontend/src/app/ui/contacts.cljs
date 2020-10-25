@@ -15,10 +15,13 @@
    [app.common.uuid :as uuid]
    [app.events :as ev]
    [app.events.messages :as em]
-   [app.store :as st]
    [app.repo :as rp]
-   [app.ui.dropdown :refer [dropdown]]
+   [app.store :as st]
    [app.ui.confirm :refer [confirm-dialog]]
+   [app.ui.contacts.email]
+   [app.ui.contacts.mattermost]
+   [app.ui.contacts.telegram]
+   [app.ui.dropdown :refer [dropdown]]
    [app.ui.forms :as fm]
    [app.ui.icons :as i]
    [app.ui.modal :as modal]
@@ -32,196 +35,32 @@
    [potok.core :as ptk]
    [rumext.alpha :as mf]))
 
-(defmulti prepare-submit-data (fn [form] (get-in form [:data :type])))
-
-(defmethod prepare-submit-data :default [_] (ex/raise :type :not-implemented))
-(defmethod prepare-submit-data "email"
-  [form]
-  {:type "email"
-   :id (get-in form [:clean-data :id])
-   :is-paused (get-in form [:clean-data :is-paused])
-   :name (get-in form [:clean-data :name])
-   :params {:email (get-in form [:clean-data :email])}})
-
-(defmethod prepare-submit-data "mattermost"
-  [form]
-  {:type "mattermost"
-   :id (get-in form [:clean-data :id])
-   :is-paused (get-in form [:clean-data :is-paused])
-   :name (get-in form [:clean-data :name])
-   :params {:uri (get-in form [:clean-data :uri])}})
-
-(s/def ::email-contact-form
-  (s/keys :req-un [::us/email ::name]))
-
-(mf/defc email-contact-modal
-  {::mf/register modal/components
-   ::mf/register-as :email-contact}
-  [{:keys [item] :as props}]
-  (let [on-close (st/emitf (modal/hide))
-
-        on-success
-        (mf/use-callback
-         (st/emitf
-          (modal/hide)
-          (em/show {:content "Contact created succesfuly; a verification email sent."
-                    :type :success})))
-
-        on-error
-        (mf/use-callback
-         (fn [{:keys [code type] :as error}]
-           (if (and (= type :validation)
-                    (= code :contact-already-exists))
-             (st/emit! (em/show {:content "Contact already exist!"
-                                 :type :error}))
-             (rx/throw error))))
-
-        on-submit
-        (mf/use-callback
-         (fn [form]
-           (let [params (prepare-submit-data @form)
-                 params (with-meta params
-                          {:on-success on-success
-                           :on-error on-error})]
-             (st/emit!
-              (if item
-                (ev/update-contact params)
-                (ev/create-contact params))))))
-
-        initial
-        (mf/use-memo
-         (mf/deps item)
-         (fn []
-           (if item
-             {:id (:id item)
-              :type (:type item)
-              :name (:name item)
-              :is-paused (:is-paused item)
-              :email (get-in item [:params :email])}
-             {:type "email"
-              :is-paused false})))
-
-        form (fm/use-form :spec ::email-contact-form
-                          :initial initial)]
-
-    [:div.modal-overlay
-     [:div.modal.contact-modal.form-container
-      [:& fm/form {:on-submit on-submit :form form}
-       [:div.modal-header
-        [:div.modal-header-title
-         (if item
-           [:h2 "Update email contact:"]
-           [:h2 "Create email contact:"])]
-        [:div.modal-close-button
-         {:on-click on-close} i/times]]
-
-       [:div.modal-content
-        [:div.form-row
-         [:& fm/input
-          {:name :name
-           :type "text"
-           :label "Label"}]]
-
-         [:div.form-row
-          [:& fm/input
-           {:name :email
-            :disabled (boolean item)
-            :type "text"
-            :label "Email address"}]]]
-
-       [:div.modal-footer
-        [:div.action-buttons
-         [:& fm/submit-button {:label "Submit"}]]]]]]))
-
-(s/def ::mattermost-contact-form
-  (s/keys :req-un [::us/uri ::name]))
-
-(mf/defc mattermost-contact-modal
-  {::mf/register modal/components
-   ::mf/register-as :mattermost-contact}
-  [{:keys [item] :as props}]
-  (let [on-close (st/emitf (modal/hide))
-        on-submit
-        (mf/use-callback
-         (fn [form]
-           (let [params (prepare-submit-data @form)
-                 params (with-meta params
-                          {:on-success on-close})]
-             (if item
-               (st/emit! (ev/update-contact params))
-               (st/emit! (ev/create-contact params))))))
-
-        initial
-        (mf/use-memo
-         (mf/deps item)
-         (fn []
-           (if item
-             {:id (:id item)
-              :type (:type item)
-              :name (:name item)
-              :is-paused (:is-paused item)
-              :uri (get-in item [:params :uri])}
-             {:type "mattermost"
-              :is-paused false})))
-
-        form (fm/use-form :spec ::mattermost-contact-form
-                          :initial initial)]
-
-    [:div.modal-overlay
-     [:div.modal.contact-modal.form-container
-      [:& fm/form {:on-submit on-submit :form form}
-       [:div.modal-header
-        [:div.modal-header-title
-         (if item
-           [:h2 "Update Mattermost Webhook"]
-           [:h2 "Create Mattermost Webhook"])]
-        [:div.modal-close-button
-         {:on-click on-close} i/times]]
-
-       [:div.modal-content
-        [:div.form-row
-         [:& fm/input
-          {:name :name
-           :type "text"
-           :label "Label"}]]
-
-        [:div.form-row
-         [:& fm/input
-          {:name :uri
-           :type "text"
-           :label "Webhook URI"}]]]
-
-       [:div.modal-footer
-        [:div.action-buttons
-         [:& fm/submit-button {:label "Submit"}]]]]]]))
-
-
 (mf/defc contact-item
-  [{:keys [item] :as props}]
+  [{:keys [contact] :as props}]
   (let [toggle-paused
         (mf/use-callback
-         (mf/deps item)
+         (mf/deps contact)
          (fn [event]
-           (when-not (:is-disabled item)
-             (st/emit! (-> (update item :is-paused not)
+           (when-not (:is-disabled contact)
+             (st/emit! (-> (update contact :is-paused not)
                            (ev/update-contact))))))
 
         edit
         (mf/use-callback
-         (mf/deps item)
+         (mf/deps contact)
          (fn [event]
-           (when-not (:is-disabled item)
-             (case (:type item)
-               "email" (modal/show! {::modal/type :email-contact :item item})
-               "mattermost" (modal/show! {::modal/type :mattermost-contact :item item})))))
+           (case (:type contact)
+             "email" (modal/show! {:type :email-contact :id (:id contact)})
+             "mattermost" (modal/show! {:type :mattermost-contact :id (:id contact)})
+             "telegram" (modal/show! {:type :telegram-contact :id (:id contact)}))))
 
         delete
         (mf/use-callback
-         (mf/deps item)
+         (mf/deps contact)
          (fn [event]
-           (when-not (:is-disabled item)
-             (let [message   (str/format "Do you want to delete '%s'?" (:name item))
-                   on-accept (st/emitf (ev/delete-contact item))]
+           (when-not (:is-disabled contact)
+             (let [message   (str/format "Do you want to delete '%s'?" (:name contact))
+                   on-accept (st/emitf (ev/delete-contact contact))]
                (st/emit! (modal/show {:type :confirm
                                       :title "Deleting contact"
                                       :message message
@@ -229,29 +68,34 @@
                                       :on-accept on-accept}))))))]
 
     [:div.row {:class (dom/classnames
-                       :disabled (not (:validated-at item))
-                       :paused   (:is-paused item)
-                       :disabled (:is-disabled item))}
-     [:div.type i/envelope]
-     [:div.title {:title (:email item)} (:name item)]
+                       :disabled (not (:validated-at contact))
+                       :paused   (:is-paused contact)
+                       :disabled (:is-disabled contact))}
+     [:div.type (case (:type contact)
+                  "email" i/envelope
+                  "mattermost" i/mattermost
+                  "telegram" i/telegram
+                  nil)]
+
+     [:div.title {:title (:email contact)} (:name contact)]
      [:div.options
-      (if (:validated-at item)
-        (if (:is-paused item)
+      (if (:validated-at contact)
+        (if (:is-paused contact)
           [:a {:title "Enable" :on-click toggle-paused} i/play]
           [:a {:title "Pause / Disable" :on-click toggle-paused} i/pause])
         [:span.warning {:title "Contact pending validation"} i/exclamation])
 
       (cond
-        (some? (:disable-reason item))
-        (let [reason (:pause-reason item)
+        (some? (:disable-reason contact))
+        (let [reason (:pause-reason contact)
               type   (:type reason)]
           [:span.warning
            {:title (str/format "Disable reason: %s | Incidence num: %s"
-                               (name type) (:bounces item))}
+                               (name type) (:bounces contact))}
            i/exclamation])
 
-        (some? (:pause-reason item))
-        (let [reason (:pause-reason item)
+        (some? (:pause-reason contact))
+        (let [reason (:pause-reason contact)
               type   (:type reason)]
           [:span.warning
            {:title (str/format "Pause reason: %s" (name type))}
@@ -263,7 +107,10 @@
 (mf/defc contacts-section
   {::mf/wrap [mf/memo]}
   []
-  (mf/use-effect #(st/emit! (ptk/event :fetch-contacts)))
+  (mf/use-effect
+   (fn []
+     (st/emit! (ptk/event :initialize-contacts))
+     (st/emitf (ptk/event :finalize-contacts))))
   (let [contacts (mf/deref st/contacts-ref)]
     [:section.contacts-table
      [:div.table
@@ -272,15 +119,16 @@
        [:div.title "Contact"]
        [:div.options]]
       [:div.rows
-       (for [item (->> (vals contacts)
-                       (sort-by :created-at))]
-         [:& contact-item {:key (:id item)
-                           :item item}])]]]))
+       (for [contact (->> (vals contacts)
+                          (sort-by :created-at))]
+         [:& contact-item {:key (:id contact)
+                           :contact contact}])]]]))
 
 (mf/defc options
   []
   (let [add-email-contact (mf/use-callback (st/emitf (modal/show {:type :email-contact})))
         add-mattermost-contact (mf/use-callback (st/emitf (modal/show {:type :mattermost-contact})))
+        add-telegram-contact (mf/use-callback (st/emitf (modal/show {:type :telegram-contact})))
         show-dropdown? (mf/use-state false)
         show-dropdown  (mf/use-callback #(reset! show-dropdown? true))
         hide-dropdown  (mf/use-callback #(reset! show-dropdown? false))]
@@ -296,7 +144,11 @@
         [:li {:on-click add-mattermost-contact
               :title "Add new mattermost contact"}
          [:div.icon i/mattermost]
-         [:div.text "Mattermost"]]]]]]))
+         [:div.text "Mattermost"]]
+        [:li {:on-click add-telegram-contact
+              :title "Add new telegram contact"}
+         [:div.icon i/telegram]
+         [:div.text "Telegram"]]]]]]))
 
 (mf/defc contacts-page
   [props]

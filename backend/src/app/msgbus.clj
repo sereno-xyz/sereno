@@ -10,7 +10,6 @@
    [app.common.uuid :as uuid]
    [app.db :as db]
    [app.util.async :as aa]
-   [app.util.blob :as blob]
    [app.util.transit :as t]
    [clojure.core.async :as a]
    [clojure.data.json :as json]
@@ -26,21 +25,38 @@
 
 (s/def ::pool db/pool?)
 
+(defmulti adapt-db-notification :table)
+
+(defmethod adapt-db-notification "monitor"
+  [{:keys [record table schema operation] :as payload}]
+  {:id (uuid/uuid (get record "id"))
+   :owner-id (uuid/uuid (get record "owner_id"))
+   :database/operation (keyword (str/lower operation))
+   :database/table table
+   :database/schema schema})
+
+(defmethod adapt-db-notification "contact"
+  [{:keys [record table schema operation] :as payload}]
+  {:id (uuid/uuid (get record "id"))
+   :owner-id (uuid/uuid (get record "owner_id"))
+   :database/operation (keyword (str/lower operation))
+   :database/table table
+   :database/schema schema})
+
+(defmethod adapt-db-notification :default
+  [payload]
+  payload)
+
 (defn notification->map
   [^PGNotification item]
-  (let [{:keys [id operation owner-id] :as payload} (json/read-str (.getParameter item) :key-fn keyword)]
-    (cond-> (assoc payload :channel (.getName item))
-      (and (string? id)
-           (re-matches us/uuid-rx id))
-      (assoc :id (uuid/uuid id))
+  (let [channel (.getName item)
+        payload (.getParameter item)
+        payload (t/decode-str payload)]
 
-      (and (string? owner-id)
-           (re-matches us/uuid-rx owner-id))
-      (assoc :owner-id (uuid/uuid owner-id))
-
-      (string? operation)
-      (assoc :operation (keyword (str/lower operation))))))
-
+    (if (= channel "db_changes")
+      (-> (adapt-db-notification payload)
+          (assoc :metadata/channel channel))
+      (t/decode-str payload))))
 
 (defn poll
   [conn]
@@ -83,6 +99,7 @@
         chs  (atom #{})
         chd  (a/chan)
         opts (assoc opts :out out)]
+
     (a/go-loop [ech (start-event-loop opts)]
       (let [[val port] (a/alts! [chd ech out] :priority true)]
         (cond
@@ -106,28 +123,34 @@
           (do
             (log/error "Msgbus eventloop aborted because pool is closed.")
             (a/close! chd)
-            (a/close! out))
-
+            (a/close! out)
+            (swap! chs (fn [chans]
+                         (doseq [c chans]
+                           (a/close! c))
+                         #{})))
           :else
           (do
-            (log/info (str/format "Stop condition found. Shutdown msgbus."))
+            (log/info "Stop condition found. Shutdown msgbus.")
             (swap! chs (fn [chans]
                          (doseq [c chans]
                            (a/close! c))
                          #{}))))))
 
-    (reify
-      java.lang.AutoCloseable
-      (close [_]
-        (a/close! chd)
-        (a/close! out))
+    {::chd chd
+     ::out out
+     :subscribe
+     (fn [ch]
+       (swap! chs conj ch)
+       ch)
 
-      clojure.lang.IFn
-      (invoke [_ ch]
-        (swap! chs conj ch)
-        ch))))
-
+     :emit
+     (fn emit
+       ([msg] (emit pool msg))
+       ([conn msg]
+        (db/exec-one! conn ["select pg_notify('db_changes', ?::text)"
+                            (t/encode-str msg)])))}))
 
 (defmethod ig/halt-key! ::instance
-  [_ instance]
-  (.close ^java.lang.AutoCloseable instance))
+  [_ {:keys [::chd ::out]}]
+  (a/close! chd)
+  (a/close! out))

@@ -11,6 +11,7 @@
   (:require
    [integrant.core :as ig]
    [clojure.tools.logging :as log]
+   [clojure.tools.namespace.repl :as repl]
    [app.util.time :as dt]
    [app.config :as cfg])
   (:gen-class))
@@ -174,6 +175,7 @@
    :app.tasks.notify/handler
    {:pool (ig/ref :app.db/pool)
     :tokens (ig/ref :app.tokens/instance)
+    :telegram (ig/ref :app.telegram/service)
     :public-uri  (ig/ref :app.config/public-uri)
     :http-client (ig/ref :app.http/client)}
 
@@ -186,24 +188,55 @@
    {:pool (ig/ref :app.db/pool)
     :http-client (ig/ref :app.http/client)}
 
-   :app.webhooks/handlers
-   {:awssns (ig/ref :app.webhooks.awssns/handler)}
+   :app.telegram/service
+   {:id (:telegram-id cfg/config)
+    :token (:telegram-token cfg/config)
+    :http-client (ig/ref :app.http/client)
+    :pool (ig/ref :app.db/pool)}
 
+   :app.telegram/webhook
+   {:telegram (ig/ref :app.telegram/service)
+    :pool (ig/ref :app.db/pool)
+    :shared-key (:webhook-shared-key cfg/config "sample-key")}
+
+   :app.webhooks/handlers
+   {:awssns (ig/ref :app.webhooks.awssns/handler)
+    :telegram (ig/ref :app.telegram/webhook)}
+
+   ;; TODO: maybe move to a specific AWS SNS service?
    :app.webhooks.awssns/handler
    {:pool (ig/ref :app.db/pool)
     :http-client (ig/ref :app.http/client)
     :shared-key (:webhook-shared-key cfg/config "sample-key")}
+
    })
 
-(defonce system {})
+(defonce system nil)
 
-(defn run
-  [params]
+(defn stop
+  []
+  (alter-var-root #'system (fn [sys]
+                             (when sys (ig/halt! sys))
+                             nil)))
+
+(defn start
+  []
   (ig/load-namespaces system-config)
-  (let [system (ig/init system-config)]
-    (alter-var-root #'system (constantly system))
-    system))
+  (alter-var-root #'system (fn [sys]
+                             (when sys (ig/halt! sys))
+                             (ig/init system-config))))
+
+(defn refresh-and-restart
+  []
+  (stop)
+  (repl/refresh :after 'app.init/start))
+
+(defn refresh-all-and-restart
+  []
+  (stop)
+  (repl/refresh-all :after 'app.init/start))
 
 (defn -main
   [& args]
-  (run {}))
+  (start))
+
