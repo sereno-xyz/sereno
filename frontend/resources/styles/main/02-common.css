@@ -46,13 +46,14 @@ a {
 }
 
 p {
-  font-size: $fs13;
+  font-size: var(--default-font-size);
   margin-bottom: 1rem;
-  line-height: $base-lh-sm;
+  line-height: 1.33;
 }
 
 li {
-  line-height: $base-lh-sm;
+  line-height: 1.33;
+  font-size: var(--default-font-size);
 }
 
 ul {
@@ -61,18 +62,19 @@ ul {
 
 strong {
   font-weight: bold;
+  font-size: var(--default-font-size);
 }
 
 h1 {
-  font-size: $fs34;
+  font-size: var(--default-h1-font-size);
   font-weight: 500;
-  line-height: $title-lh-sm;
+  line-height: 1.15;
 }
 
 h2 {
   font-size: var(--default-h2-font-size);
   font-weight: 400;
-  line-height: $title-lh-sm;
+  line-height: 1.15;
 }
 
 h3 {
@@ -90,9 +92,9 @@ label {
 }
 
 input[type=number]::-webkit-inner-spin-button,
-    input[type=number]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-     margin: 0;
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 input[type=number] {

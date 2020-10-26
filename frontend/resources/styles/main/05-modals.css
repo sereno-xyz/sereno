@@ -12,7 +12,7 @@
     width: 100%;
   }
 
-  p { font-size: $fs16; }
+  p { font-size: var(--default-font-size); }
 
   .error-message {
     color: var(--color-danger);
@@ -80,7 +80,7 @@
   .modal-header-title {
     display: flex;
     align-items: center;
-    font-size: $fs24;
+    font-size: vat(--default-h3-font-size);
     padding-left: 16px;
 
     h2 {
@@ -110,7 +110,7 @@
     border-top: 1px solid var(--color-gray-10);
     h3 {
       color: var(--color-gray-40);
-      font-size: $fs16;
+      font-size: var(--default-font-size);
     }
 
     p {
@@ -301,7 +301,7 @@
 
     .error {
       margin-top: 10px;
-      font-size: $fs16;
+      font-size: var(--default-font-size);
       color: var(--color-danger);
     }
   }
@@ -321,215 +321,9 @@
   .row {
     color: var(--color-gray-40);
     font-weight: 500;
-    font-size: $fs18;
+    font-size: var(--default-font-size);
   }
 }
-
-.monitor-log-modal {
-  .modal-content {
-    max-width: 600px;
-    height: 100vh;
-
-    h2 {
-      margin-top: 0px;
-      text-align: center;
-      padding: 10px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid var(--color-gray-20);
-    }
-  }
-
-  .pager {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 50px;
-
-    > * {
-      padding: 10px;
-    }
-  }
-
-  .table {
-    display: flex;
-    flex-direction: column;
-    margin-right: 10px;
-    width: 100%;
-
-    .load-more-button {
-      padding: 10px;
-      display: flex;
-      justify-content: center;
-      margin-bottom: 20px;
-      height: 20px;
-    }
-
-    .table-body {
-      max-height: 900px;
-      overflow-y: auto;
-
-
-      @media (max-height: 900px) {
-        max-height: 650px;
-      }
-      @media (max-height: 800px) {
-        max-height: 550px;
-      }
-
-      @media (max-height: 700px) {
-        max-height: 450px;
-      }
-
-      @media (max-height: 600px) {
-        max-height: 350px;
-      }
-
-      @media (max-height: 500px) {
-        max-height: 350px;
-      }
-    }
-
-    .table-header,
-    .table-body-item {
-      display: flex;
-      padding: 0px;
-      margin: 0px;
-      list-style: none;
-
-      &.status-up {
-        svg {
-          fill: var(--color-success);
-        }
-      }
-
-      &.status-down {
-        svg {
-          fill: var(--color-danger);
-        }
-      }
-
-      > li {
-        color: var(--color-gray-40);
-        display: flex;
-        height: 2.5rem;
-        align-items: center;
-        padding-left: 20px;
-
-        &.icon {
-          width: 60px;
-        }
-
-        &.latency {
-          width: 100px;
-        }
-
-        &.created-at {
-          flex-grow: 1;
-          min-width: 170px;
-        }
-
-        &.reason {
-          width: 150px;
-        }
-      }
-
-      @media (max-width: 540px) {
-        > li {
-          padding-left: 0px;
-          font-size: $fs14;
-
-          &.icon {
-            min-width: 40px;
-          }
-
-          &.latency {
-            min-width: 60px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-          }
-
-          &.reason {
-            min-width: 60px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-          }
-
-          &.created-at {
-            min-width: 150px;
-          }
-
-        }
-      }
-    }
-
-    .table-header {
-      font-weight: 500;
-    }
-
-    .table-body-item {
-      svg {
-        width: 20px;
-        height: 20px;
-      }
-    }
-  }
-}
-
-
-
-.contact-type-selection {
-  .modal-content {
-    max-width: 600px;
-  }
-
-  h2 { text-align: center; }
-
-
-  svg {
-    width: 60px;
-    height: 60px;
-  }
-
-  ul {
-    list-style: none;
-    padding: 0px;
-    margin: 0px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-  }
-
-  li {
-    padding: 0px 50px;
-    margin: 0px;
-    display: flex;
-    width: 400px;
-
-    cursor: pointer;
-
-    &:not(:last-child) {
-      border-bottom: 1px solid var(--color-gray-10);
-    }
-  }
-
-  .icon {
-    padding: 10px;
-    margin-right: 10px;
-  }
-
-  .label {
-    font-size: $fs32;
-    display: flex;
-    align-items: center;
-  }
-}
-
-.contact-modal {
-}
-
 
 .telegram-link-info {
   .qrcode {

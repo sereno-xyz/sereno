@@ -133,7 +133,7 @@
         show-dropdown  (mf/use-callback #(reset! show-dropdown? true))
         hide-dropdown  (mf/use-callback #(reset! show-dropdown? false))]
     [:section.topside-options
-     [:a.add-monitor {:on-click show-dropdown} i/plus
+     [:a.add-button {:on-click show-dropdown} i/plus
       [:& dropdown {:show @show-dropdown?
                     :on-close hide-dropdown}
        [:ul.dropdown

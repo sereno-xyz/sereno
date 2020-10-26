@@ -74,7 +74,7 @@
     }
 
     span {
-      font-size: $fs18;
+      font-size: var(--default-font-size);
     }
   }
 

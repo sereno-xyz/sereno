@@ -60,7 +60,7 @@
 
     .error {
       color: var(--color-danger);
-      font-size: $fs16;
+      font-size: var(--default-font-size);
       padding: 5px;
     }
 
@@ -78,7 +78,7 @@
     flex-direction: column;
     margin-bottom: 10px;
     flex-grow: 1;
-    font-size: $fs16;
+    font-size: var(--default-font-size);
 
     label {
       font-weight: 500;
@@ -124,7 +124,7 @@
     cursor: pointer;
 
     option {
-      font-size: $fs16;
+      font-size: var(--default-font-size);
     }
   }
 

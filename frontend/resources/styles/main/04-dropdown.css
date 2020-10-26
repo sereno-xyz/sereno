@@ -4,7 +4,8 @@
 
 /* Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz> */
 
-.dropdown {
+ul.dropdown {
+
   position: absolute;
   max-height: 30rem;
   background-color: var(--color-white);
@@ -17,35 +18,34 @@
   margin: 0px;
   padding: 0px;
 
-  hr {
+  > hr {
     margin: 0;
     border-color: var(--color-gray-5-05);
     background-color: rgba(0,0,0,0);
   }
 
-  li {
+  > li {
     display: flex;
     align-items: center;
     color: var(--color-gray-60);
     cursor: pointer;
-    font-size: $fs12;
-    height: 40px;
-    padding: 0px 16px;
-
-    .icon {
-      display: flex;
-      align-items: center;
-      margin-right: 10px;
-
-      svg {
-        width: 20px;
-        height: 20px;
-        fill: var(--color-gray-30);
-      }
-    }
+    height: 45px;
+    padding: 0px 20px;
 
     &:hover {
-      background-color: var(--color-primary-lighter);
+      background-color: var(--color-gray-5);
+    }
+  }
+
+  .icon {
+    display: flex;
+    align-items: center;
+    margin-right: 10px;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      fill: var(--color-gray-50);
     }
   }
 }
