@@ -12,6 +12,7 @@
   (:require-macros [app.util.icons :refer [icon-xref]])
   (:require [rumext.alpha :as mf]))
 
+(def user (icon-xref :user))
 (def history (icon-xref :history))
 (def times (icon-xref :times))
 (def download (icon-xref :download))

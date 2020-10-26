@@ -118,7 +118,6 @@
         margin-right: 15px;
       }
     }
-
   }
 
   .right-menu {
@@ -127,26 +126,34 @@
     align-items: center;
     justify-content: space-between;
     padding-right: 5px;
+    position: relative;
 
-    svg {
-      width: 25px;
-      height: 25px;
-      fill: var(--color-gray-10);
+    .dropdown {
+      top: 65px;
+      right: 5px;
     }
 
-    .label { display: none; }
+    
 
-    .logout {
+    .profile-button {
       display: flex;
       justify-content: center;
       align-items: center;
       width: 30px;
       height: 30px;
       margin-right: 10px;
+
+      svg {
+        width: 20px;
+        height: 20px;
+        fill: var(--color-gray-5);
+      }
     }
   }
 
   @media (max-width: 600px) {
+    margin-bottom: 0px;
+
     .logo {
       margin-right: 0px;
 
@@ -162,9 +169,6 @@
 
       .logo-text { display: none; }
     }
-
-    margin-bottom: 0px;
-
     .left-menu {
       .menu {
         li {
@@ -177,6 +181,10 @@
       svg {
         width: 20px;
         height: 20px;
+      }
+
+      .dropdown {
+        top: 45px;
       }
     }
   }

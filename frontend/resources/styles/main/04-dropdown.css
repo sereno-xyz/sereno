@@ -5,7 +5,6 @@
 /* Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz> */
 
 ul.dropdown {
-
   position: absolute;
   max-height: 30rem;
   background-color: var(--color-white);
@@ -43,9 +42,29 @@ ul.dropdown {
     margin-right: 10px;
 
     svg {
-      width: 20px;
-      height: 20px;
+      width: 16px;
+      height: 16px;
       fill: var(--color-gray-50);
     }
+  }
+
+  &.dark {
+    background-color: var(--color-gray-50);
+
+    > li {
+      color: var(--color-white);
+      font-weight: 400;
+
+      &:hover {
+        background-color: var(--color-gray-60);
+      }
+    }
+
+    .icon {
+      svg {
+        fill: var(--color-white);
+      }
+    }
+
   }
 }
