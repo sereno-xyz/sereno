@@ -1,3 +1,10 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public */
+/* License, v. 2.0. If a copy of the MPL was not distributed with this */
+/* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/* Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz> */
+
+
 .button {
   padding: 0.5rem 2rem;
   border: 1px solid var(--color-gray-10);
@@ -141,7 +148,6 @@
 
 input {
   font-weight: 300;
-  // Background color
   &:-webkit-autofill {
     -webkit-box-shadow: 0 0 0 1000px #fff inset;
     font-family: "Inter", sans-serif;
@@ -149,7 +155,6 @@ input {
     font-weight: 300;
   }
 
-  // Font styles
   &:-webkit-autofill::first-line {
     font-family: "Inter", sans-serif;
     font-size: var(--default-font-size);

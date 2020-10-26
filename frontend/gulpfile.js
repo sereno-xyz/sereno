@@ -1,120 +1,25 @@
 const fs = require("fs");
 const path = require("path");
 const l = require("lodash");
-
-const CleanCSS = require("clean-css");
 const gulp = require("gulp");
-const gulpif = require("gulp-if");
 const gzip = require("gulp-gzip");
-
 const mustache = require("gulp-mustache");
 const rename = require("gulp-rename");
 const svgSprite = require("gulp-svg-sprite");
-
+const concat = require("gulp-concat");
 const mkdirp = require("mkdirp");
 const rimraf = require("rimraf");
-const sass = require("sass");
-const autoprefixer = require("autoprefixer")
-const postcss = require("postcss")
-
 const mapStream = require("map-stream");
-
 const paths = {};
 
 paths.resources = "./resources/";
 paths.output = "./resources/public/";
 paths.dist = "./target/dist/";
-paths.scss = "./resources/styles/**/*.scss";
+paths.styles = "./resources/styles/**/*.css";
 
 /***********************************************
  * Helpers
  ***********************************************/
-
-function isProduction() {
-  return (process.env.NODE_ENV === "production");
-}
-
-function scssPipeline(options) {
-  const write = (_path, data) => {
-    return new Promise((resolve, reject) => {
-      fs.writeFile(_path, data, function(err) {
-        if (err) { reject(err); }
-        else { resolve(); }
-      });
-    });
-  };
-
-  const touch = (_path) => {
-    return new Promise((resolve, reject) => {
-      return fs.utimes(_path, new Date(), new Date(), () => {
-        resolve(_path);
-      });
-    })
-  }
-
-  const render = (input) => {
-    return new Promise((resolve, reject) => {
-      sass.render({file: input}, async function(err, result) {
-        if (err) {
-          console.log(err.formatted);
-          reject(err);
-        } else {
-          resolve(result.css);
-        }
-      });
-    });
-  };
-
-  const postprocess = (data, input, output) => {
-    return postcss([autoprefixer])
-      .process(data, {map: false, from: input, to: output})
-  };
-
-  const clean = (data) => {
-    if (isProduction()) {
-      const cleaner = new CleanCSS({
-        format: "keep-breaks",
-        level: 1
-      });
-      const result = cleaner.minify(data);
-
-      if (result.errors.length > 0) {
-        console.log(result.errors); // a list of errors raised
-      }
-
-      if (result.warnings.length > 0) {
-        console.log(result.warnings); // a list of warnings raised
-      }
-
-      return result.styles;
-    } else {
-      return data;
-    }
-  }
-
-  return function(next) {
-    const input = options.input;
-    const output = options.output;
-
-    return mkdirp(path.dirname(output))
-      .then(() => render(input))
-      .then((res) => postprocess(res, input, output))
-      .then(async (res) => {
-        const css = clean(res.css)
-        await write(output, css);
-        await touch(output);
-        return res;
-      })
-      .catch((err) => {
-        console.log(err);
-      })
-      .then(() => {
-        next();
-      });
-  };
-}
-
-// Templates
 
 function readLocales() {
   const path = __dirname + "/resources/locales.json";
@@ -210,12 +115,26 @@ function templatePipeline(options) {
  * Generic
  ***********************************************/
 
-gulp.task("scss:main", scssPipeline({
-  input: paths.resources + "styles/main.scss",
-  output: paths.output + "css/main.css"
-}));
+gulp.task("css:main", function() {
+  const autoprefixer = require("autoprefixer");
+  const postcss      = require('gulp-postcss');
+  const sourcemaps   = require('gulp-sourcemaps');
+  const neested      = require("postcss-nested");
+  const clean        = require("postcss-clean");
 
-gulp.task("scss", gulp.parallel("scss:main"));
+  return gulp.src("resources/styles/main/*.css")
+    .pipe(sourcemaps.init())
+    .pipe(postcss([
+      neested,
+      autoprefixer,
+      clean({format: "keep-breaks", level: 1})
+    ]))
+    .pipe(concat("main.css"))
+    .pipe(sourcemaps.write('.'))
+    .pipe(gulp.dest("resources/public/css/"));
+});
+
+gulp.task("css", gulp.parallel("css:main"));
 
 gulp.task("svg:sprite", function() {
   return gulp.src(paths.resources + "images/icons/*.svg")
@@ -260,13 +179,13 @@ gulp.task("dev:dirs", function(next) {
 });
 
 gulp.task("watch:main", function() {
-  gulp.watch(paths.scss, gulp.series("scss"));
+  gulp.watch(paths.styles, gulp.series("css"));
   gulp.watch([paths.resources + "templates/*.mustache",
               paths.resources + "locales.json"],
              gulp.series("template:main"));
 });
 
-gulp.task("build", gulp.series("scss", "templates", "copy:assets"));
+gulp.task("build", gulp.series("css", "templates", "copy:assets"));
 
 gulp.task("watch", gulp.series(
   "dev:dirs",

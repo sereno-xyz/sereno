@@ -12,7 +12,6 @@
   (:refer-clojure :exclude [set! get get-in merge clone])
   (:require
    [cuerdas.core :as str]
-   [goog.object :as gobj]
    ["camelcase" :as camelcase]))
 
 (defn get
@@ -59,7 +58,6 @@
 (defn clj->props
   [props]
   (clj->js props :keyword-fn (comp camelcase name)))
-
 
 (defn without
   [obj keys]
