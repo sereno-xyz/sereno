@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "camelcase": "^6.1.0",
-    "chart.js": "^2.9.4",
+    "d3": "^6.2.0",
     "humanize-duration": "^3.23.1",
     "luxon": "^1.25.0",
     "mousetrap": "^1.6.5",

@@ -6,7 +6,7 @@
 
 :root {
   --color-primary: #14B9D7;
-  --color-primary-dark: #1BC4D8;
+  --color-primary-dark: rgb(89, 185, 226);
 
   --color-white: rgb(255,255,255);
   --color-black: rgb(0,0,0);
@@ -40,6 +40,7 @@
   --default-h3-font-size: 22px;
   --default-h4-font-size: 18px;
   --default-font-size: 16px;
+  --default-small-font-size: 14px;
 }
 
 

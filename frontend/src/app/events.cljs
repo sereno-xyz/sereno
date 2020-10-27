@@ -519,33 +519,34 @@
                          (on-error err)
                          (rx/empty))))))))
 
-(def default-interval "7 days")
+(def default-period "7 days")
 
 (defmethod ptk/resolve :fetch-monitor-summary
   [_ {:keys [id] :as params}]
   (us/assert ::us/uuid id)
-  (letfn [(on-fetched [{:keys [summary latency-buckets]} state]
+  (letfn [(on-fetched [{:keys [data buckets]} state]
             (update-in state [:monitor-summary id]
-                       (fn [data]
-                         (assoc data
-                                :summary summary
-                                :buckets latency-buckets))))]
-
+                       (fn [summary]
+                         (assoc summary
+                                :data data
+                                :buckets buckets))))]
     (ptk/reify :fetch-monitor-summary
       ptk/WatchEvent
       (watch [_ state stream]
-        (let [interval (get-in state [:monitor-summary id :interval] default-interval)]
-          (->> (rp/req! :retrieve-monitor-summary {:id id :interval interval})
+        (let [period (get-in state [:monitor-summary id :period] default-period)]
+          (->> (rp/req! :retrieve-monitor-summary {:id id :period period})
                (rx/map #(partial on-fetched %))))))))
 
-(defn update-summary-interval
-  [{:keys [id interval] :as params}]
+;; TODO: rename to period
+
+(defn update-summary-period
+  [{:keys [id period] :as params}]
   (us/assert ::us/uuid id)
-  (us/assert ::us/string interval)
-  (ptk/reify :update-summary-interval
+  (us/assert ::us/string period)
+  (ptk/reify :update-summary-period
     ptk/UpdateEvent
     (update [_ state]
-      (update-in state [:monitor-summary id] assoc :interval interval))))
+      (update-in state [:monitor-summary id] assoc :period period))))
 
 (defmethod ptk/resolve :fetch-monitor-status-history
   [_ {:keys [id since limit]
@@ -682,7 +683,7 @@
   (ptk/reify ::initialize-monitor-summary
     ptk/UpdateEvent
     (update [_ state]
-      (assoc-in state [:monitor-summary id] {:interval default-interval}))
+      (assoc-in state [:monitor-summary id] {:period default-period}))
 
     ptk/WatchEvent
     (watch [_ state stream]
@@ -692,7 +693,7 @@
          (rx/of (ptk/event :fetch-monitor-summary {:id id}))
 
          (->> stream
-              (rx/filter (ptk/type? :update-summary-interval))
+              (rx/filter (ptk/type? :update-summary-period))
               (rx/map #(ptk/event :fetch-monitor-summary params))
               (rx/take-until stoper))
 

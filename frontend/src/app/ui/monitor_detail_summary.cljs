@@ -9,7 +9,7 @@
 
 (ns app.ui.monitor-detail-summary
   (:require
-   ["chart.js" :as cht]
+   ["./impl_latency_chart" :as ilc]
    [app.common.data :as d]
    [app.common.exceptions :as ex]
    [app.common.math :as mth]
@@ -21,6 +21,7 @@
    [app.ui.icons :as i]
    [app.ui.modal :as modal]
    [app.ui.monitor-detail-log]
+   [app.ui.monitor-detail-latency-chart :refer [latency-chart]]
    [app.ui.monitor-form]
    [app.util.dom :as dom]
    [app.util.router :as r]
@@ -30,86 +31,6 @@
    [okulary.core :as l]
    [potok.core :as ptk]
    [rumext.alpha :as mf]))
-
-(mf/defc latency-chart-section
-  {::mf/wrap [mf/memo]}
-  [{:keys [data] :as props}]
-  (let [series1 (map (fn [item]
-                       {:y (:avg item)
-                        :x (:ts item)})
-                     data)
-        series2 (map (fn [item]
-                       {:y (:p90 item)
-                        :x (:ts item)})
-                     data)
-
-        ref  (mf/use-ref)
-        hint (mf/use-state nil)
-
-        on-nearest-x
-        (mf/use-callback
-         (fn [value props]
-           (let [ts (unchecked-get value "x")
-                 ms (unchecked-get value "y")]
-             (reset! hint value))))
-
-        on-mouse-out
-        (mf/use-callback
-         (fn []
-           (reset! hint nil)))
-        ]
-
-    (mf/use-effect
-     (mf/deps data)
-     (fn []
-       (let [node (mf/ref-val ref)
-             ctx  (.getContext ^js node "2d")
-             data {:datasets
-                   [{:label "AVG Latency"
-                     :fill false
-                     :pointStrokeColor "#fff"
-                     :pointRadius 5
-                     :pointBackgroundColor "#000"
-                     :pointBorderColor "#fff"
-                     :pointHitRadius 5
-                     :borderColor "#573010"
-                     :data series1}
-                    #_{:label "90th percentile"
-                     :fill false
-                     :pointColor "#000"
-                     :pointRadius 5
-                     :pointBackgroundColor "#000"
-                     :pointBorderColor "#fff"
-                     :borderColor "#FC8802"
-                     :data series2}]}
-
-            opts {:responsive true
-                  :animation {:duration 0}
-                  :maintainAspectRatio false
-                  :tooltips {:mode "x"}
-                  :scales {:xAxes [{:type "time",
-                                    :distribution "series"
-                                    ;; :display false
-                                    :ticks {:maxRotation 120
-                                            :display false
-                                            :minRotation 60}
-                                    ;; :gridLines {:display true}
-                                    :time {:unit "minute"
-                                           :displayFormats {:quarter "MMM YYYY"
-                                                            :minute "DD/MM HH:mm a"}}}]}}
-             prms {:type "line"
-                   :data data
-                   :options opts}
-
-             chart (cht/Chart. ctx (clj->js prms))]
-         (fn []
-           (.destroy ^js chart)))))
-
-    [:div.chart
-     [:canvas {:ref ref
-               :style {:width "100%" :height "100%"}
-               }]]))
-
 
 (mf/defc details-table
   [{:keys [summary monitor]}]
@@ -126,7 +47,7 @@
            (let [target (dom/get-target event)]
              (.setAttribute target "title" (dt/timeago (:modified-at monitor))))))]
 
-    [:div.details
+    [:div.details-table
      [:div.details-column
       [:div.details-row
        [:div.details-field "Status"]
@@ -163,11 +84,10 @@
        [:div.details-field "Q90 Latency"]
        [:div.details-field (mth/precision (:latency-p90 summary) 0) " ms"]]]]))
 
-(def interval-options
+(def period-options
   [{:value "24 hours" :label "24 hours"}
    {:value "7 days" :label "7 days"}
    {:value "30 days" :label "30 days"}])
-
 
 (defn summary-ref
   [id]
@@ -175,18 +95,36 @@
 
 (mf/defc monitor-summary
   [{:keys [monitor]}]
-  (let [summary-ref (mf/use-memo (mf/deps (:id monitor)) #(summary-ref (:id monitor)))
-        {:keys [summary buckets interval]} (mf/deref summary-ref)
+  (let [chart-ref    (mf/use-ref)
 
-        value (d/seek #(= interval (:value %)) interval-options)
+        summary-ref  (mf/use-memo (mf/deps (:id monitor)) #(summary-ref (:id monitor)))
+        summary      (mf/deref summary-ref)
 
-        on-interval-change
+        summary-data (:data summary)
+        summary-buckets (:buckets summary)
+        summary-period (:period summary)
+
+        selected-bucket (mf/use-state nil)
+        value (d/seek #(= summary-period (:value %)) period-options)
+
+        on-period-change
         (mf/use-callback
          (mf/deps (:id monitor))
          (fn [data]
            (let [value (unchecked-get data "value")]
-             (st/emit! (ev/update-summary-interval {:id (:id monitor)
-                                                    :interval value})))))]
+             (st/emit! (ev/update-summary-period {:id (:id monitor)
+                                                    :period value})))))
+        on-mouse-over
+        (mf/use-callback
+         (mf/deps summary-buckets)
+         (fn [index]
+           (reset! selected-bucket (nth summary-buckets index))))
+
+        on-mouse-out
+        (mf/use-callback
+         (mf/deps summary-buckets)
+         (fn []
+           (reset! selected-bucket nil)))]
 
     (mf/use-effect
      (mf/deps monitor)
@@ -194,20 +132,44 @@
        (st/emit! (ptk/event :initialize-monitor-summary {:id (:id monitor)}))
        (st/emitf (ptk/event :finalize-monitor-summary {:id (:id monitor)}))))
 
+    (mf/use-layout-effect
+     (mf/deps summary-buckets)
+     (fn []
+       (when summary-buckets
+         (let [dom  (mf/ref-val chart-ref)
+               data (->> summary-buckets
+                         (map #(assoc % :ts (.toJSDate ^js (:ts %))))
+                         (clj->js))]
+           (ilc/render dom #js {:width 1160
+                                :height (.-clientHeight dom)
+                                :onMouseOver on-mouse-over
+                                :onMouseOut on-mouse-out
+                                :data data})
+           (fn []
+             (ilc/clear dom))))))
+
     [:div.main-content
      [:h3 i/info "Summary"]
 
      [:div.topside-options
+      (when-let [data (deref selected-bucket)]
+        [:ul.period-info
+         [:li
+          [:span.label "Latency: "]
+          [:span.value (str (:avg data) "ms")]]
+         [:li
+          [:span.label "Period: "]
+          [:span.value (dt/format (:ts data) :datetime-med)]]])
       [:div.timeframe-selector
        [:> forms/rselect
-        {:options (clj->js interval-options)
-          :styles (clj->js forms/select-styles)
+        {:options (clj->js period-options)
+         :styles (clj->js forms/select-styles)
          :isClearable false
-         :onChange on-interval-change
+         :onChange on-period-change
          :value (clj->js value)}]]]
 
      [:div.latency-chart
-      [:& latency-chart-section {:data buckets}]]
+      [:div.chart {:ref chart-ref}]]
 
-     [:& details-table {:summary summary
+     [:& details-table {:summary summary-data
                         :monitor monitor}]]))

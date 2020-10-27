@@ -43,11 +43,11 @@
         edit   #(modal/show! {::modal/type :monitor-form
                               :item monitor})]
     [:div.header
-     [:div.title-block
+     [:div.title-section
       [:div.title
        [:a.go-back {:on-click go-back :title "Go back"} i/chevron-left]
        [:h2 (:name monitor)]]
-      [:div.options
+      [:div.header-options
        (when (not= section :monitor-log)
          [:*
           (if (= "paused" (:status monitor))

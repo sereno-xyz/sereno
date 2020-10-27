@@ -29,7 +29,8 @@ ul.dropdown {
     color: var(--color-gray-60);
     cursor: pointer;
     height: 45px;
-    padding: 0px 20px;
+    padding: 0px 15px;
+    font-size: var(--default-small-font-size);
 
     &:hover {
       background-color: var(--color-gray-5);

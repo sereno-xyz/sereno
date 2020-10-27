@@ -747,15 +747,35 @@
 
 ;; --- Query: Retrieve Monitor Latency Summary
 
-(def valid-intervals
-  {"24 hours"  "1 hour"
-    "7 days"   "12 hours"
-    "30 days"  "1 day"
-    "3 months" "10 days"})
+(declare sql:monitor-summary-buckets)
+(declare sql:monitor-summary)
+(declare sql:monitor-uptime)
 
-(s/def ::interval #(contains? valid-intervals %))
+(def bucket-size
+  {"24 hours"  (db/interval "30 minutes")
+    "7 days"   (db/interval "3 hour")
+    "30 days"  (db/interval "12 hours")})
+
+(s/def ::period #(contains? bucket-size %))
 (s/def ::retrieve-monitor-latency-summary
-  (s/keys :req-un [::id ::interval]))
+  (s/keys :req-un [::id ::period]))
+
+(defn retrieve-monitor-summary
+  {:spec ::retrieve-monitor-latency-summary :auth true}
+  [{:keys [pool]} {:keys [id profile-id period]}]
+  (db/with-atomic [conn pool]
+    (let [monitor   (db/exec-one! conn [sql:retrieve-monitor profile-id id])
+          partition (get bucket-size period)]
+      (when-not monitor
+        (ex/raise :type :not-found
+                  :hint "monitor does not exists"))
+
+      (let [buckets (db/exec! conn [sql:monitor-summary-buckets partition id period])
+            data    (db/exec-one! conn [sql:monitor-summary id period])
+            uptime  (db/exec-one! conn [sql:monitor-uptime period period id period])]
+        {:buckets buckets
+         :data (merge data uptime)}))))
+
 
 (def sql:monitor-summary
   "select percentile_cont(0.90) within group (order by latency) as latency_p90,
@@ -779,28 +799,13 @@
           (select extract(epoch from sum(duration)) from entries where status = 'down')::float8 as down_seconds,
           (select extract(epoch from sum(duration)) from entries where status = 'up')::float8 as up_seconds")
 
-(def sql:monitor-latency-buckets
+(def sql:monitor-summary-buckets
    "select time_bucket(?::interval, created_at) as ts,
            round(avg(latency)::numeric, 2)::float8 as avg
      from monitor_entry
     where monitor_id = ?
       and (now()-created_at) < ?::interval group by 1 order by 1")
 
-(defn retrieve-monitor-summary
-  {:spec ::retrieve-monitor-latency-summary :auth true}
-  [{:keys [pool]} {:keys [id profile-id interval]}]
-  (db/with-atomic [conn pool]
-    (let [monitor   (db/exec-one! conn [sql:retrieve-monitor profile-id id])
-          partition (get valid-intervals interval)]
-      (when-not monitor
-        (ex/raise :type :not-found
-                  :hint "monitor does not exists"))
-
-      (let [latency-buckets (db/exec! conn [sql:monitor-latency-buckets partition id interval])
-            summary (db/exec-one! conn [sql:monitor-summary id interval])
-            uptime  (db/exec-one! conn [sql:monitor-uptime interval interval id interval])]
-        {:latency-buckets latency-buckets
-         :summary (merge summary uptime)}))))
 
 ;; --- Query: Retrieve Monitor Status
 

@@ -33,6 +33,7 @@
    java.io.InputStream
    java.io.OutputStream
    java.sql.Connection
+   java.sql.Savepoint
    java.time.Duration
    org.postgresql.PGConnection
    org.postgresql.jdbc.PgArray
@@ -299,6 +300,18 @@
                 (:for-update opts)
                 (assoc :suffix "for update"))]
      (exec! ds (jdbc-bld/for-query table params opts) opts))))
+
+(defn savepoint
+  ([^Connection conn]
+   (.setSavepoint conn))
+  ([^Connection conn label]
+   (.setSavepoint conn (name label))))
+
+(defn rollback!
+  ([^Connection conn]
+   (.rollback conn))
+  ([^Connection conn ^Savepoint sp]
+   (.rollback conn sp)))
 
 (defn pgobject?
   [v]
