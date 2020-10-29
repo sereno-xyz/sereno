@@ -145,8 +145,6 @@
 (mf/defc options
   [{:keys [profile] :as props}]
   (let [input-ref      (mf/use-ref)
-        importing?     (mf/use-state false)
-
         show-dropdown? (mf/use-state false)
         show-dropdown  (mf/use-callback #(reset! show-dropdown? true))
         hide-dropdown  (mf/use-callback #(reset! show-dropdown? false))
@@ -179,21 +177,31 @@
            (let [node  (dom/get-target event)
                  files (array-seq (.-files node))]
 
-             (reset! importing? true)
+             (st/emit! (em/show {:content "Importing file..."
+                                 :type :info}))
              (->> (rp/req! :request-import {:file (first files)})
                   (rx/subs (fn [resp]
-                             (reset! importing? false)
+                             (st/emit! (em/show {:content "Imported succesfully"
+                                                 :type :success
+                                                 :timeout 2000}))
                              (.reload ^js js/location))
                            (fn [err]
-                             (reset! importing? false)
-                             (st/emit! (ev/show-message {:content "Error on import data."
-                                                         :type :error
-                                                         :timeout 2000}))))))))]
+                             (st/emit! (em/show {:content "Error on import data."
+                                                 :type :error
+                                                 :timeout 2000}))))))))]
 
     [:div.topside-options
      [:div.select-like {:on-click show-dropdown}
       [:span.text "Options"]
       [:span.icon i/chevron-down]]
+
+     [:input {:style {:display "none"}
+              :accept ".data"
+              :default-value ""
+              :ref input-ref
+              :onChange on-selected
+              :type "file"}]
+
      [:& dropdown {:show @show-dropdown?
                    :on-close hide-dropdown}
       [:ul.dropdown
@@ -202,12 +210,7 @@
         [:span.text "Export"]]
        [:li {:on-click on-import-click}
         [:span.icon i/upload]
-        [:span.text "Import"]
-        [:input {:style {:display "none"}
-                 :ref input-ref
-                 :accept ".data"
-                 :on-change on-selected
-                 :type "file"}]]
+        [:span.text "Import"]]
        [:li {:on-click on-password-change
              :title "Change assword"}
         [:span.icon i/key]

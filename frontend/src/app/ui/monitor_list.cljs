@@ -61,7 +61,7 @@
      (mf/deps @form)
      (st/emitf (ev/update-monitor-list-filters (:clean-data @form))))
 
-    [:div.filters
+    [:div.monitor-filters
      [:div.search
       [:& tags-select
        {:options @atags
@@ -86,10 +86,9 @@
 (mf/defc header
   [{:keys [filters] :as props}]
   (let [open-form (st/emitf (modal/show {:type :monitor-form}))]
-    [:div.header
+    [:div.options-bar
      [:& header-filters {:filters filters}]
-     [:div.options
-      [:a.add-monitor {:on-click open-form} i/plus]]]))
+     [:a.add-button {:on-click open-form} i/plus]]))
 
 (mf/defc monitor-item
   [{:keys [item] :as props}]
@@ -223,7 +222,7 @@
 
   (let [filters (mf/deref monitor-list-filters-ref)]
     [:main.monitor-list-section
-     [:section
+     [:div.single-column-1200
       [:& header {:filters filters}]
       [:& monitor-list {:filters filters}]]]))
 

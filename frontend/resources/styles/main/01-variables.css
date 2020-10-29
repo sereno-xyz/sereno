@@ -5,8 +5,23 @@
 /* Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz> */
 
 :root {
-  --color-primary: #14B9D7;
-  --color-primary-dark: rgb(89, 185, 226);
+  /* --color-primary: #14B9D7; */
+  /* --color-primary-dark: rgb(89, 185, 226); */
+
+  --color-primary-0: rgba( 16,149,174,1);
+  --color-primary-1: rgba( 98,182,197,1);
+  --color-primary-2: rgba( 64,196,220,1);
+  --color-primary-3: rgba(  9, 87,101,1);
+  --color-primary-4: rgba(  2, 94,111,1);
+  --color-primary-5: rgba( 16,149,174,0.07);
+  --color-primary-6: rgba( 16,149,174,0.2);
+
+
+  --color-primary: var(--color-primary-0);
+  --color-primary-light: var(--color-primary-1);
+  --color-primary-lighter: var(--color-primary-6);
+  --color-primary-dark: var(--color-primary-4);
+
 
   --color-white: rgb(255,255,255);
   --color-black: rgb(0,0,0);
@@ -42,5 +57,3 @@
   --default-font-size: 16px;
   --default-small-font-size: 14px;
 }
-
-

@@ -54,24 +54,6 @@
     }
   }
 
-  .form-field {
-    display: flex;
-    flex-direction: column;
-
-    .error {
-      color: var(--color-danger);
-      font-size: var(--default-font-size);
-      padding: 5px;
-    }
-
-    &.invalid {
-      input, select, > div {
-        border: 1px solid var(--color-danger);
-        color: var(--color-danger) !important;
-      }
-    }
-  }
-
   .form-row {
     color: var(--color-gray-50);
     display: flex;
@@ -98,52 +80,6 @@
   label {
     padding-bottom: 5px;
   }
-
-  input[type=password],
-  input[type=text] {
-    padding: 10px;
-    border-radius: 2px;
-    border: 1px solid var(--color-gray-10);
-    background-color: var(--color-white);
-  }
-
-  textarea {
-    padding: 10px;
-    border-radius: 2px;
-    border: 1px solid var(--color-gray-10);
-    background-color: var(--color-white);
-  }
-
-  select {
-    padding: 10px;
-    border-radius: 2px;
-    border: 1px solid var(--color-gray-10);
-    background-color: var(--color-white);
-
-    appearance: none;
-    cursor: pointer;
-
-    option {
-      font-size: var(--default-font-size);
-    }
-  }
-
-  button,
-  input[type=button],
-  input[type=submit] {
-    height: 40px;
-    cursor: pointer;
-    padding: 3px;
-    min-width: 150px;
-    padding: 0px 10px;
-    border-radius: 2px;
-    border: 1px solid var(--color-gray-10);
-  }
-
-  input:focus,
-  select:focus {
-    border: 1px solid var(--color-primary-dark);
-  }
 }
 
 input {
@@ -161,3 +97,110 @@ input {
     font-weight: 300;
   }
 }
+
+
+input[type=password],
+input[type=text] {
+  padding: 10px;
+  border-radius: 2px;
+  border: 1px solid var(--color-gray-10);
+  background-color: var(--color-white);
+}
+
+textarea {
+  padding: 10px;
+  border-radius: 2px;
+  border: 1px solid var(--color-gray-10);
+  background-color: var(--color-white);
+}
+
+select {
+  padding: 10px;
+  border-radius: 2px;
+  border: 1px solid var(--color-gray-10);
+  background-color: var(--color-white);
+
+  appearance: none;
+  cursor: pointer;
+
+  option {
+    font-size: var(--default-font-size);
+  }
+}
+
+button,
+input[type=button],
+input[type=submit] {
+  height: 40px;
+  cursor: pointer;
+  padding: 3px;
+  min-width: 150px;
+  padding: 0px 10px;
+  border-radius: 2px;
+  border: 1px solid var(--color-gray-10);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border: 1px solid var(--color-primary-lighter);
+  box-shadow: 0 0 0 1px var(--color-primary-lighter);
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+
+  .error {
+    color: var(--color-danger);
+    font-size: var(--default-font-size);
+    padding: 5px;
+  }
+
+  &.invalid {
+    input, select, > div {
+      box-shadow: 0 0 0 1px var(--color-danger-lighter);
+      border: 1px solid var(--color-danger-lighter);
+      color: var(--color-danger) !important;
+    }
+  }
+}
+
+.react-select {
+  width: 100%;
+
+  .react-select__control {
+    /* max-height: 38px; */
+    padding: 0px;
+    border: 1px solid var(--color-gray-10);
+    font-size: var(--default-font-size);
+    border-radius: var(--default-border-radius);
+  }
+
+  .react-select__control--is-focused {
+    box-shadow: 0 0 0 1px var(--color-primary-lighter);
+    border-color: var(--color-primary-lighter);
+  }
+
+  .react-select__control:hover {
+    box-shadow: 0 0 0 1px var(--color-primary-lighter);
+    border-color: var(--color-primary-lighter);
+  }
+
+  .react-select__menu {
+    .react-select__option--is-selected {
+      background-color: var(--color-primary);
+    }
+    .react-select__option--is-focused:not(.react-select__option--is-selected) {
+      background-color: var(--color-primary-lighter);
+      color: var(--color-gray-50);
+    }
+  }
+
+  .react-select__multi-value {
+    border-radius: var(--default-border-radius);
+    background-color: var(--color-primary-lighter);
+    padding: 2px;
+  }
+}
+

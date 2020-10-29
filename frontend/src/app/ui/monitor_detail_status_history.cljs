@@ -72,7 +72,7 @@
                       "created" i/circle
                       nil)]
           [:li.status (str/upper (:status item))]
-          [:li.created-at (dt/format (:created-at item) "PPp")]
+          [:li.created-at (dt/format (:created-at item) :datetime-med)]
           [:li.duration (dt/format-time-distance (:created-at item)
                                                  (:finished-at item (dt/now)))]])
        [:div.load-more-button

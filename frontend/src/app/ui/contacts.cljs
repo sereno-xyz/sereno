@@ -112,8 +112,8 @@
      (st/emit! (ptk/event :initialize-contacts))
      (st/emitf (ptk/event :finalize-contacts))))
   (let [contacts (mf/deref st/contacts-ref)]
-    [:section.contacts-table
-     [:div.table
+    [:section.contacts-table-container
+     [:div.contacts-table
       [:div.header.row
        [:div.type "Type"]
        [:div.title "Contact"]
@@ -132,7 +132,7 @@
         show-dropdown? (mf/use-state false)
         show-dropdown  (mf/use-callback #(reset! show-dropdown? true))
         hide-dropdown  (mf/use-callback #(reset! show-dropdown? false))]
-    [:section.topside-options
+    [:section.options-bar
      [:a.add-button {:on-click show-dropdown} i/plus
       [:& dropdown {:show @show-dropdown?
                     :on-close hide-dropdown}

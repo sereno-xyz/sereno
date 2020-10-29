@@ -9,7 +9,6 @@
 
 (ns app.ui.monitor-detail
   (:require
-   ["chart.js" :as cht]
    [app.common.data :as d]
    [app.common.exceptions :as ex]
    [app.common.math :as mth]

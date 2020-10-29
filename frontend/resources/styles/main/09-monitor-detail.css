@@ -91,10 +91,11 @@
     color: var(--color-white);
     font-size: var(--default-h3-font-size);
     font-weight: 500;
-    background-color: var(--color-gray-50);
+    background-color: var(--color-gray-40);
     margin-top: 10px;
     border-radius: var(--default-border-radius);
     cursor: default;
+    box-shadow: 0px 1px 7px var(--color-gray-20);
 
     display: flex;
     align-items: center;
@@ -104,6 +105,7 @@
       height: var(--title-icon-size);
       margin-right: 10px;
       margin-left: 5px;
+      /* fill: var(--color-primary); */
       fill: var(--color-white);
     }
   }

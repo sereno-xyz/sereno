@@ -37,7 +37,7 @@ export function render(node, {width, height, data, onMouseOver, onMouseOut}) {
     .call(xAxis);
 
   svg.append("g")
-    .attr("fill", "var(--color-primary-dark)")
+    .attr("fill", "var(--color-primary-light)")
     .selectAll("rect")
     .data(data)
     .join("rect")

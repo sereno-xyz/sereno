@@ -48,7 +48,9 @@
          [:span "Profile"]]
         ]]
       [:section.right-menu.authenticated
-       [:a.profile-button {:title "Logout" :on-click #(reset! menu? true)} i/user]
+       [:a.profile-section {:title "Logout" :on-click #(reset! menu? true)}
+        [:span.icon i/user]
+        [:span.label (:email profile)]]
        [:& dropdown {:show @menu?
                      :on-close #(reset! menu? false)}
         [:ul.dropdown.dark

@@ -21,7 +21,6 @@
    [app.ui.icons :as i]
    [app.ui.modal :as modal]
    [app.ui.monitor-detail-log]
-   [app.ui.monitor-detail-latency-chart :refer [latency-chart]]
    [app.ui.monitor-form]
    [app.util.dom :as dom]
    [app.util.router :as r]
@@ -163,7 +162,9 @@
       [:div.timeframe-selector
        [:> forms/rselect
         {:options (clj->js period-options)
-         :styles (clj->js forms/select-styles)
+         ;; :styles forms/select-styles
+         :className "react-select"
+         :classNamePrefix "react-select"
          :isClearable false
          :onChange on-period-change
          :value (clj->js value)}]]]

@@ -1,0 +1,40 @@
+.options-bar {
+  display: flex;
+  width: 100%;
+  flex-grow: 1;
+  justify-content: flex-end;
+  margin-top: 10px;
+  padding: 10px;
+
+  .add-button {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid var(--color-gray-10);
+    border-radius: var(--default-border-radius);
+    padding: 10px;
+    align-self: center;
+    background-color: var(--color-success);
+    color: var(--color-white);
+    font-weight: 500;
+    height: 38px;
+    width: 38px;
+
+    > svg {
+      width: 15px;
+      height: 15px;
+      fill: var(--color-white);
+    }
+  }
+
+  .dropdown {
+    top: 0px;
+    left: -170px;
+
+    margin: 0px;
+    padding: 0px;
+    list-style: none;
+    display: flex;
+  }
+}
