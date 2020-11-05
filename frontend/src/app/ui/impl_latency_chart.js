@@ -19,14 +19,14 @@ export function render(node, {width, height, data, period, onMouseOver, onMouseO
   let endDate, startDate;
 
   if (period === "7days") {
-    endDate = dt.DateTime.local().plus(dt.Duration.fromObject({hours: 3}));
+    endDate = dt.DateTime.local().plus(dt.Duration.fromObject({hours: 2}));
     startDate = endDate.minus(dt.Duration.fromObject({days: 7, hours: 3}));
   } else if (period === "30days") {
-    endDate = dt.DateTime.local();
+    endDate = dt.DateTime.local().plus(dt.Duration.fromObject({hours: 6}));
     startDate = endDate.minus(dt.Duration.fromObject({days: 30}));
   } else {
     // period === "24hours"
-    endDate = dt.DateTime.local().plus(dt.Duration.fromObject({minutes:30}));
+    endDate = dt.DateTime.local().plus(dt.Duration.fromObject({minutes:10}));
     startDate = endDate.minus(dt.Duration.fromObject({hours: 24}));
   }
 
