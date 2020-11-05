@@ -9,14 +9,13 @@
 
 (ns app.ui.monitor-detail-log
   (:require
-   [okulary.core :as l]
-   [app.common.math :as mth]
    [app.common.data :as d]
    [app.common.exceptions :as ex]
+   [app.common.math :as mth]
    [app.common.uuid :as uuid]
    [app.events :as ev]
-   [app.store :as st]
    [app.repo :as rp]
+   [app.store :as st]
    [app.ui.forms :as forms]
    [app.ui.icons :as i]
    [app.ui.modal :as modal]
@@ -25,6 +24,7 @@
    [app.util.time :as dt]
    [beicon.core :as rx]
    [cuerdas.core :as str]
+   [okulary.core :as l]
    [potok.core :as ptk]
    [rumext.alpha :as mf]))
 
@@ -54,8 +54,8 @@
        [:li.icon ""]
        [:li.status "Status"]
        [:li.created-at "Created At"]
-       [:li.latency "Latency"]
-       [:li.reason "Reason"]]
+       [:li.reason "Reason"]
+       [:li.latency "Latency"]]
       [:div.table-body
        (for [item (->> (vals (:items log-data))
                        (sort-by :created-at)
@@ -70,8 +70,9 @@
                       nil)]
           [:li.status (str/upper (:status item))]
           [:li.created-at (dt/format (:created-at item) :datetime-med)]
+          [:li.reason (:reason item "---")]
           [:li.latency {:title (:reason item "")} (str (:latency item) "ms")]
-          [:li.reason (:reason item "---")]])
+          ])
        [:div.load-more-button
         (when (:load-more log-data)
           [:a {:on-click lmore} "Load more"])]]]]))

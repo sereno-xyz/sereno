@@ -27,7 +27,6 @@
    [okulary.core :as l]
    [potok.core :as ptk]))
 
-
 (declare logged-in)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -537,8 +536,6 @@
           (->> (rp/req! :retrieve-monitor-summary {:id id :period period})
                (rx/map #(partial on-fetched %))))))))
 
-;; TODO: rename to period
-
 (defn update-summary-period
   [{:keys [id period] :as params}]
   (us/assert ::us/uuid id)
@@ -546,7 +543,7 @@
   (ptk/reify :update-summary-period
     ptk/UpdateEvent
     (update [_ state]
-      (update-in state [:monitor-summary id] assoc :period period))))
+      (d/update-in-when state [:monitor-summary id] assoc :period period))))
 
 (defmethod ptk/resolve :fetch-monitor-status-history
   [_ {:keys [id since limit]
@@ -661,7 +658,7 @@
 
 (defmethod ptk/resolve :initialize-monitor-detail
   [_ {:keys [id] :as params}]
-  (ptk/reify :initialize-monitor-summary
+  (ptk/reify :initialize-monitor-detail
     ptk/WatchEvent
     (watch [_ state stream]
       (let [stoper (rx/filter (ptk/type? :finalize-monitor-detail) stream)]
@@ -683,20 +680,24 @@
   (ptk/reify ::initialize-monitor-summary
     ptk/UpdateEvent
     (update [_ state]
-      (assoc-in state [:monitor-summary id] {:period default-period}))
+      (update-in state [:monitor-summary id :period]
+                 (fn [v] (if (nil? v) default-period v))))
 
     ptk/WatchEvent
     (watch [_ state stream]
       (let [stoper (rx/filter (ptk/type? :finalize-monitor-summary) stream)]
 
         (rx/merge
-         (rx/of (ptk/event :fetch-monitor-summary {:id id}))
+         ;; Initial fetch of summary data
+         (rx/of (ptk/event :fetch-monitor-summary params))
 
+         ;; Watch for summary period updates
          (->> stream
               (rx/filter (ptk/type? :update-summary-period))
               (rx/map #(ptk/event :fetch-monitor-summary params))
               (rx/take-until stoper))
 
+         ;; Watch for backend update notifications
          (->> stream
               (rx/filter (ptk/type? ::websocket-message))
               (rx/map deref)
@@ -752,7 +753,7 @@
         (rx/merge
          (rx/of (ptk/event :fetch-monitor-log params))
 
-         (->> stream
+         #_(->> stream
               (rx/filter (ptk/type? ::websocket-message))
               (rx/map deref)
               (rx/filter #(= (:metadata/channel %) "db_changes"))

@@ -28,6 +28,29 @@
   [type params]
   (ptk/data-event type params))
 
+;; (defn- repr-event
+;;   [event]
+;;   (cond
+;;     (satisfies? ptk/Event event)
+;;     (str "typ: " (pr-str (ptk/type event)))
+
+;;     (and (fn? event)
+;;          (pos? (count (.-name event))))
+;;     (str "fn: " (demunge (.-name event)))
+
+;;     :else
+;;     (str "unk: " (pr-str event))))
+
+
+;; (when *assert*
+;;   (defonce debug-subscription
+;;     (as-> stream $
+;;       (rx/filter ptk/event? $)
+;;       ;; (rx/filter (fn [s] (debug? :events)) $)
+;;       (rx/subscribe $ (fn [event]
+;;                         (println "[stream]: " (repr-event event)))))))
+
+
 ;; Refs
 
 (def route-ref

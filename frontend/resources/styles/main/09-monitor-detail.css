@@ -348,7 +348,7 @@
         }
 
         &.latency {
-          min-width: 70px;
+          min-width: 90px;
         }
 
         &.created-at {
