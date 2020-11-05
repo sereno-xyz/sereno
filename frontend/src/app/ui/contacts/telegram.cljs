@@ -68,14 +68,21 @@
                       :type :info
                       :timeout 3000}))))
 
-
         on-error
         (mf/use-callback
          (fn [{:keys [code type] :as error}]
-           (if (and (= type :validation)
-                    (= code :contact-already-exists))
+           (cond
+             (and (= type :validation)
+                  (= code :contact-already-exists))
              (st/emit! (em/show {:content "Contact already exist!"
                                  :type :error}))
+
+             (and (= type :validation)
+                  (= code :contact-limits-reached))
+             (st/emit! (em/show {:content "Can't create more contacts. Limit reached"
+                                 :type :warning}))
+
+             :else
              (rx/throw error))))
 
         on-submit
