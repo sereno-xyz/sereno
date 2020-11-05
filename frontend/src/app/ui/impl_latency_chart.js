@@ -45,7 +45,7 @@ export function render(node, params) {
              .rangeRound([0, width]));
 
   const y = (d3.scaleLinear()
-             .domain([d3.max(data, d => d.avg), 0])
+             .domain([d3.max(data, d => d["avg"]), 0])
              .rangeRound([0, height-bottomMargin]));
 
   const xAxis = (g) => {
@@ -64,16 +64,16 @@ export function render(node, params) {
     .join("rect")
     .attr("data-index", (d, index) => index)
     .attr("x", (d, index) => {
-      return x(d.ts);
+      return x(d["ts"]);
     })
     .attr("y", (d) => {
-      return y(d.avg);
+      return y(d["avg"]);
     })
     .attr("width", (d) => {
       return barWidth;
     })
     .attr("height", (d) => {
-      return y(0) - y(d.avg);
+      return y(0) - y(d["avg"]);
     });
 
   svg.append("g")
@@ -85,7 +85,7 @@ export function render(node, params) {
     .join("rect")
     .attr("data-index", (d, index) => index)
     .attr("x", (d, index) => {
-      return x(d.ts);
+      return x(d["ts"]);
     })
     .attr("y", (d) => {
       return 0;
