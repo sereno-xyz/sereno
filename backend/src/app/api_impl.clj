@@ -630,15 +630,14 @@
   (db/update! conn :monitor
               {:status status}
               {:id id})
-  (when status
-    (db/exec! conn ["update monitor_status set finished_at=now()
-                      where id=(select id from monitor_status
-                                 where monitor_id=?
-                                   and finished_at is null
-                                 order by created_at desc
-                                 limit 1)" id])
-    (db/exec! conn ["insert into monitor_status (monitor_id, status, created_at)
-                     values (?, ?, now())" id status])))
+  (db/exec! conn ["update monitor_status set finished_at=clock_timestamp()
+                    where id=(select id from monitor_status
+                               where monitor_id=?
+                                 and finished_at is null
+                               order by created_at desc
+                               limit 1)" id])
+  (db/exec! conn ["insert into monitor_status (monitor_id, status, created_at)
+                   values (?, ?, clock_timestamp())" id status]))
 
 
 (s/def ::pause-monitor
@@ -1077,14 +1076,6 @@
   (letfn [(retrieve-monitors [conn]
             (->> (db/exec! conn ["select * from monitor where owner_id=?" profile-id])
                  (map decode-monitor-row)))
-          (retrieve-monitor-contacts [conn]
-            (let [sql "select mc.* from monitor_contact_rel as mc
-                         join monitor as m on (m.id = mc.monitor_id)
-                        where m.owner_id = ?"]
-              (db/exec! conn [sql profile-id])))
-          (retrieve-contacts [conn]
-            (->> (db/exec! conn ["select * from contact where owner_id=?" profile-id])
-                 (map decode-contact-row)))
           (retrieve-monitor-status [conn]
             (let [sql "select ms.* from monitor_status as ms
                          join monitor as m on (m.id = ms.monitor_id)
@@ -1110,14 +1101,10 @@
                   ]
         (let [writer (t/writer zout {:type :json})]
           (t/write! writer {:type :export :format 1 :created-at (dt/now)})
-          (doseq [contact (retrieve-contacts conn)]
-            (t/write! writer {:type :contact :payload contact}))
           (doseq [monitor (retrieve-monitors conn)]
             (t/write! writer {:type :monitor :payload monitor}))
           (doseq [mstatus (retrieve-monitor-status conn)]
             (t/write! writer {:type :monitor-status :payload mstatus}))
-          (doseq [mcontact (retrieve-monitor-contacts conn)]
-            (t/write! writer {:type :monitor-contact :payload mcontact}))
           (loop [since (dt/now)]
             (let [entries (retrieve-monitor-entries conn {:since since})]
               (when (seq entries)
@@ -1146,7 +1133,6 @@
                 (catch Exception e
                   (log/errorf e "Exception on export")))))}))
 
-
 ;; --- Request Import
 
 (defn process-import!
@@ -1159,19 +1145,8 @@
                                  :params (db/tjson (:params monitor))
                                  :owner-id profile-id
                                  :tags (into-array String (:tags monitor))
-                                 :status "started"))
-              (db/insert! conn :monitor-schedule
-                          {:monitor-id id})
+                                 :status "imported"))
               (update state :monitors assoc (:id monitor) id)))
-
-          (process-contact [state contact]
-            (let [id (uuid/next)]
-              (db/insert! conn :contact
-                          (assoc contact
-                                 :id id
-                                 :owner-id profile-id
-                                 :params (db/tjson (:params contact))))
-              (update state :contacts assoc (:id contact) id)))
 
           (process-monitor-status [state mstatus]
             (let [monitor-id (get-in state [:monitors (:monitor-id mstatus)])]
@@ -1179,14 +1154,6 @@
                           (assoc mstatus
                                  :monitor-id monitor-id
                                  :id (uuid/next)))
-              state))
-
-          (process-monitor-contact [state mcontact]
-            (let [monitor-id (get-in state [:monitors (:monitor-id mcontact)])
-                  contact-id (get-in state [:contacts (:contact-id mcontact)])]
-              (db/insert! conn :monitor-contact-rel
-                          {:monitor-id monitor-id
-                           :contact-id contact-id})
               state))
 
           (process-monitor-entries-chunk [state items]
@@ -1199,23 +1166,37 @@
                                             (let [monitor-id (get index (:monitor-id row))]
                                               (assoc row :monitor-id monitor-id))))
                                      (map (apply juxt fields))))
-              state))]
+              state))
 
-    (with-open [in  (io/input-stream (:tempfile file))
-                zin (GZIPInputStream. in)]
-      (let [reader (t/reader zin)]
-        (loop [state {}]
-          (let [item (t/read! reader)]
-            (when-not (nil? item)
-              (recur
-               (case (:type item)
-                 :contact (process-contact state (:payload item))
-                 :monitor (process-monitor state (:payload item))
-                 :monitor-status (process-monitor-status state (:payload item))
-                 :monitor-contact (process-monitor-contact state (:payload item))
-                 :monitor-entries-chunk (process-monitor-entries-chunk state (:payload item))
-                 state)))))
-        (ex/raise :type :abort)))))
+          (handle-monitor-status [id]
+            (db/insert! conn :monitor-schedule {:monitor-id id})
+            (change-monitor-status! conn id "imported")
+            (change-monitor-status! conn id "paused"))
+
+          (read-chunk! [reader]
+            (try
+              (t/read! reader)
+              (catch java.lang.RuntimeException e
+                (let [cause (ex-cause e)]
+                  (when-not (instance? java.io.EOFException cause)
+                    (throw cause))))))
+
+          (handle-import [file]
+            (with-open [in  (io/input-stream (:tempfile file))
+                        zin (GZIPInputStream. in)]
+              (let [reader (t/reader zin)]
+                (loop [state {}]
+                  (let [item (read-chunk! reader)]
+                    (if (nil? item)
+                      state
+                      (recur (case (:type item)
+                               :monitor (process-monitor state (:payload item))
+                               :monitor-status (process-monitor-status state (:payload item))
+                               :monitor-entries-chunk (process-monitor-entries-chunk state (:payload item))
+                               state))))))))]
+
+    (let [state (handle-import file)]
+      (run! handle-monitor-status (vals (:monitors state))))))
 
 (s/def :internal.http.upload/filename ::us/string)
 (s/def :internal.http.upload/size ::us/integer)
@@ -1236,12 +1217,7 @@
   {:spec ::request-import :auth true}
   [{:keys [pool]} {:keys [profile-id file] :as params}]
   (db/with-atomic [conn pool]
-    (try
-      (process-import! conn params)
-      (catch java.lang.RuntimeException e
-        (let [cause (ex-cause e)]
-          (when-not (instance? java.io.EOFException cause)
-            (throw cause)))))
+    (process-import! conn params)
     nil))
 
 

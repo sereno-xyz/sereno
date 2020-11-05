@@ -337,7 +337,7 @@
   (s/keys :req-un [::id ::name ::is-paused]))
 
 (defn update-contact
-  [{:keys [id name is-enabled] :as params}]
+  [{:keys [id] :as params}]
   (s/assert ::update-contact params)
   (ptk/reify ::update-contact
     ptk/UpdateEvent
