@@ -519,7 +519,7 @@
                          (on-error err)
                          (rx/empty))))))))
 
-(def default-period "7 days")
+(def default-period "7days")
 
 (defmethod ptk/resolve :fetch-monitor-summary
   [_ {:keys [id] :as params}]

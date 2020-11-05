@@ -1,10 +1,11 @@
-import d3 from "d3";
+import dt from "luxon";
+import d3 from "../util/d3";
 
 export function clear(node) {
   d3.select(node).selectAll("svg").remove();
 }
 
-export function render(node, {width, height, data, onMouseOver, onMouseOut}) {
+export function render(node, {width, height, data, period, onMouseOver, onMouseOut}) {
   clear(node);
 
   const svg = (d3.select(node).append("svg")
@@ -15,13 +16,26 @@ export function render(node, {width, height, data, onMouseOver, onMouseOut}) {
   const barWidth = 17;
   const bottomMargin = 30;
 
+  let endDate, startDate;
+
+  if (period === "7days") {
+    endDate = dt.DateTime.local().plus(dt.Duration.fromObject({hours: 3}));
+    startDate = endDate.minus(dt.Duration.fromObject({days: 7, hours: 3}));
+  } else if (period === "30days") {
+    endDate = dt.DateTime.local();
+    startDate = endDate.minus(dt.Duration.fromObject({days: 30}));
+  } else {
+    // period === "24hours"
+    endDate = dt.DateTime.local().plus(dt.Duration.fromObject({minutes:30}));
+    startDate = endDate.minus(dt.Duration.fromObject({hours: 24}));
+  }
+
+  // console.log("start=", startDate.toString())
+  // console.log("end=  ", endDate.toString());
+
   const x = (d3.scaleUtc()
-             .domain([data[0].ts, data[data.length - 1].ts])
+             .domain([startDate, endDate])
              .rangeRound([0, width]));
-    // .domain([0, d3.max(data, d => d.value)])
-
-
-
 
   const y = (d3.scaleLinear()
              .domain([d3.max(data, d => d.avg), 0])
@@ -54,14 +68,6 @@ export function render(node, {width, height, data, onMouseOver, onMouseOut}) {
     .attr("height", (d) => {
       return y(0) - y(d.avg);
     });
-    // .on("mouseover", function(d) {
-    //   const target = d3.select(this);
-    //   target.attr("fill", "var(--color-black)");
-    // })
-    // .on("mouseout", function() {
-    //   const target = d3.select(this);
-    //   target.attr("fill", "var(--color-info)");
-    // });
 
   svg.append("g")
     .attr("fill", "var(--color-gray-5)")

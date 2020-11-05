@@ -84,9 +84,9 @@
        [:div.details-field (mth/precision (:latency-p90 summary) 0) " ms"]]]]))
 
 (def period-options
-  [{:value "24 hours" :label "24 hours"}
-   {:value "7 days" :label "7 days"}
-   {:value "30 days" :label "30 days"}])
+  [{:value "24hours" :label "24 hours"}
+   {:value "7days"   :label "7 days"}
+   {:value "30days"  :label "30 days"}])
 
 (defn summary-ref
   [id]
@@ -99,9 +99,9 @@
         summary-ref  (mf/use-memo (mf/deps (:id monitor)) #(summary-ref (:id monitor)))
         summary      (mf/deref summary-ref)
 
-        summary-data (:data summary)
+        summary-data    (:data summary)
         summary-buckets (:buckets summary)
-        summary-period (:period summary)
+        summary-period  (:period summary)
 
         selected-bucket (mf/use-state nil)
         value (d/seek #(= summary-period (:value %)) period-options)
@@ -132,14 +132,13 @@
        (st/emitf (ptk/event :finalize-monitor-summary {:id (:id monitor)}))))
 
     (mf/use-layout-effect
-     (mf/deps summary-buckets)
+     (mf/deps summary-buckets summary-period)
      (fn []
        (when summary-buckets
          (let [dom  (mf/ref-val chart-ref)
-               data (->> summary-buckets
-                         (map #(assoc % :ts (.toJSDate ^js (:ts %))))
-                         (clj->js))]
+               data (clj->js summary-buckets)]
            (ilc/render dom #js {:width 1160
+                                :period summary-period
                                 :height (.-clientHeight dom)
                                 :onMouseOver on-mouse-over
                                 :onMouseOut on-mouse-out
@@ -162,7 +161,6 @@
       [:div.timeframe-selector
        [:> forms/rselect
         {:options (clj->js period-options)
-         ;; :styles forms/select-styles
          :className "react-select"
          :classNamePrefix "react-select"
          :isClearable false

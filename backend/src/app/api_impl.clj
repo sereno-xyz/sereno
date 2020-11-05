@@ -752,9 +752,10 @@
 (declare sql:monitor-uptime)
 
 (def bucket-size
-  {"24 hours"  (db/interval "30 minutes")
-    "7 days"   (db/interval "3 hour")
-    "30 days"  (db/interval "12 hours")})
+  "Translates the period to the bucket size."
+  {"24hours"  (db/interval "30 minutes")
+   "7days"    (db/interval "3 hour")
+   "30days"   (db/interval "12 hours")})
 
 (s/def ::period #(contains? bucket-size %))
 (s/def ::retrieve-monitor-latency-summary
