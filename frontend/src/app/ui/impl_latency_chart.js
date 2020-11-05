@@ -5,7 +5,14 @@ export function clear(node) {
   d3.select(node).selectAll("svg").remove();
 }
 
-export function render(node, {width, height, data, period, onMouseOver, onMouseOut}) {
+export function render(node, params) {
+  const width = params["width"];
+  const height = params["height"];
+  const data = params["data"];
+  const period = params["period"];
+  const onMouseOut = params["onMouseOut"];
+  const onMouseOver = params["onMouseOver"];
+
   clear(node);
 
   const svg = (d3.select(node).append("svg")
