@@ -239,7 +239,6 @@
         fill: var(--color-gray-40);
       }
 
-
       &.status-up {
         svg {
           fill: var(--color-success);
@@ -284,6 +283,7 @@
       }
     }
 
+
     .table-header {
       font-weight: 500;
     }
@@ -292,6 +292,10 @@
       svg {
         width: 20px;
         height: 20px;
+      }
+
+      &:hover {
+        background-color: var(--color-primary-5);
       }
     }
   }
@@ -380,6 +384,10 @@
       svg {
         width: 20px;
         height: 20px;
+      }
+
+      &:hover {
+        background-color: var(--color-primary-5);
       }
     }
   }

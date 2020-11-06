@@ -74,7 +74,7 @@
        [:div.details-field "Uptime (%)"]
        [:div.details-field (mth/precision uptime 2) "%"]]
       [:div.details-row
-       [:div.details-field "Last downtime"]
+       [:div.details-field "Downtime"]
        [:div.details-field (dt/humanize-duration (* 1000 dsecs))]]
       [:div.details-row
        [:div.details-field "AVG Latency"]

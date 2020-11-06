@@ -31,7 +31,8 @@
     margin-right: 20px;
 
     .logo-image {
-      width: 40px;
+      /* width: 40px; */
+      margin-right: 5px;
       height: 40px;
       display: flex;
       justify-content: center;
