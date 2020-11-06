@@ -154,7 +154,7 @@ uncompressed.
 
 
 **NOTE:** The bundle archive is platform agnostic, and it tested under
-**x86_64** and **aarch64**.
+**amd64** and **arm64** (AWS Graviton2).
 
 
 ## Configuration ##
@@ -244,8 +244,11 @@ provided. The webhook for telegram is <yourdomain>/webhook/telegram?secret_key=<
 ### Other ###
 
 ```bash
+# Options to pass to the JVM; Optional (example values openjdk15)
+JVM_OPTS="-XX:+AlwaysPreTouch -Xms128m -Xmx128m -XX:+UseZGC"
+
 # Options to pass to the JVM; Optional (example values)
-JVM_OPTS="-XX:+AlwaysPreTouch -Xms224m -Xmx224m -XX:+UnlockExperimentalVMOptions -XX:+UseZGC"
+JVM_OPTS="-XX:+AlwaysPreTouch -Xms128m -Xmx128m -XX:+UnlockExperimentalVMOptions -XX:+UseZGC"
 ```
 
 
