@@ -123,7 +123,15 @@
         (mf/use-callback
          (mf/deps summary-buckets)
          (fn []
-           (reset! selected-bucket nil)))]
+           (reset! selected-bucket nil)))
+
+        go-back   (mf/use-callback #(st/emit! (r/nav :monitor-list)))
+        go-detail #(st/emit! (r/nav :monitor-detail {:id (:id monitor)}))
+        go-log    #(st/emit! (r/nav :monitor-log {:id (:id monitor)}))
+        pause     #(st/emit! (ev/pause-monitor monitor))
+        resume    #(st/emit! (ev/resume-monitor monitor))
+        edit      #(modal/show! {::modal/type :monitor-form
+                                 :item monitor})]
 
     (mf/use-effect
      (mf/deps monitor)
@@ -147,7 +155,14 @@
              (ilc/clear dom))))))
 
     [:div.main-content
-     [:h3 i/info "Summary"]
+     [:div.section-title-bar
+      [:h2 (:name monitor)]
+      [:div.options
+       (if (= "paused" (:status monitor))
+         [:a.inline-button {:on-click resume} i/play "Resume"]
+         [:a.inline-button {:on-click pause} i/pause "Pause"])
+       [:a.inline-button {:on-click edit} i/edit "Edit"]]]
+     [:hr]
 
      [:div.topside-options
       (when-let [data (deref selected-bucket)]

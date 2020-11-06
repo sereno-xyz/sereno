@@ -25,57 +25,44 @@
     width: 100%;
   }
 
-  .title-section {
+  .section-title-bar {
     display: flex;
-  }
 
-  .title {
-    display: flex;
-    flex-grow: 1;
-    padding-left: 10px;
-  }
-
-  h2 {
-    font-size: var(--default-font-size);
-    font-weight: 500;
-    margin: 0px;
-    display: flex;
-    align-items: center;
-    cursor: default;
-  }
-
-  .go-back {
-    display: flex;
-    display: none;
-    justify-content: center;
-    align-items: center;
-    width: 30px;
-    height: 45px;
-
-    svg {
-      width: 20px;
-      height: 20px;
+    &.secondary {
+      margin-top: 50px;
     }
-  }
 
-  .header-options {
-    display: flex;
-    align-items: center;
-    padding-right: 5px;
-
-    .inline-button {
+    h2 {
+      flex-grow: 1;
+      padding-left: 10px;
+      font-size: var(--default-font-size);
+      font-weight: 500;
+      margin: 0px;
+      height: 28px;
       display: flex;
       align-items: center;
-      margin: 5px 10px;
-      color: var(--color-gray-50);
-      font-weight: 500;
-      font-size: var(--default-font-size);
+      cursor: default;
     }
-    svg {
-      width: 15px;
-      height: 15px;
-      fill: var(--color-gray-50);
-      margin-right: 5px;
+
+    .options {
+      display: flex;
+      align-items: center;
+      padding-right: 5px;
+
+      .inline-button {
+        display: flex;
+        align-items: center;
+        margin: 5px 10px;
+        color: var(--color-gray-50);
+        font-weight: 500;
+        font-size: var(--default-font-size);
+      }
+      svg {
+        width: 15px;
+        height: 15px;
+        fill: var(--color-gray-50);
+        margin-right: 5px;
+      }
     }
   }
 
@@ -86,16 +73,23 @@
     width: 100%;
   }
 
+  hr {
+    border: 1px dashed var(--color-gray-10);
+    width: 100%;
+    border-radius: 10px;
+  }
+
+
   h3 {
-    padding: 10px 10px;
-    color: var(--color-white);
+    padding: 2px;
+    color: var(--color-gray-60);
     font-size: var(--default-h3-font-size);
     font-weight: 500;
-    background-color: var(--color-gray-40);
+    /* background-color: var(--color-gray-40); */
     margin-top: 10px;
     border-radius: var(--default-border-radius);
     cursor: default;
-    box-shadow: 0px 1px 7px var(--color-gray-20);
+    /* box-shadow: 0px 1px 7px var(--color-gray-20); */
 
     display: flex;
     align-items: center;
@@ -106,7 +100,7 @@
       margin-right: 10px;
       margin-left: 5px;
       /* fill: var(--color-primary); */
-      fill: var(--color-white);
+      fill: var(--color-gray-50);
     }
   }
 

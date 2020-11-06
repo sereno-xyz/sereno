@@ -31,39 +31,6 @@
    [potok.core :as ptk]
    [rumext.alpha :as mf]))
 
-(mf/defc monitor-header
-  {::mf/wrap [mf/memo]}
-  [{:keys [monitor section] :as props}]
-  (let [go-back (mf/use-callback #(st/emit! (r/nav :monitor-list)))
-        go-detail #(st/emit! (r/nav :monitor-detail {:id (:id monitor)}))
-        go-log #(st/emit! (r/nav :monitor-log {:id (:id monitor)}))
-        pause #(st/emit! (ev/pause-monitor monitor))
-        resume #(st/emit! (ev/resume-monitor monitor))
-        edit   #(modal/show! {::modal/type :monitor-form
-                              :item monitor})]
-    [:div.header
-     [:div.title-section
-      [:div.title
-       [:a.go-back {:on-click go-back :title "Go back"} i/chevron-left]
-       [:h2 (:name monitor)]]
-      [:div.header-options
-       (when (not= section :monitor-log)
-         [:*
-          (if (= "paused" (:status monitor))
-            [:a.inline-button {:on-click resume} i/play "Resume"]
-            [:a.inline-button {:on-click pause} i/pause "Pause"])
-          [:a.inline-button {:on-click edit} i/edit "Edit"]])
-
-       (if (= section :monitor-log)
-         [:a.inline-button
-          {:on-click go-detail}
-          i/chevron-left
-          "Go back"]
-         [:a.inline-button
-          {:on-click go-log}
-          i/list-alt
-          "Log"])]]]))
-
 (defn monitor-ref
   [id]
   (l/derived (l/in [:monitors id]) st/state))
@@ -86,8 +53,6 @@
     (when monitor
       [:main.monitor-detail-section
        [:section
-        [:& monitor-header {:monitor monitor :section section}]
-
         (case section
           :monitor-detail
           [:*

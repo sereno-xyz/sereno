@@ -48,7 +48,10 @@
        (st/emitf (ptk/event :finalize-monitor-status-history monitor))))
 
     [:div.main-content
-     [:h3 i/history "Status History"]
+     [:div.section-title-bar.secondary
+      [:h2 "Status History"]]
+     [:hr]
+
      [:div.history-table
       [:ul.table-header
        [:li.icon ""]
