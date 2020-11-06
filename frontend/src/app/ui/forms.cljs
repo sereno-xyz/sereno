@@ -133,7 +133,7 @@
         (mf/use-callback
          (mf/deps form)
          (fn [item]
-           (let [value (into #{} (amap item i ret (obj/get (aget item i) "value")))]
+           (let [value (into #{} (map #(obj/get % "value")) (seq item))]
              (swap! form (fn [state]
                            (-> state
                                (assoc-in [:data name] value)
