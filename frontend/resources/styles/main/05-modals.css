@@ -1,0 +1,374 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public */
+/* License, v. 2.0. If a copy of the MPL was not distributed with this */
+/* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/* Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz> */
+
+.modal-wrapper {
+  display: flex;
+
+  .full-width {
+    flex-grow: 1;
+    width: 100%;
+  }
+
+  p { font-size: var(--default-font-size); }
+
+  .error-message {
+    color: var(--color-danger);
+  }
+
+  .close {
+    position: absolute;
+    cursor: pointer;
+    right: 25px;
+    top: 25px;
+
+    svg {
+      fill: var(--color-gray-30);
+      height: 20px;
+      width: 20px;
+
+      &:hover {
+        fill: var(--color-danger);
+      }
+    }
+  }
+
+  .row {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    flex-grow: 1;
+    width: 100%;
+  }
+
+}
+
+.modal-overlay {
+  align-items: center;
+  background-color: var(--color-modal-overlay);
+  display: flex;
+  justify-content: center;
+  position: fixed;
+  height: 100%;
+  left: 0;
+  top: 0;
+  width: 100%;
+  z-index: 1000;
+}
+
+.modal {
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  width: 448px;
+  background-color: var(--color-white);
+  margin: 3px;
+
+  .modal-header {
+    align-items: center;
+    background-color: var(--color-white);
+    border-radius: 8px 8px 0px 0px;
+    color: var(--color-black);
+    display: flex;
+    height: 63px;
+    justify-content: space-between;
+  }
+
+  .modal-header-title {
+    display: flex;
+    align-items: center;
+    font-size: vat(--default-h3-font-size);
+    padding-left: 16px;
+
+    h2 {
+      margin: 0;
+    }
+  }
+
+  .modal-close-button {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    height: 30px;
+    justify-content: center;
+    margin-right: 16px;
+    width: 30px;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  .modal-content {
+    display: flex;
+    flex-direction: column;
+    padding: 10px 20px;
+    border-top: 1px solid var(--color-gray-10);
+    h3 {
+      color: var(--color-gray-40);
+      font-size: var(--default-font-size);
+    }
+
+    p {
+      margin: 7px 0px;
+    }
+  }
+
+  .modal-footer {
+    display: flex;
+    height: 63px;
+    padding: 0px 16px;
+    border-top: 1px solid var(--color-gray-10);
+
+    .action-buttons {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      justify-content: flex-start;
+      align-items: center;
+      margin: 0px;
+
+      input {
+        margin-bottom: 0px;
+      }
+    }
+  }
+
+  .columns {
+    display: flex;
+    flex-direction: row;
+    max-height: 70vh;
+    overflow-y: auto;
+
+    .column {
+      flex-direction: column;
+      flex-grow: 1;
+      min-width: 260px;
+      max-width: 260px;
+      padding: 0px 5px;
+
+      &:not(:last-child) {
+        margin-right: 15px;
+      }
+    }
+
+    @media (max-width: 700px) {
+      flex-direction: column;
+
+      .column:not(:last-child) {
+        margin-right: inherit;
+      }
+    }
+  }
+
+  .full-width-message {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 10px;
+  }
+}
+
+.monitor-form-modal {
+  width: 900px;
+  min-height: 557px;
+
+  textarea {
+    white-space: nowrap;
+    overflow: auto;
+    height: 160px;
+  }
+
+  .columns .column {
+    flex-direction: column;
+    flex-grow: 1;
+    padding: 0px 10px;
+    max-width: inherit;
+    width: 50%;
+  }
+
+  @media (max-width: 700px) {
+    .columns .column {
+      width: 100%;
+    }
+  }
+
+  .monitor-test {
+    margin-left: 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    .check-button {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 5px;
+      cursor: pointer;
+    }
+
+    .result {
+      cursor: default;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      span:nth-child(1) {
+        display: flex;
+        min-width: 25px;
+      }
+    }
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    &.deactivated {
+      svg {
+        fill: var(--color-gray-20);
+      }
+
+      .check-button {
+        cursor: default;
+      }
+    }
+
+    &.failed {
+      svg {
+        fill: var(--color-danger);
+      }
+      .result {
+        color: var(--color-danger);
+      }
+    }
+
+    &.success {
+      svg {
+        fill: var(--color-success-dark);
+      }
+      .result {
+        color: var(--color-success-dark);
+      }
+    }
+  }
+}
+
+.confirm-dialog {
+  .action-buttons {
+    width: 100%;
+    display: flex;
+
+    > a {
+      border-radius: 2px;
+      text-decoration: none;
+      display: flex;
+      height: 40px;
+      align-items: center;
+      justify-tent: center;
+      cursor: pointer;
+      &:not(:last-child) {
+        margin-right: 20px;
+      }
+    }
+  }
+
+  .accept-button {
+    padding: 0.5rem 2rem;
+    border: 1px solid var(--color-danger-dark);
+    background: var(--color-danger);
+    color: var(--color-white);
+    font-weight: 500;
+    margin-bottom: 0;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-danger-dark);
+    }
+
+    &.disabled {
+      background: var(--color-danger-lighter);
+      border-color: var(--color-danger-lighter);
+      color: var(--color-gray-60);
+    }
+  }
+
+  .form-row {
+    margin: 15px 0px;
+
+    .error {
+      margin-top: 10px;
+      font-size: var(--default-font-size);
+      color: var(--color-danger);
+    }
+  }
+
+}
+
+.email-change-modal {
+  .generic-form {
+    width: 100%;
+  }
+
+  .modal-content {
+    max-height: 500px;
+    max-width: 500px;
+  }
+
+  .row {
+    color: var(--color-gray-40);
+    font-weight: 500;
+    font-size: var(--default-font-size);
+  }
+}
+
+.telegram-link-info {
+  .qrcode {
+    margin-top: 15px;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+
+    img {
+      width: 200px;
+      height: 200px;
+    }
+
+    .link {
+      display: flex;
+      justify-content: center;
+
+      a {
+        width: 197px;
+        overflow: hidden;
+
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+
+      }
+    }
+
+    .options {
+      display: flex;
+      width: 100%;
+      justify-content: center;
+
+      > span {
+        cursor: pointer;
+        &.active {
+          font-weight: 600;
+          color: var(--color-primary-dark);
+        }
+
+        &:first-child {
+          margin-right: 10px;
+        }
+      }
+    }
+  }
+}
+

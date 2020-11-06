@@ -49,7 +49,7 @@
 
 (def ^:privare +write-handlers+
   {Blob blob-write-handler
-   js/Date instant-write-handler})
+   dt/DateTime instant-write-handler})
 
 ;; --- Public Api
 

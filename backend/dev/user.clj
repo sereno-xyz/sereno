@@ -11,7 +11,6 @@
   (:require
    [app.config :as cfg]
    [app.init :as init]
-   [app.util.blob :as blob]
    [app.util.time :as dt]
    [app.util.transit :as t]
    [clj-kondo.core :as kondo]

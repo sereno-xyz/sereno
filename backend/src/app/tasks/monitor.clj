@@ -180,7 +180,7 @@
                    values (?, ?, now(), ?)" id (:status result) (:reason result)]))
 
 (def sql:monitor-contacts
-  "select c.*
+  "select c.*, mcr.id as subscription_id
      from monitor_contact_rel as mcr
     inner join contact as c on (c.id = mcr.contact_id)
     where mcr.monitor_id = ?

@@ -24,7 +24,7 @@
    [app.util.dom :as dom]
    [app.util.forms :as fm]
    [app.util.router :as r]
-   [app.util.time :as tm]
+   [app.util.time :as dt]
    [beicon.core :as rx]
    [cljs.spec.alpha :as s]
    [clojure.set :as set]
@@ -61,7 +61,7 @@
      (mf/deps @form)
      (st/emitf (ev/update-monitor-list-filters (:clean-data @form))))
 
-    [:div.filters
+    [:div.monitor-filters
      [:div.search
       [:& tags-select
        {:options @atags
@@ -86,10 +86,9 @@
 (mf/defc header
   [{:keys [filters] :as props}]
   (let [open-form (st/emitf (modal/show {:type :monitor-form}))]
-    [:div.header
+    [:div.options-bar
      [:& header-filters {:filters filters}]
-     [:div.options
-      [:a.add-monitor {:on-click open-form} i/plus]]]))
+     [:a.add-button {:on-click open-form} i/plus]]))
 
 (mf/defc monitor-item
   [{:keys [item] :as props}]
@@ -128,7 +127,7 @@
          (mf/deps item)
          (fn [event]
            (let [target (dom/get-target event)]
-             (.setAttribute target "title" (tm/timeago (:modified-at item))))))]
+             (.setAttribute target "title" (dt/timeago (:modified-at item))))))]
 
     [:li {:key (:id item)
           :class (dom/classnames
@@ -158,9 +157,9 @@
 
       [:div.monitor-updated
        {:on-mouse-enter on-hover
-        :title (tm/timeago (:modified-at item))}
+        :title (dt/timeago (:modified-at item))}
        (if-let [ma (:monitored-at item)]
-         (tm/format ma "PPpp")
+         (dt/format ma :datetime-med)
          "---")]
 
       [:div.monitor-options
@@ -223,7 +222,7 @@
 
   (let [filters (mf/deref monitor-list-filters-ref)]
     [:main.monitor-list-section
-     [:section
+     [:div.single-column-1200
       [:& header {:filters filters}]
       [:& monitor-list {:filters filters}]]]))
 

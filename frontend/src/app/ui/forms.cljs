@@ -103,19 +103,6 @@
                         (on-submit form event))}
     children]])
 
-(def select-styles
-  {:container (fn [provided state]
-                 (-> provided
-                     ;; (obj/set! "display" "flex")
-                     ;; (obj/set! "flexGrow" "1")
-                     (obj/set! "width" "100%")))
-
-   :control (fn [provided state]
-              (-> provided
-                  (obj/set! "padding" "2px")
-                  (obj/set! "border" "1px solid #b1b2b5")
-                  (obj/set! "borderRadius" "2px")))})
-
 (mf/defc tags-select
   {::mf/wrap-props false
    ::mf/wrap [#(mf/deferred % tm/raf)]}
@@ -155,7 +142,8 @@
         props (-> (obj/without props [:from :children :label])
                   (obj/merge #js {:options options
                                   :defaultInputValue ""
-                                  :styles select-styles
+                                  :className "react-select"
+                                  :classNamePrefix "react-select"
                                   :isMulti true
                                   :onBlur on-blur
                                   :onChange on-change
@@ -230,8 +218,9 @@
                         :value (str "edn:" (pr-str (:value item)))}))
 
         props (-> (obj/without props [:form :children :label :value-fn :options])
-                  (obj/merge! #js {:styles select-styles
-                                   :isMulti mult
+                  (obj/merge! #js {:isMulti mult
+                                   :classNamePrefix "react-select"
+                                   :className "react-select"
                                    :defaultInputValue ""
                                    :onBlur on-blur
                                    :inFocus on-focus

@@ -1,0 +1,206 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public */
+/* License, v. 2.0. If a copy of the MPL was not distributed with this */
+/* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/* Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz> */
+
+
+.button {
+  padding: 0.5rem 2rem;
+  border: 1px solid var(--color-gray-10);
+  font-weight: 500;
+  margin-bottom: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  text-decoration: none;
+  color: var(--color-gray-60);
+  background-color: var(--color-gray-5);
+  height: 40px;
+  margin: 0px 5px;
+
+  &:hover {
+    text-decoration: none;
+    color: var(--color-gray-60);
+    background-color: var(--color-gray-10);
+  }
+}
+
+.form-container {
+  form {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .form-links {
+    display: flex;
+    flex-direction: column;
+    a {
+      font-weight: 400;
+      color: var(--color-gray-40);
+    }
+  }
+
+  .form-columns {
+    display: flex;
+    flex-direction: row;
+
+    > .column {
+      width: 100%;
+      padding: 10px;
+    }
+  }
+
+  .form-row {
+    color: var(--color-gray-50);
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+    flex-grow: 1;
+    font-size: var(--default-font-size);
+
+    label {
+      font-weight: 500;
+    }
+
+    &.submit-row {
+      margin-top: 20px;
+    }
+  }
+
+  .action-buttons {
+    margin-top: 10px;
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  label {
+    padding-bottom: 5px;
+  }
+}
+
+input {
+  font-weight: 300;
+  &:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 1000px #fff inset;
+    font-family: "Inter", sans-serif;
+    font-size: var(--default-font-size);
+    font-weight: 300;
+  }
+
+  &:-webkit-autofill::first-line {
+    font-family: "Inter", sans-serif;
+    font-size: var(--default-font-size);
+    font-weight: 300;
+  }
+}
+
+
+input[type=password],
+input[type=text] {
+  padding: 10px;
+  border-radius: 2px;
+  border: 1px solid var(--color-gray-10);
+  background-color: var(--color-white);
+}
+
+textarea {
+  padding: 10px;
+  border-radius: 2px;
+  border: 1px solid var(--color-gray-10);
+  background-color: var(--color-white);
+}
+
+select {
+  padding: 10px;
+  border-radius: 2px;
+  border: 1px solid var(--color-gray-10);
+  background-color: var(--color-white);
+
+  appearance: none;
+  cursor: pointer;
+
+  option {
+    font-size: var(--default-font-size);
+  }
+}
+
+button,
+input[type=button],
+input[type=submit] {
+  height: 40px;
+  cursor: pointer;
+  padding: 3px;
+  min-width: 150px;
+  padding: 0px 10px;
+  border-radius: 2px;
+  border: 1px solid var(--color-gray-10);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border: 1px solid var(--color-primary-lighter);
+  box-shadow: 0 0 0 1px var(--color-primary-lighter);
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+
+  .error {
+    color: var(--color-danger);
+    font-size: var(--default-font-size);
+    padding: 5px;
+  }
+
+  &.invalid {
+    input, select, > div {
+      box-shadow: 0 0 0 1px var(--color-danger-lighter);
+      border: 1px solid var(--color-danger-lighter);
+      color: var(--color-danger) !important;
+    }
+  }
+}
+
+.react-select {
+  width: 100%;
+
+  .react-select__control {
+    /* max-height: 38px; */
+    padding: 0px;
+    border: 1px solid var(--color-gray-10);
+    font-size: var(--default-font-size);
+    border-radius: var(--default-border-radius);
+  }
+
+  .react-select__control--is-focused {
+    box-shadow: 0 0 0 1px var(--color-primary-lighter);
+    border-color: var(--color-primary-lighter);
+  }
+
+  .react-select__control:hover {
+    box-shadow: 0 0 0 1px var(--color-primary-lighter);
+    border-color: var(--color-primary-lighter);
+  }
+
+  .react-select__menu {
+    .react-select__option--is-selected {
+      background-color: var(--color-primary);
+    }
+    .react-select__option--is-focused:not(.react-select__option--is-selected) {
+      background-color: var(--color-primary-lighter);
+      color: var(--color-gray-50);
+    }
+  }
+
+  .react-select__multi-value {
+    border-radius: var(--default-border-radius);
+    background-color: var(--color-primary-lighter);
+    padding: 2px;
+  }
+}
+

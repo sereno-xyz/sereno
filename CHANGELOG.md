@@ -2,7 +2,11 @@
 
 ## v1-2020-SNAPSHOT
 
-**Unreleased**
+- Add telegram bot api and webhooks integration.
+- Fix minor issue with user activation when is logged in using
+  external authententication provider.
+- Internal refactor of contacts.
+- Minor interface restyling.
 
 
 ## v1-2020.10.16-0

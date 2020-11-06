@@ -1,4 +1,4 @@
 (ns cuerdas.vendor.xregexp
-  (:require ["xregexp" :as XRegExp]))
+  (:require ["xregexp/src/index" :default XRegExp]))
 
 (goog/exportSymbol "XRegExp" XRegExp)

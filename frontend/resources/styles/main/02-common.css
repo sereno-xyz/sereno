@@ -1,8 +1,8 @@
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
-//
-// Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
+/* This Source Code Form is subject to the terms of the Mozilla Public */
+/* License, v. 2.0. If a copy of the MPL was not distributed with this */
+/* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/* Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz> */
 
 body {
   display: flex;
@@ -34,23 +34,26 @@ svg {
 
 a {
   cursor: pointer;
-  color: $color-primary-dark;
+  color: var(--color-gray-50);
+  font-size: var(--default-font-size);
+  font-weight: 500;
   text-decoration: none;
 
   &:hover {
-    color: $color-primary;
+    color: var(--color-primary);
     text-decoration: none;
   }
 }
 
 p {
-  font-size: $fs13;
+  font-size: var(--default-font-size);
   margin-bottom: 1rem;
-  line-height: $base-lh-sm;
+  line-height: 1.33;
 }
 
 li {
-  line-height: $base-lh-sm;
+  line-height: 1.33;
+  font-size: var(--default-font-size);
 }
 
 ul {
@@ -59,34 +62,39 @@ ul {
 
 strong {
   font-weight: bold;
+  font-size: var(--default-font-size);
 }
 
 h1 {
-  font-size: $fs34;
+  font-size: var(--default-h1-font-size);
   font-weight: 500;
-  line-height: $title-lh-sm;
+  line-height: 1.15;
 }
 
 h2 {
-  font-size: $fs26;
+  font-size: var(--default-h2-font-size);
   font-weight: 400;
-  line-height: $title-lh-sm;
+  line-height: 1.15;
 }
 
 h3 {
-  font-size: $fs22;
+  font-size: var(--default-h3-font-size);
   font-weight: 300;
 }
 
 h4 {
-  font-size: $fs18;
+  font-size: var(--default-h4-font-size);
   font-weight: 300;
 }
 
+label {
+  font-size: var(--default-font-size);
+}
+
 input[type=number]::-webkit-inner-spin-button,
-    input[type=number]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-     margin: 0;
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 input[type=number] {

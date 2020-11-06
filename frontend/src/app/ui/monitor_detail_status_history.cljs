@@ -45,11 +45,13 @@
      (mf/deps (:id monitor))
      (fn []
        (st/emit! (ptk/event :initialize-monitor-status-history monitor))
-       (fn []
-         (st/emit! ::ev/finalize-monitor-status-history))))
+       (st/emitf (ptk/event :finalize-monitor-status-history monitor))))
 
     [:div.main-content
-     [:h3 "Status History"]
+     [:div.section-title-bar.secondary
+      [:h2 "Status History"]]
+     [:hr]
+
      [:div.history-table
       [:ul.table-header
        [:li.icon ""]
@@ -73,7 +75,7 @@
                       "created" i/circle
                       nil)]
           [:li.status (str/upper (:status item))]
-          [:li.created-at (dt/format (:created-at item) "PPp")]
+          [:li.created-at (dt/format (:created-at item) :datetime-med)]
           [:li.duration (dt/format-time-distance (:created-at item)
                                                  (:finished-at item (dt/now)))]])
        [:div.load-more-button

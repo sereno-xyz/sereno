@@ -16,6 +16,10 @@
   #?(:clj
      (:import linked.set.LinkedSet)))
 
+(def sentinel
+  #?(:clj (Object.)
+     :cljs (js/Object.)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Data Structures Manipulation
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -30,6 +34,34 @@
           (dissoc m k)))
       m)
     (dissoc m k)))
+
+(defn update-in-when
+  [m key-seq f & args]
+  (let [found (get-in m key-seq sentinel)]
+    (if-not (identical? sentinel found)
+      (assoc-in m key-seq (apply f found args))
+      m)))
+
+(defn update-when
+  [m key f & args]
+  (let [found (get m key sentinel)]
+    (if-not (identical? sentinel found)
+      (assoc m key (apply f found args))
+      m)))
+
+(defn assoc-in-when
+  [m key-seq v]
+  (let [found (get-in m key-seq sentinel)]
+    (if-not (identical? sentinel found)
+      (assoc-in m key-seq v)
+      m)))
+
+(defn assoc-when
+  [m key v]
+  (let [found (get m key sentinel)]
+    (if-not (identical? sentinel found)
+      (assoc m key v)
+      m)))
 
 (defn concat
   [& colls]

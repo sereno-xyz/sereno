@@ -1,3 +1,9 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public */
+/* License, v. 2.0. If a copy of the MPL was not distributed with this */
+/* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/* Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz> */
+
 .inline-notifications {
   display: flex;
   flex-direction: column;
@@ -9,11 +15,11 @@
     flex-direction: column;
 
     &.opaque {
-      color: $color-gray-30;
+      color: var(--color-gray-30);
     }
 
     &.warning {
-      color: $color-warning;
+      color: var(--color-warning);
     }
   }
 }
@@ -44,7 +50,7 @@
     cursor: pointer;
 
     svg {
-      fill: $color-white;
+      fill: var(--color-white);
       height: 18px;
       width: 18px;
     }
@@ -52,40 +58,40 @@
 
   .content {
     align-items: center;
-    color: $color-white;
+    color: var(--color-white);
     display: flex;
     justify-content: center;
     max-width: 60%;
 
     .icon {
       display: flex;
-      margin-right: $medium;
+      margin-right: 15px;
       svg {
-        fill: $color-white;
+        fill: var(--color-white);
         height: 20px;
         width: 20px;
       }
     }
 
     span {
-      font-size: $fs18;
+      font-size: var(--default-font-size);
     }
   }
 
   &.error {
-    background-color: $color-danger;
+    background-color: var(--color-danger);
   }
 
   &.success {
-    background-color: $color-success;
+    background-color: var(--color-success);
   }
 
   &.warning {
-    background-color: $color-warning;
+    background-color: var(--color-warning);
   }
 
   &.info {
-    background-color: $color-info;
+    background-color: var(--color-info);
   }
 
   &.quick {

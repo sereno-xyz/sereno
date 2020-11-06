@@ -16,6 +16,7 @@
    [app.db :as db]
    [app.emails :as emails]
    [app.http :as http]
+   [app.telegram :as telegram]
    [app.tasks.monitor :refer [run-monitor!]]
    [app.tasks.notify :refer [notify!]]
    [app.util.time :as dt]
@@ -34,7 +35,6 @@
    java.util.zip.GZIPOutputStream
    java.io.InputStream
    java.io.OutputStream))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Profile & Auth
@@ -171,6 +171,7 @@
                          :fullname fullname
                          :email (str/lower email)
                          :external-id external-id
+                         :is-active true
                          :password "!"}))
 
           (register-profile [conn params]
@@ -181,6 +182,7 @@
       (let [profile (db/get-by-params conn :profile {:email (str/lower email)})
             profile (or profile (register-profile conn params))]
         (dissoc profile :password)))))
+
 
 ;; --- Mutation: Update Profile
 
@@ -378,9 +380,8 @@
   claims)
 
 (defmethod process-token :unsub-monitor
-  [{:keys [conn] :as cfg} {:keys [contact-id monitor-id] :as claims}]
-  (db/delete! conn :monitor-contact-rel {:monitor-id monitor-id
-                                         :contact-id contact-id})
+  [{:keys [conn] :as cfg} {:keys [id] :as claims}]
+  (db/delete! conn :monitor-contact-rel {:id id})
   claims)
 
 (defmethod process-token :delete-contact
@@ -629,15 +630,14 @@
   (db/update! conn :monitor
               {:status status}
               {:id id})
-  (when status
-    (db/exec! conn ["update monitor_status set finished_at=now()
-                      where id=(select id from monitor_status
-                                 where monitor_id=?
-                                   and finished_at is null
-                                 order by created_at desc
-                                 limit 1)" id])
-    (db/exec! conn ["insert into monitor_status (monitor_id, status, created_at)
-                     values (?, ?, now())" id status])))
+  (db/exec! conn ["update monitor_status set finished_at=clock_timestamp()
+                    where id=(select id from monitor_status
+                               where monitor_id=?
+                                 and finished_at is null
+                               order by created_at desc
+                               limit 1)" id])
+  (db/exec! conn ["insert into monitor_status (monitor_id, status, created_at)
+                   values (?, ?, clock_timestamp())" id status]))
 
 
 (s/def ::pause-monitor
@@ -746,15 +746,36 @@
 
 ;; --- Query: Retrieve Monitor Latency Summary
 
-(def valid-intervals
-  {"24 hours"  "1 hour"
-    "7 days"   "12 hours"
-    "30 days"  "1 day"
-    "3 months" "10 days"})
+(declare sql:monitor-summary-buckets)
+(declare sql:monitor-summary)
+(declare sql:monitor-uptime)
 
-(s/def ::interval #(contains? valid-intervals %))
+(def bucket-size
+  "Translates the period to the bucket size."
+  {"24hours"  (db/interval "30 minutes")
+   "7days"    (db/interval "3 hour")
+   "30days"   (db/interval "12 hours")})
+
+(s/def ::period #(contains? bucket-size %))
 (s/def ::retrieve-monitor-latency-summary
-  (s/keys :req-un [::id ::interval]))
+  (s/keys :req-un [::id ::period]))
+
+(defn retrieve-monitor-summary
+  {:spec ::retrieve-monitor-latency-summary :auth true}
+  [{:keys [pool]} {:keys [id profile-id period]}]
+  (db/with-atomic [conn pool]
+    (let [monitor   (db/exec-one! conn [sql:retrieve-monitor profile-id id])
+          partition (get bucket-size period)]
+      (when-not monitor
+        (ex/raise :type :not-found
+                  :hint "monitor does not exists"))
+
+      (let [buckets (db/exec! conn [sql:monitor-summary-buckets partition id period])
+            data    (db/exec-one! conn [sql:monitor-summary id period])
+            uptime  (db/exec-one! conn [sql:monitor-uptime period period id period])]
+        {:buckets buckets
+         :data (merge data uptime)}))))
+
 
 (def sql:monitor-summary
   "select percentile_cont(0.90) within group (order by latency) as latency_p90,
@@ -778,28 +799,13 @@
           (select extract(epoch from sum(duration)) from entries where status = 'down')::float8 as down_seconds,
           (select extract(epoch from sum(duration)) from entries where status = 'up')::float8 as up_seconds")
 
-(def sql:monitor-latency-buckets
+(def sql:monitor-summary-buckets
    "select time_bucket(?::interval, created_at) as ts,
            round(avg(latency)::numeric, 2)::float8 as avg
      from monitor_entry
     where monitor_id = ?
       and (now()-created_at) < ?::interval group by 1 order by 1")
 
-(defn retrieve-monitor-summary
-  {:spec ::retrieve-monitor-latency-summary :auth true}
-  [{:keys [pool]} {:keys [id profile-id interval]}]
-  (db/with-atomic [conn pool]
-    (let [monitor   (db/exec-one! conn [sql:retrieve-monitor profile-id id])
-          partition (get valid-intervals interval)]
-      (when-not monitor
-        (ex/raise :type :not-found
-                  :hint "monitor does not exists"))
-
-      (let [latency-buckets (db/exec! conn [sql:monitor-latency-buckets partition id interval])
-            summary (db/exec-one! conn [sql:monitor-summary id interval])
-            uptime  (db/exec-one! conn [sql:monitor-uptime interval interval id interval])]
-        {:latency-buckets latency-buckets
-         :summary (merge summary uptime)}))))
 
 ;; --- Query: Retrieve Monitor Status
 
@@ -886,113 +892,117 @@
                 :code :contact-limits-reached))))
 
 
-;; --- Mutation: Create contact
+;; --- Mutation: Create Email Contact
 
-(defmulti impl-create-contact (fn [cfg props] (:type props)))
-(defmulti impl-conform-contact (fn [props] (:type props)))
+(s/def ::create-email-contact
+  (s/keys :req-un [::profile-id ::name ::email]))
 
-(s/def ::create-contact
-  (s/keys :req-un [::name ::params ::type ::profile-id]))
-
-(defn create-contact
-  {:spec ::create-contact :auth true}
-  [{:keys [pool] :as cfg} {:keys [profile-id] :as props}]
+(defn create-email-contact
+  {:spec ::create-email-contact :auth true}
+  [{:keys [pool tokens] :as cfg} {:keys [profile-id name email] :as props}]
   (db/with-atomic [conn pool]
     (let [id      (uuid/next)
-          cfg     (assoc cfg :conn conn)
-          profile (get-profile conn profile-id)
-          props   (assoc props :id id :profile profile)]
+          profile (get-profile conn profile-id)]
 
       ;; Validate limits
       (validate-contacts-limits! conn profile)
 
       ;; Do the main logic
-      (impl-create-contact cfg props)
+      (let [claims  {:iss :verify-contact
+                     :exp (dt/plus (dt/now) #app/duration "24h")
+                     :contact-id id}
+            token   ((:create tokens) claims)
+            params  {:email email}]
 
-      nil)))
+        (emails/send! conn emails/verify-contact
+                      {:to (:email params)
+                       :public-uri (:public-uri cfg)
+                       :invited-by (:fullname profile)
+                       :invited-by-email (:email profile)
+                       :token token})
 
-(s/def ::email-contact-params
-  (s/keys :req-un [::us/email]))
-
-(s/def ::mattermost-contact-params
-  (s/keys :req-un [::us/uri]))
-
-(defmethod impl-conform-contact "email"
-  [{:keys [params] :as props}]
-  (-> (us/conform ::email-contact-params params)
-      (select-keys [:email])))
-
-(defmethod impl-conform-contact "mattermost"
-  [{:keys [params] :as props}]
-  (-> (us/conform ::mattermost-contact-params params)
-      (select-keys [:uri])))
-
-(defmethod impl-conform-contact :default
-  [props]
-  (ex/raise :type :validation
-            :code :invalid-contact-type
-            :context {:type type}))
-
-(defmethod impl-create-contact "email"
-  [{:keys [conn tokens] :as cfg} {:keys [type id name profile-id profile] :as props}]
-  (let [params  (impl-conform-contact props)
-        claims  {:iss :verify-contact
-                 :exp (dt/plus (dt/now) #app/duration "24h")
-                 :contact-id id}
-        token   ((:create tokens) claims)]
-
-    (emails/send! conn emails/verify-contact
-                    {:to (:email params)
-                     :public-uri (:public-uri cfg)
-                     :invited-by (:fullname profile)
-                     :invited-by-email (:email profile)
-                     :token token})
-    (try
-      (db/insert! conn :contact
-                  {:id id
-                   :owner-id profile-id
-                   :name name
-                   :type type
-                   :params (db/tjson params)})
-      (catch org.postgresql.util.PSQLException e
-        (if (= "23505" (.getSQLState e))
-          (ex/raise :type :validation
-                    :code :contact-already-exists
-                    :cause e)
-          (throw e))))))
-
-(defmethod impl-create-contact "mattermost"
-  [{:keys [conn]} {:keys [type id name profile-id] :as props}]
-  (let [params (impl-conform-contact props)]
-    (db/insert! conn :contact
-                {:id id
-                 :owner-id profile-id
-                 :name name
-                 :type type
-                 :validated-at (dt/now)
-                 :params (db/tjson params)})))
-
-(defmethod impl-create-contact :default
-  [props]
-  (ex/raise :type :validation
-            :code :invalid-contact-type
-            :context {:type type}))
+        (try
+          (db/insert! conn :contact
+                      {:id id
+                       :owner-id profile-id
+                       :name name
+                       :type "email"
+                       :params (db/tjson params)})
+          (catch org.postgresql.util.PSQLException e
+            (if (= "23505" (.getSQLState e))
+              (ex/raise :type :validation
+                        :code :contact-already-exists
+                        :cause e)
+              (throw e))))
+        nil))))
 
 
-;; --- Mutation: Update email contact
+;; --- Mutation: Create Mattermost Contact
+
+(s/def ::create-mattermost-contact
+  (s/keys :req-un [::profile-id ::name ::us/uri]))
+
+(defn create-mattermost-contact
+  {:spec ::create-mattermost-contact :auth true}
+  [{:keys [pool] :as cfg} {:keys [profile-id name uri] :as props}]
+  (db/with-atomic [conn pool]
+    (let [id      (uuid/next)
+          profile (get-profile conn profile-id)]
+
+      ;; Validate limits
+      (validate-contacts-limits! conn profile)
+
+      ;; Do the main logic
+      (let [params {:uri uri}]
+        (db/insert! conn :contact
+                    {:id id
+                     :owner-id profile-id
+                     :name name
+                     :type "mattermost"
+                     :validated-at (dt/now)
+                     :params (db/tjson params)})
+        nil))))
+
+
+;; --- Mutation: Create Mattermost Contact
+
+(declare decode-contact-row)
+
+(s/def ::create-telegram-contact
+  (s/keys :req-un [::profile-id ::name]))
+
+(defn create-telegram-contact
+  {:spec ::create-telegram-contact :auth true}
+  [{:keys [pool] :as cfg} {:keys [profile-id name] :as props}]
+  (db/with-atomic [conn pool]
+    (let [id      (uuid/next)
+          profile (get-profile conn profile-id)]
+
+      ;; Validate limits
+      (validate-contacts-limits! conn profile)
+
+      ;; Do the main logic
+      (let [contact (db/insert! conn :contact
+                                {:id id
+                                 :owner-id profile-id
+                                 :name name
+                                 :type "telegram"
+                                 :params (db/tjson {})})]
+        (decode-contact-row contact)))))
+
+
+;; --- Mutation: Update contact
 
 (s/def ::update-contact
-  (s/keys :req-un [::id ::type ::name ::is-paused ::profile-id]))
+  (s/keys :req-un [::id ::name ::is-paused ::profile-id]))
 
 (defn update-contact
   {:spec ::update-contact :auth true}
-  [{:keys [pool]} {:keys [id type profile-id name is-paused] :as props}]
+  [{:keys [pool]} {:keys [id profile-id name is-paused] :as props}]
   (db/with-atomic [conn pool]
-    (let [params (impl-conform-contact props)
-          item   (db/get-by-params conn :contact
+    (let [item   (db/get-by-params conn :contact
                                    {:id id :owner-id profile-id}
                                    {:for-update true})]
-
       (when-not item
         (ex/raise :type :not-found
                   :code :object-not-found))
@@ -1004,10 +1014,8 @@
 
       (db/update! conn :contact
                   {:name name
-                   :type type
                    :is-paused is-paused}
                   {:id id :owner-id profile-id})
-
       nil)))
 
 
@@ -1034,8 +1042,11 @@
 ;; --- Query: Retrieve contacts
 
 (defn decode-contact-row
-  [{:keys [params pause-reason disable-reason] :as row}]
+  [{:keys [params pause-reason disable-reason id] :as row}]
   (cond-> (dissoc row :ref)
+    (uuid? id)
+    (assoc :short-id (telegram/uuid->b64us id))
+
     (db/pgobject? params)
     (assoc :params (db/decode-transit-pgobject params))
 
@@ -1065,14 +1076,6 @@
   (letfn [(retrieve-monitors [conn]
             (->> (db/exec! conn ["select * from monitor where owner_id=?" profile-id])
                  (map decode-monitor-row)))
-          (retrieve-monitor-contacts [conn]
-            (let [sql "select mc.* from monitor_contact_rel as mc
-                         join monitor as m on (m.id = mc.monitor_id)
-                        where m.owner_id = ?"]
-              (db/exec! conn [sql profile-id])))
-          (retrieve-contacts [conn]
-            (->> (db/exec! conn ["select * from contact where owner_id=?" profile-id])
-                 (map decode-contact-row)))
           (retrieve-monitor-status [conn]
             (let [sql "select ms.* from monitor_status as ms
                          join monitor as m on (m.id = ms.monitor_id)
@@ -1098,14 +1101,10 @@
                   ]
         (let [writer (t/writer zout {:type :json})]
           (t/write! writer {:type :export :format 1 :created-at (dt/now)})
-          (doseq [contact (retrieve-contacts conn)]
-            (t/write! writer {:type :contact :payload contact}))
           (doseq [monitor (retrieve-monitors conn)]
             (t/write! writer {:type :monitor :payload monitor}))
           (doseq [mstatus (retrieve-monitor-status conn)]
             (t/write! writer {:type :monitor-status :payload mstatus}))
-          (doseq [mcontact (retrieve-monitor-contacts conn)]
-            (t/write! writer {:type :monitor-contact :payload mcontact}))
           (loop [since (dt/now)]
             (let [entries (retrieve-monitor-entries conn {:since since})]
               (when (seq entries)
@@ -1134,7 +1133,6 @@
                 (catch Exception e
                   (log/errorf e "Exception on export")))))}))
 
-
 ;; --- Request Import
 
 (defn process-import!
@@ -1147,19 +1145,8 @@
                                  :params (db/tjson (:params monitor))
                                  :owner-id profile-id
                                  :tags (into-array String (:tags monitor))
-                                 :status "started"))
-              (db/insert! conn :monitor-schedule
-                          {:monitor-id id})
+                                 :status "imported"))
               (update state :monitors assoc (:id monitor) id)))
-
-          (process-contact [state contact]
-            (let [id (uuid/next)]
-              (db/insert! conn :contact
-                          (assoc contact
-                                 :id id
-                                 :owner-id profile-id
-                                 :params (db/tjson (:params contact))))
-              (update state :contacts assoc (:id contact) id)))
 
           (process-monitor-status [state mstatus]
             (let [monitor-id (get-in state [:monitors (:monitor-id mstatus)])]
@@ -1167,14 +1154,6 @@
                           (assoc mstatus
                                  :monitor-id monitor-id
                                  :id (uuid/next)))
-              state))
-
-          (process-monitor-contact [state mcontact]
-            (let [monitor-id (get-in state [:monitors (:monitor-id mcontact)])
-                  contact-id (get-in state [:contacts (:contact-id mcontact)])]
-              (db/insert! conn :monitor-contact-rel
-                          {:monitor-id monitor-id
-                           :contact-id contact-id})
               state))
 
           (process-monitor-entries-chunk [state items]
@@ -1187,23 +1166,37 @@
                                             (let [monitor-id (get index (:monitor-id row))]
                                               (assoc row :monitor-id monitor-id))))
                                      (map (apply juxt fields))))
-              state))]
+              state))
 
-    (with-open [in  (io/input-stream (:tempfile file))
-                zin (GZIPInputStream. in)]
-      (let [reader (t/reader zin)]
-        (loop [state {}]
-          (let [item (t/read! reader)]
-            (when-not (nil? item)
-              (recur
-               (case (:type item)
-                 :contact (process-contact state (:payload item))
-                 :monitor (process-monitor state (:payload item))
-                 :monitor-status (process-monitor-status state (:payload item))
-                 :monitor-contact (process-monitor-contact state (:payload item))
-                 :monitor-entries-chunk (process-monitor-entries-chunk state (:payload item))
-                 state)))))
-        (ex/raise :type :abort)))))
+          (handle-monitor-status [id]
+            (db/insert! conn :monitor-schedule {:monitor-id id})
+            (change-monitor-status! conn id "imported")
+            (change-monitor-status! conn id "paused"))
+
+          (read-chunk! [reader]
+            (try
+              (t/read! reader)
+              (catch java.lang.RuntimeException e
+                (let [cause (ex-cause e)]
+                  (when-not (instance? java.io.EOFException cause)
+                    (throw cause))))))
+
+          (handle-import [file]
+            (with-open [in  (io/input-stream (:tempfile file))
+                        zin (GZIPInputStream. in)]
+              (let [reader (t/reader zin)]
+                (loop [state {}]
+                  (let [item (read-chunk! reader)]
+                    (if (nil? item)
+                      state
+                      (recur (case (:type item)
+                               :monitor (process-monitor state (:payload item))
+                               :monitor-status (process-monitor-status state (:payload item))
+                               :monitor-entries-chunk (process-monitor-entries-chunk state (:payload item))
+                               state))))))))]
+
+    (let [state (handle-import file)]
+      (run! handle-monitor-status (vals (:monitors state))))))
 
 (s/def :internal.http.upload/filename ::us/string)
 (s/def :internal.http.upload/size ::us/integer)
@@ -1224,12 +1217,7 @@
   {:spec ::request-import :auth true}
   [{:keys [pool]} {:keys [profile-id file] :as params}]
   (db/with-atomic [conn pool]
-    (try
-      (process-import! conn params)
-      (catch java.lang.RuntimeException e
-        (let [cause (ex-cause e)]
-          (when-not (instance? java.io.EOFException cause)
-            (throw cause)))))
+    (process-import! conn params)
     nil))
 
 

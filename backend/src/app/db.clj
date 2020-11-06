@@ -33,6 +33,7 @@
    java.io.InputStream
    java.io.OutputStream
    java.sql.Connection
+   java.sql.Savepoint
    java.time.Duration
    org.postgresql.PGConnection
    org.postgresql.jdbc.PgArray
@@ -97,6 +98,11 @@
     {:name "0015-del-generic-token-table"
      :fn (mg/resource "app/db/sql/0015-del-generic-token-table.sql")}
 
+    {:name "0016-mod-contact-table-add-telegram-fields"
+     :fn (mg/resource "app/db/sql/0016-mod-contact-table-add-telegram-fields.sql")}
+
+    {:name "0017-mod-change-notify-trigger"
+     :fn (mg/resource "app/db/sql/0017-mod-change-notify-trigger.sql")}
     ]})
 
 (s/def ::uri ::us/not-empty-string)
@@ -222,6 +228,16 @@
   [rs opts]
   (jdbc-opt/as-unqualified-modified-maps rs (assoc opts :label-fn kebab-case)))
 
+(defn row->map
+  "A helper that adapts database style row to clojure style map,
+  converting all snake_case attrs into kebab-case, and it only works
+  on a first level of the map."
+  [m]
+  (let [xf #(if (string? %) (keyword (str/replace % #"_" "-")) %)]
+    (persistent!
+     (reduce-kv (fn [m k v] (assoc! m (xf k) v))
+                (transient {}) m))))
+
 (defn open
   ^java.sql.Connection
   [pool]
@@ -284,6 +300,18 @@
                 (:for-update opts)
                 (assoc :suffix "for update"))]
      (exec! ds (jdbc-bld/for-query table params opts) opts))))
+
+(defn savepoint
+  ([^Connection conn]
+   (.setSavepoint conn))
+  ([^Connection conn label]
+   (.setSavepoint conn (name label))))
+
+(defn rollback!
+  ([^Connection conn]
+   (.rollback conn))
+  ([^Connection conn ^Savepoint sp]
+   (.rollback conn sp)))
 
 (defn pgobject?
   [v]

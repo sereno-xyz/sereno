@@ -24,6 +24,33 @@
 (defonce store  (ptk/store {:resolve ptk/resolve}))
 (defonce stream (ptk/input-stream store))
 
+(defmethod ptk/resolve :default
+  [type params]
+  (ptk/data-event type params))
+
+;; (defn- repr-event
+;;   [event]
+;;   (cond
+;;     (satisfies? ptk/Event event)
+;;     (str "typ: " (pr-str (ptk/type event)))
+
+;;     (and (fn? event)
+;;          (pos? (count (.-name event))))
+;;     (str "fn: " (demunge (.-name event)))
+
+;;     :else
+;;     (str "unk: " (pr-str event))))
+
+
+;; (when *assert*
+;;   (defonce debug-subscription
+;;     (as-> stream $
+;;       (rx/filter ptk/event? $)
+;;       ;; (rx/filter (fn [s] (debug? :events)) $)
+;;       (rx/subscribe $ (fn [event]
+;;                         (println "[stream]: " (repr-event event)))))))
+
+
 ;; Refs
 
 (def route-ref
@@ -43,6 +70,10 @@
 
 (def contacts-ref
   (l/derived :contacts state))
+
+(defn contact-ref
+  [id]
+  (l/derived (l/in [:contacts id]) state))
 
 (defn emit!
   ([] nil)

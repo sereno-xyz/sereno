@@ -41,12 +41,10 @@
 
 (defn use-form
   [& {:keys [spec validators initial] :as opts}]
-  (let [state      (mf/useState 0)
-        render     (aget state 1)
-        state-ref  (mf/use-ref {:data (if (fn? initial) (initial) initial)
-                                :errors {}
-                                :touched {}})
-        form       (mf/use-memo #(create-form-mutator state-ref render opts))]
+  (let [tmp    (mf/useState 0)
+        render (aget tmp 1)
+        local  (mf/use-ref {:data {} :errors {} :touched {}})
+        form   (mf/use-memo #(create-form-mutator local render opts))]
 
     (mf/use-effect
      (mf/deps initial)

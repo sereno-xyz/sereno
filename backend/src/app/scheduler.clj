@@ -48,7 +48,7 @@
      from monitor_schedule as ms
      join monitor as m on (m.id = ms.monitor_id)
     where ms.scheduled_at <= now()
-      and m.status != 'paused'
+      and m.status in ('started', 'up', 'down')
     order by ms.scheduled_at, ms.modified_at
     limit ?
       for update of ms skip locked")

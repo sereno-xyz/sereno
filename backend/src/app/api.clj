@@ -71,7 +71,10 @@
                    :method :get}]
       ["/webhook"
        ["/awssns" {:handler (:awssns webhooks)
-                   :method :post}]]
+                   :method :post}]
+       ["/telegram" {:handler (:telegram webhooks)
+                     :method :post}]]
+
       ["/api"
        ["/login" {:handler login-handler
                   :method :post}]

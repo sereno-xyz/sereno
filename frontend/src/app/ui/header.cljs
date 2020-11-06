@@ -13,6 +13,7 @@
    [app.common.uuid :as uuid]
    [app.events :as ev]
    [app.store :as st]
+   [app.ui.dropdown :refer [dropdown]]
    [app.ui.icons :as i]
    [app.util.dom :as dom]
    [app.util.router :as r]
@@ -30,26 +31,38 @@
 (mf/defc header
   {::mf/wrap [#(mf/memo % =)]}
   [{:keys [section profile] :as props}]
-  [:header
-   [:nav
-    [:section.left-menu
-     [:& logo]
-     [:ul.menu
-      [:li {:class (dom/classnames :current (= section :monitor-list))
-            :on-click #(st/emit! (r/nav :monitor-list))}
-       [:span "Monitors"]]
-      [:li {:class (dom/classnames :current (= section :contacts))
-            :on-click #(st/emit! (r/nav :contacts))}
-       [:span "Contacts"]]
-      [:li {:class (dom/classnames :current (= section :profile))
-            :on-click #(st/emit! (r/nav :profile))}
-       [:span "Profile"]]
-      ]]
-    [:section.right-menu.authenticated
-     #_[:a.user-icon
-      {:title (:email profile)
-       :on-click #(st/emit! (r/nav :profile))}
-      i/user]
-     [:a {:title "Logout"
-          :on-click #(st/emit! ev/logout)} i/sign-out-alt
-      [:span.label "logout"]]]]])
+  (let [menu? (mf/use-state false)]
+    [:header
+     [:nav
+      [:section.left-menu
+       [:& logo]
+       [:ul.menu
+        [:li {:class (dom/classnames :current (or (= section :monitor-list)
+                                                  (= section :monitor-detail)))
+              :on-click #(st/emit! (r/nav :monitor-list))}
+         [:span "Monitors"]]
+        [:li {:class (dom/classnames :current (= section :contacts))
+              :on-click #(st/emit! (r/nav :contacts))}
+         [:span "Contacts"]]
+        #_[:li {:class (dom/classnames :current (= section :profile))
+              :on-click #(st/emit! (r/nav :profile))}
+         [:span "Profile"]]
+        ]]
+      [:section.right-menu.authenticated
+       [:a.profile-section {:title "Logout" :on-click #(reset! menu? true)}
+        [:span.icon i/user]
+        [:span.label (:email profile)]]
+       [:& dropdown {:show @menu?
+                     :on-close #(reset! menu? false)}
+        [:ul.dropdown.dark
+         [:li {:on-click (st/emitf (r/nav :profile))
+               :title "Go to profile"}
+          [:div.icon i/user]
+          [:div.text "Profile"]]
+
+         [:li {:on-click (st/emitf ev/logout) :title "Logout"}
+          [:div.icon i/sign-out-alt]
+          [:div.text "Logout"]]]]]]]))
+
+
+
