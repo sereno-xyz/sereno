@@ -182,6 +182,16 @@
       flex-grow: 1;
       padding: 0px 10px;
 
+      &.success {
+        font-weight: 600;
+        color: var(--color-success-dark);
+      }
+
+      &.fail {
+        font-weight: 600;
+        color: var(--color-danger-dark);
+      }
+
       &:first-child {
         font-weight: 500;
         min-width: 140px;

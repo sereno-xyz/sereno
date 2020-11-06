@@ -50,7 +50,10 @@
      [:div.details-column
       [:div.details-row
        [:div.details-field "Status"]
-       [:div.details-field (str/upper (:status monitor))]]
+       [:div.details-field
+        {:class (dom/classnames :success (= "up" (:status monitor))
+                                :fail    (= "down" (:status monitor)))}
+        (str/upper (:status monitor))]]
       [:div.details-row
        [:div.details-field "Type"]
        [:div.details-field (str/upper (:type monitor))]]

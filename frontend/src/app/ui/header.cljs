@@ -37,7 +37,8 @@
       [:section.left-menu
        [:& logo]
        [:ul.menu
-        [:li {:class (dom/classnames :current (= section :monitor-list))
+        [:li {:class (dom/classnames :current (or (= section :monitor-list)
+                                                  (= section :monitor-detail)))
               :on-click #(st/emit! (r/nav :monitor-list))}
          [:span "Monitors"]]
         [:li {:class (dom/classnames :current (= section :contacts))
