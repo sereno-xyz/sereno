@@ -56,7 +56,7 @@
                       :type :success
                       :timeout 5000})
             (modal/show {:type :telegram-contact
-                         :contact contact}))))
+                         :id (:id contact)}))))
 
 
         on-update-success

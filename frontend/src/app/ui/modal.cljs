@@ -32,7 +32,7 @@
 (defn show
   [props]
   (us/assert ::modal-props props)
-  (ptk/reify ::show-modal
+  (ptk/reify ::show
     ptk/UpdateEvent
     (update [_ state]
       (let [id    (uuid/next)
@@ -42,7 +42,7 @@
 
 (defn hide
   []
-  (ptk/reify ::hide-modal
+  (ptk/reify ::hide
     ptk/UpdateEvent
     (update [_ state]
       (dissoc state ::modal))))
