@@ -167,12 +167,16 @@
 
       .monitor-tags {
         width: 200px;
-        display: block;
-
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        overflow: hidden;
+        display: flex;
+        align-items: center;
         margin-right: 20px;
+
+        span {
+          display: inline-block;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          overflow: hidden;
+        }
       }
 
       .monitor-updated {
