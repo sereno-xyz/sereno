@@ -166,8 +166,8 @@
         [:p "This contact is " [:strong "not activated"] ". To
              activate it, you need to link it to some private or a
              group chat. Once the contact is linked, you will be able
-             to send notifications to it. Once linked the link can be
-             changed."]
+             to send notifications to it. Once linked, the link can't
+             be changed."]
 
         [:div.qrcode
          [:div.options
