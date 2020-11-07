@@ -9,8 +9,9 @@
 
 (ns app.ui
   (:require
-   [app.common.uuid :as uuid]
+   [app.common.data :as d]
    [app.common.exceptions :as ex]
+   [app.common.uuid :as uuid]
    [app.config :as cfg]
    [app.events :as ev]
    [app.events.messages :as em]
@@ -82,7 +83,7 @@
        [:div.inline-notifications
         [:div.notification-item.warning
          [:span "The email " [:strong (:email profile)] " is not verified. "
-          " Not verified emails will be deleted after 48 hours."]]])
+          " Accounts with not verified emails will be deleted after 48 hours."]]])
      children]))
 
 (mf/defc app
@@ -121,7 +122,16 @@
          [:& main-layout {:route route}
           (case section
             :monitor-list
-            [:& monitor-list-page]
+            (let [params (:query-params route)
+                  params (update params :tags
+                                 (fn [tags]
+                                   (cond
+                                     (string? tags) #{tags}
+                                     (vector? tags) (into #{} tags)
+                                     (array? tags) (into #{} tags)
+                                     (set? tags) tags
+                                     :else #{})))]
+              [:& monitor-list-page {:params params}])
 
             (:monitor-detail
              :monitor-log)

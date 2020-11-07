@@ -620,12 +620,18 @@
 ;; Monitor List & Detail
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
+
 (defn update-monitor-list-filters
   [data]
   (ptk/reify ::update-monitor-list-filters
     ptk/UpdateEvent
     (update [_ state]
-      (assoc state :monitor-list-filters data))))
+      (assoc state :monitor-list-filters data))
+
+    ptk/WatchEvent
+    (watch [_ state stream]
+      (rx/of (r/nav' :monitor-list {} data)))))
 
 (defn update-monitor-text-filter
   [{:keys [term] :as params}]

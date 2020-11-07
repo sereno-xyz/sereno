@@ -40,47 +40,52 @@
 
 (mf/defc header-filters
   [{:keys [filters] :as props}]
-  (let [form  (fm/use-form :spec ::filters-form :initial {})
-        atags (mf/use-state (or (get-in @form [:data :tags]) #{}))
+  (let [tags  (mf/use-state (:tags filters))
 
-        update-status-filter
+        update-status
         (mf/use-callback
+         (mf/deps filters)
          (fn [val]
-           (swap! form update-in [:data :status]
-                  (fn [local]
-                    (cond
-                      (= local val) "all"
-                      (not= local val) val
-                      :else local)))))]
+           (let [filters (update filters :status
+                                 (fn [lval]
+                                   (cond
+                                     (= lval val) "all"
+                                     (not= lval val) val
+                                     :else lval)))]
+             (st/emit! (r/nav' :monitor-list {} filters)))))
+
+        update-tags
+        (mf/use-callback
+         (mf/deps filters)
+         (fn [tags]
+           (let [filters (assoc filters :tags tags)]
+             (st/emit! (r/nav' :monitor-list {} filters)))))]
 
     (mf/use-effect
      #(->> (rp/req! :retrieve-all-tags {})
-           (rx/subs (fn [tags] (swap! atags into tags)))))
-
-    (mf/use-effect
-     (mf/deps @form)
-     (st/emitf (ev/update-monitor-list-filters (:clean-data @form))))
+           (rx/subs (fn [v] (swap! tags into v)))))
 
     [:div.monitor-filters
      [:div.search
       [:& tags-select
-       {:options @atags
-        :form form
-        :name :tags}]]
+       {:options @tags
+        :value (:tags filters)
+        :on-change update-tags}]]
+
      [:div.status-filter
       [:span.label "FILTER:"]
       [:ul
-       [:li {:class (dom/classnames :active (= "up" (get-in @form [:class :status])))
-             :on-click (partial update-status-filter "up")}
+       [:li {:class (dom/classnames :active (= "up" (:status filters)))
+             :on-click (partial update-status "up")}
         [:input {:type "checkbox"
                  :read-only true
-                 :checked (= "up" (get-in @form [:clean-data :status]))}]
+                 :checked (= "up" (:status filters))}]
         [:label "Up"]]
-       [:li {:class (dom/classnames :active (= "down" (get-in form [:class :status])))
-             :on-click (partial update-status-filter "down")}
+       [:li {:class (dom/classnames :active (= "down" (:status filters)))
+             :on-click (partial update-status "down")}
         [:input {:type "checkbox"
                  :read-only true
-                 :checked (= "down" (get-in @form [:clean-data :status]))}]
+                 :checked (= "down" (:status filters))}]
         [:label "Down"]]]]]))
 
 (mf/defc header
@@ -213,16 +218,14 @@
 
 (mf/defc monitor-list-page
   {::mf/wrap [mf/memo]}
-  []
+  [{:keys [params] :as props}]
   (mf/use-effect
    (fn []
      (st/emit! (ptk/event :initialize-monitor-list))
-     (fn []
-       (st/emit! (ptk/data-event :finalize-monitor-list)))))
+     (st/emitf (ptk/event :finalize-monitor-list))))
 
-  (let [filters (mf/deref monitor-list-filters-ref)]
-    [:main.monitor-list-section
-     [:div.single-column-1200
-      [:& header {:filters filters}]
-      [:& monitor-list {:filters filters}]]]))
+  [:main.monitor-list-section
+   [:div.single-column-1200
+    [:& header {:filters params}]
+    [:& monitor-list {:filters params}]]])
 

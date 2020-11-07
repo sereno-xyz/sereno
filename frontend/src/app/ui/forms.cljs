@@ -107,52 +107,34 @@
   {::mf/wrap-props false
    ::mf/wrap [#(mf/deferred % tm/raf)]}
   [props]
-  (let [form      (or (obj/get props "form")
-                      (mf/use-ctx form-ctx))
-        label     (obj/get props "label")
+  (let [label     (obj/get props "label")
         name      (obj/get props "name")
         options   (obj/get props "options")
+        on-change (obj/get props "on-change")
 
         value-fn  #(js-obj "label" % "value" %)
         options   (into-array (map value-fn options))
 
-        touched?  (get-in @form [:touched name])
-        error     (get-in @form [:errors name])
-
-        value     (or (get-in @form [:data name]) [])
+        value     (obj/get props "value")
         value     (into-array (map value-fn value))
 
-        on-blur
+        on-change*
         (mf/use-callback
-         (mf/deps form)
-         (fn [event]
-           (when-not (get-in @form [:touched name])
-             (swap! form assoc-in [:touched name] true))))
-
-        on-change
-        (mf/use-callback
-         (mf/deps form)
          (fn [item]
            (let [value (into #{} (map #(obj/get % "value")) (seq item))]
-             (swap! form (fn [state]
-                           (-> state
-                               (assoc-in [:data name] value)
-                               (update :errors dissoc name)))))))
+             (on-change value))))
 
-        props (-> (obj/without props [:from :children :label])
+        props (-> (obj/without props [:from :children :label :on-change :value])
                   (obj/merge #js {:options options
                                   :defaultInputValue ""
                                   :className "react-select"
                                   :classNamePrefix "react-select"
                                   :isMulti true
-                                  :onBlur on-blur
-                                  :onChange on-change
+                                  :onChange on-change*
                                   :value value}))]
     [:div.form-field
      (when label [:label label])
-     [:> CreatableSelect props]
-     (when (and touched? (:message error))
-       [:span.error (:message error)])]))
+     [:> CreatableSelect props]]))
 
 (mf/defc select
   {::mf/wrap-props false

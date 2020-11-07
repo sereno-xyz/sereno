@@ -24,12 +24,14 @@
 
 (declare reinit)
 
+
 (defn on-navigate
   [router path]
   (let [match   (rt/match router path)
         profile (:profile storage)
         authed? (and (not (nil? profile))
                      (not= (:id profile) uuid/zero))]
+
     (cond
       (and (or (= path "")
                (nil? match))
@@ -43,7 +45,7 @@
       (st/emit! (rt/nav :not-found))
 
       :else
-      (st/emit! #(assoc % :route match)))))
+      (st/emit! (rt/assoc-route match)))))
 
 (defn init-ui
   []

@@ -90,6 +90,14 @@
 
 ;; --- Navigate (Event)
 
+
+(defn assoc-route
+  [route]
+  (ptk/reify ::asoc-route
+    ptk/UpdateEvent
+    (update [_ state]
+      (assoc state :route route))))
+
 (deftype Navigate [id params qparams replace]
   ptk/EffectEvent
   (effect [_ state stream]
