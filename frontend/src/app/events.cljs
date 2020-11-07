@@ -617,48 +617,6 @@
         (rx/of (ptk/event :fetch-monitor-log {:id id :since since}))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Monitor List & Detail
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-
-(defn update-monitor-list-filters
-  [data]
-  (ptk/reify ::update-monitor-list-filters
-    ptk/UpdateEvent
-    (update [_ state]
-      (assoc state :monitor-list-filters data))
-
-    ptk/WatchEvent
-    (watch [_ state stream]
-      (rx/of (r/nav' :monitor-list {} data)))))
-
-(defn update-monitor-text-filter
-  [{:keys [term] :as params}]
-  (us/assert ::us/string term)
-  (ptk/reify ::update-monitor-text-filter
-    ptk/UpdateEvent
-    (update [_ state]
-      (update state :monitor-list assoc :term term))))
-
-(defn update-monitor-status-filter
-  [status]
-  (ptk/reify ::update-monitor-status-filter
-    ptk/UpdateEvent
-    (update [_ state]
-      (update-in state [:monitor-list :status-filter]
-                 (fn [local]
-                   (cond
-                     (= local status)
-                     nil
-
-                     (not= local status)
-                     status
-
-                     :else
-                     local))))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Initialization Events
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
