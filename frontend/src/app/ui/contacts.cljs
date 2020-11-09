@@ -118,7 +118,7 @@
        [:div.row
         [:div.type ""]
         [:div.title "Contact"]
-        [:div.options "Opts"]]]
+        [:div.options "Options"]]]
       [:div.table-body
        (for [contact (->> (vals contacts)
                           (sort-by :created-at))]
