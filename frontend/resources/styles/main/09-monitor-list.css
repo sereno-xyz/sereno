@@ -107,140 +107,109 @@
       }
     }
 
-    .monitor-list-header,
-    .monitor-list-body {
-      padding: 0px;
-      margin: 0px;
-      list-style: none;
+    .monitor-title {
+      display: flex;
+      align-items: center;
+      flex-grow: 1;
 
-      > li {
-        color: var(--color-gray-50);
-        display: flex;
-        line-height: 3rem;
+      span {
+        display: block;
+        font-size: var(--default-font-size);
+
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+    }
+
+    .monitor-options {
+      min-width: 80px;
+      display: flex;
+      justify-content: space-evenly;
+      align-items: center;
+
+      > div {
         cursor: pointer;
+        display: flex;
+        justify-content: center;
+      }
+    }
 
-        > a {
-          display: flex;
-          width: 100%;
-        }
+    .monitor-tags {
+      width: 200px;
+      display: flex;
+      align-items: center;
+      margin-right: 20px;
 
-        &.success {
-          .monitor-status svg {
-            fill: var(--color-success);
-          }
-        }
+      span {
+        display: inline-block;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+    }
 
-        &.failed {
-          .monitor-status svg {
-            fill: var(--color-danger);
-          }
-        }
+    .monitor-updated {
+      min-width:200px;
+      display: flex;
+      align-items: center;
+    }
+
+    .monitor-status {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-width: 50px;
+    }
+
+    @media (max-width: 500px) {
+      > li {
+        height: 45px;
       }
 
-      .monitor-title {
-        display: flex;
-        align-items: center;
-        flex-grow: 1;
-
-        span {
-          display: block;
-          font-size: var(--default-font-size);
-
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          overflow: hidden;
-        }
+      .monitor-name {
+        padding-left: 0px;
       }
 
       .monitor-options {
         min-width: 80px;
-        display: flex;
-        justify-content: space-evenly;
-        align-items: center;
-
-        > div {
-          cursor: pointer;
-          display: flex;
-          justify-content: center;
-        }
-      }
-
-      .monitor-tags {
-        width: 200px;
-        display: flex;
-        align-items: center;
-        margin-right: 20px;
-
-        span {
-          display: inline-block;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          overflow: hidden;
-        }
       }
 
       .monitor-updated {
-        min-width:200px;
-        display: flex;
-        align-items: center;
-      }
-
-      .monitor-status {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-width: 50px;
-      }
-
-      @media (max-width: 500px) {
-        > li {
-          height: 45px;
-        }
-
-        .monitor-name {
-          padding-left: 0px;
-        }
-
-        .monitor-options {
-          min-width: 80px;
-        }
-
-        .monitor-updated {
-          display: none;
-        }
-      }
-
-      @media (max-width: 700px) {
-        .monitor-tags {
-          display: none;
-        }
-      }
-
-      svg {
-        width: 18px;
-        height: 18px;
-        fill: var(--color-gray-50);
+        display: none;
       }
     }
 
-    .monitor-list-header > li {
-      font-weight: 500;
-      height: 55px;
-      cursor: auto;
-      border-bottom: 1px solid var(--color-gray-5);
+    @media (max-width: 700px) {
+      .monitor-tags {
+        display: none;
+      }
+    }
+  }
+
+  .table-body .row {
+    &.inactive {
+      border-left: 3px solid var(--color-inactive);
     }
 
-    .monitor-list-body > li {
-      border-bottom: 1px solid var(--color-gray-5);
-      height: 55px;
+    &.success {
+      border-left: 3px solid var(--color-success);
 
-      &:not(:first-child) {
-        /* margin-top: 5px; */
+      .monitor-status svg {
+        fill: var(--color-success);
       }
+    }
 
-      &:hover {
-        background-color: var(--color-primary-5);
+    &.failed {
+      border-left: 3px solid var(--color-danger);
+
+      .monitor-status svg {
+        fill: var(--color-danger);
       }
+    }
+
+    &:hover {
+      background-color: var(--color-inactive-lighter);
     }
   }
 }

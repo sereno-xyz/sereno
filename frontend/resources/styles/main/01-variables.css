@@ -44,7 +44,7 @@
 
   --color-gray-5-05:  rgba(232, 233, 234, 0.5);
 
-  --color-success-dark: #479e4b;
+  --color-success-dark: rgb(71,158,75);
   --color-danger-dark: #ba4237;
   --color-danger-lighter: #fadcda;
 
@@ -56,4 +56,12 @@
   --default-h4-font-size: 18px;
   --default-font-size: 16px;
   --default-small-font-size: 14px;
+
+  --color-success-lighter: rgba(88, 195, 92, 0.1);
+  --color-danger-lighter: rgba(230, 82, 68, 0.1);
+  --color-inactive: rgb(100, 102, 106);
+  --color-inactive-lighter: rgba(100, 102, 106, 0.1);
+
+
+
 }

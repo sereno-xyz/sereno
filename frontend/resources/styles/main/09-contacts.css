@@ -32,17 +32,6 @@
     flex-direction: column;
 
     .row {
-      font-size: var(--default-font-size);
-      cursor: default;
-      display: flex;
-      height: 55px;
-      justify-content: space-between;
-      border-bottom: 1px solid var(--color-gray-5);
-
-      &:not(.header):hover {
-        background-color: var(--color-primary-5);
-      }
-
       &.disabled {
         color: var(--color-gray-20);
         svg { fill: var(--color-gray-20); }
@@ -51,10 +40,6 @@
       &.paused {
         color: var(--color-gray-30);
         svg { fill: var(--color-gray-30); }
-      }
-
-      &.header {
-        font-weight: 500;
       }
 
       .type {
@@ -74,9 +59,13 @@
 
       .options {
         display: flex;
-        justify-content: center;
         align-items: center;
-        width: 120px;
+        width: 105px;
+        a, span {
+          display: flex;
+          align-items: center;
+        }
+
         > :not(:last-child) {
           margin-right: 15px;
         }
@@ -87,11 +76,6 @@
         }
       }
 
-
-      svg {
-        width: 20px;
-        height: 20px;
-      }
     }
   }
 }

@@ -1,0 +1,46 @@
+.table {
+  .table-header, .table-body {
+    padding: 0px;
+    margin: 0px;
+    list-style: none;
+
+    .row {
+      color: var(--color-gray-50);
+      display: flex;
+      line-height: 3rem;
+      cursor: pointer;
+
+      > a {
+        display: flex;
+        width: 100%;
+      }
+    }
+  }
+
+  .table-header .row {
+    font-weight: 500;
+    height: 55px;
+    cursor: auto;
+  }
+
+  .table-body .row {
+    border-radius: var(--default-border-radius);
+    height: 55px;
+
+    border-left: 3px solid transparent;
+    margin-bottom: 10px;
+
+    box-shadow: var(--color-gray-10) 0px 1px 5px 1px;
+
+    &:hover {
+      background-color: var(--color-inactive-lighter);
+    }
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+    fill: var(--color-gray-50);
+  }
+}
+

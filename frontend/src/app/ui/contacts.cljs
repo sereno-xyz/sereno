@@ -113,12 +113,13 @@
      (st/emitf (ptk/event :finalize-contacts))))
   (let [contacts (mf/deref st/contacts-ref)]
     [:section.contacts-table-container
-     [:div.contacts-table
-      [:div.header.row
-       [:div.type "Type"]
-       [:div.title "Contact"]
-       [:div.options]]
-      [:div.rows
+     [:div.contacts-table.table
+      [:div.table-header
+       [:div.row
+        [:div.type ""]
+        [:div.title "Contact"]
+        [:div.options "Opts"]]]
+      [:div.table-body
        (for [contact (->> (vals contacts)
                           (sort-by :created-at))]
          [:& contact-item {:key (:id contact)

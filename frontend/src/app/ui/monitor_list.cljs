@@ -134,23 +134,24 @@
            (let [target (dom/get-target event)]
              (.setAttribute target "title" (dt/timeago (:modified-at item))))))]
 
-    [:li {:key (:id item)
-          :class (dom/classnames
-                  :success (= "up" status)
-                  :failed  (= "down" status)
-                  :nodata  (nil? status))}
+    [:li.row {:key (:id item)
+              :class (dom/classnames
+                      :inactive (= "paused" status)
+                      :inactive (= "started" status)
+                      :success (= "up" status)
+                      :failed  (= "down" status)
+                      :nodata  (nil? status))}
      [:a {:href uri}
       [:div.monitor-status
-       {:title (case status
-                 "up" "Everything is ok"
-                 "down"  "The service seems down"
-                 "Waiting data")}
+       {:title (str (str/upper (:type item)) ": "
+                    (case status
+                      "up" "Everything is ok"
+                      "down"  "The service seems down"
+                      "Waiting data"))}
 
-       (case status
-         "up" i/check-circle
-         "down"  i/times-circle
-         "nodata" i/circle
-         i/circle)]
+       (case (:type item)
+         "http" i/cloud
+         nil)]
 
       [:div.monitor-title
        [:span (:name item)]]
@@ -200,16 +201,16 @@
         [:h3 "No monitors found."]]
 
        (not (empty? monitors))
-       [:*
-        [:ul.monitor-list-header
-         [:li
-          [:div.monitor-status ""]
+       [:div.table
+        [:div.table-header
+         [:div.row
+           [:div.monitor-status ""]
           [:div.monitor-title "Title"]
           [:div.monitor-tags "Tags"]
           [:div.monitor-updated "Monitored at"]
           [:div.monitor-options "Options"]
           ]]
-        [:ul.monitor-list-body
+        [:div.table-body
          (for [item monitors]
            [:& monitor-item {:key (:id item) :item item}])]])]))
 

@@ -12,6 +12,7 @@
   (:require-macros [app.util.icons :refer [icon-xref]])
   (:require [rumext.alpha :as mf]))
 
+(def cloud (icon-xref :cloud))
 (def user (icon-xref :user))
 (def history (icon-xref :history))
 (def times (icon-xref :times))

@@ -80,11 +80,12 @@
   .modal-header-title {
     display: flex;
     align-items: center;
-    font-size: vat(--default-h3-font-size);
     padding-left: 16px;
+    --default-h2-font-size: 20px;
 
     h2 {
-      margin: 0;
+      font-weight: 500;
+      color: var(--color-gray-30);
     }
   }
 
@@ -176,6 +177,10 @@
 .monitor-form-modal {
   width: 900px;
   min-height: 557px;
+
+  .modal-content {
+    padding: 10px 10px;
+  }
 
   textarea {
     white-space: nowrap;
