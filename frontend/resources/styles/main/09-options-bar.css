@@ -36,5 +36,11 @@
     padding: 0px;
     list-style: none;
     display: flex;
+
+    .disabled {
+      color: var(--color-gray-20);
+
+      svg { fill: var(--color-gray-20); }
+    }
   }
 }

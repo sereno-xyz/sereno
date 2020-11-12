@@ -4,6 +4,13 @@
   justify-content: center;
   align-items: center;
 
+  .options-bar {
+    .dropdown {
+      width: 140px;
+      left: -150px;
+    }
+  }
+
   .monitor-filters {
     display: flex;
     flex-direction: row;

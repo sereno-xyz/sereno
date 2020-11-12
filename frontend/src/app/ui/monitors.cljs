@@ -15,6 +15,7 @@
    [app.repo :as rp]
    [app.store :as st]
    [app.ui.confirm]
+   [app.ui.dropdown :refer [dropdown]]
    [app.ui.forms :refer [tags-select]]
    [app.ui.icons :as i]
    [app.ui.modal :as modal]
@@ -89,10 +90,39 @@
 
 (mf/defc header
   [{:keys [filters] :as props}]
-  (let [open-form (st/emitf (modal/show {:type :http-monitor-form}))]
+  (let [create-http-monitor
+        (mf/use-callback
+         (st/emitf (modal/show {:type :http-monitor-form})))
+
+        create-ssl-monitor
+        (mf/use-callback
+         (st/emitf (modal/show {:type :ssl-monitor-form})))
+
+        show-dropdown? (mf/use-state false)
+        show-dropdown  (mf/use-callback #(reset! show-dropdown? true))
+        hide-dropdown  (mf/use-callback #(reset! show-dropdown? false))]
+
     [:div.options-bar
      [:& header-filters {:filters filters}]
-     [:a.add-button {:on-click open-form} i/plus]]))
+     [:a.add-button {:on-click show-dropdown} i/plus
+      [:& dropdown {:show @show-dropdown?
+                    :on-close hide-dropdown}
+       [:ul.dropdown
+        [:li {:on-click create-http-monitor
+              :title "HTTP & HTTPS monitor."}
+         [:div.icon i/cloud]
+         [:div.text "HTTP"]]
+        [:li {:on-click create-ssl-monitor
+              :title "SSL certificate monitor."}
+         [:div.icon i/shield-alt]
+         [:div.text "SSL Cert"]]
+        [:li.disabled {:title "DNS registry monitor (not implemented yet)."}
+         [:div.icon i/globe]
+         [:div.text "DNS"]]
+        [:li.disabled {:title "Heartbeat / Keepalive monitor (not implemented yet)."}
+         [:div.icon i/heartbeat]
+         [:div.text "Keepalive"]]]]]]))
+
 
 (mf/defc monitor-item
   [{:keys [item] :as props}]
