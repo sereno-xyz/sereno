@@ -98,10 +98,15 @@
         cdata  ((:create tokens) {:iss :contact
                                   :exp (dt/in-future {:days 7})
                                   :profile-id (:owner-id contact)
-                                  :contact-id (:id contact)})]
-    (emails/send! pool emails/monitor-notification
+                                  :contact-id (:id contact)})
+        email  (case (:type monitor)
+                 "http" emails/http-monitor-notification
+                 "ssl"  emails/ssl-monitor-notification)]
+
+    (emails/send! pool email
                   {:old-status (:status monitor)
                    :new-status (:status result)
+                   :reason (:reason result)
                    :monitor-name (:name monitor)
                    :public-uri (:public-uri cfg)
                    :unsubscribe-token utoken

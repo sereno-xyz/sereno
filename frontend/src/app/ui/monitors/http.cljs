@@ -7,9 +7,9 @@
 ;;
 ;; Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
 
-(ns app.ui.monitor-detail
+(ns app.ui.monitors.http
   (:require
-   ["./impl_latency_chart" :as ilc]
+   ["./http_chart" :as ilc]
    [app.common.data :as d]
    [app.common.exceptions :as ex]
    [app.common.math :as mth]
@@ -19,7 +19,6 @@
    [app.ui.forms :as forms]
    [app.ui.icons :as i]
    [app.ui.modal :as modal]
-   [app.ui.monitor-form]
    [app.util.dom :as dom]
    [app.util.router :as r]
    [app.util.time :as dt]
@@ -28,7 +27,6 @@
    [okulary.core :as l]
    [potok.core :as ptk]
    [rumext.alpha :as mf]))
-
 
 (mf/defc monitor-info
   [{:keys [summary monitor]}]
@@ -243,36 +241,11 @@
         (when (:load-more history)
           [:a {:on-click load} "Load more"])]]]]))
 
-(defn monitor-ref
-  [id]
-  (l/derived (l/in [:monitors id]) st/state))
-
-(defn monitor-local-ref
-  [id]
-  (l/derived (l/in [:monitor-local id]) st/state))
-
-(mf/defc monitor-detail-page
+(mf/defc http-monitor-detail
   {::mf/wrap [mf/memo]}
-  [{:keys [id section] :as props}]
-  (let [monitor-ref (mf/use-memo (mf/deps id) #(monitor-ref id))
-        monitor     (mf/deref monitor-ref)]
-
-    (mf/use-effect
-     (fn []
-       (st/emit! (ptk/event :initialize-monitor-detail {:id id}))
-       (st/emitf (ptk/event :finalize-monitor-detail {:id id}))))
-
-    (when monitor
-      [:main.monitor-detail-section
-       [:section
-        (case section
-          :monitor-detail
-          [:*
-           [:& monitor-summary {:monitor monitor}]
-           [:& monitor-status-history {:monitor monitor}]]
-
-          ;; :monitor-log
-          ;; [:& monitor-log {:monitor monitor}]
-
-          nil)]])))
+  [{:keys [monitor] :as props}]
+  [:main.monitor-detail-section
+   [:section
+    [:& monitor-summary {:monitor monitor}]
+    [:& monitor-status-history {:monitor monitor}]]])
 

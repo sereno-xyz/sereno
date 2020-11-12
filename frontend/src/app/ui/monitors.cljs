@@ -7,12 +7,10 @@
 ;;
 ;; Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
 
-(ns app.ui.monitor-list
+(ns app.ui.monitors
   (:require
    [app.common.data :as d]
-   [app.common.exceptions :as ex]
    [app.common.spec :as us]
-   [app.common.uuid :as uuid]
    [app.events :as ev]
    [app.repo :as rp]
    [app.store :as st]
@@ -20,7 +18,8 @@
    [app.ui.forms :refer [tags-select]]
    [app.ui.icons :as i]
    [app.ui.modal :as modal]
-   [app.ui.monitor-form]
+   [app.ui.monitors.http-form]
+   [app.ui.monitors.http :refer [http-monitor-detail]]
    [app.util.dom :as dom]
    [app.util.forms :as fm]
    [app.util.router :as r]
@@ -90,7 +89,7 @@
 
 (mf/defc header
   [{:keys [filters] :as props}]
-  (let [open-form (st/emitf (modal/show {:type :monitor-form}))]
+  (let [open-form (st/emitf (modal/show {:type :http-monitor-form}))]
     [:div.options-bar
      [:& header-filters {:filters filters}]
      [:a.add-button {:on-click open-form} i/plus]]))
@@ -125,7 +124,7 @@
          (fn [event]
            (dom/prevent-default event)
            (dom/stop-propagation event)
-           (st/emit! (modal/show {:type :monitor-form :item item}))))
+           (st/emit! (modal/show {:type :http-monitor-form :item item}))))
 
         on-hover
         (mf/use-callback
@@ -229,4 +228,26 @@
    [:div.single-column-1200
     [:& header {:filters params}]
     [:& monitor-list {:filters params}]]])
+
+(defn monitor-ref
+  [id]
+  (l/derived (l/in [:monitors id]) st/state))
+
+(mf/defc monitor-detail-page
+  {::mf/wrap [mf/memo]}
+  [{:keys [id section] :as props}]
+  (let [monitor-ref (mf/use-memo (mf/deps id) #(monitor-ref id))
+        monitor     (mf/deref monitor-ref)]
+
+    (mf/use-effect
+     (fn []
+       (st/emit! (ptk/event :initialize-monitor-detail {:id id}))
+       (st/emitf (ptk/event :finalize-monitor-detail {:id id}))))
+
+    (when monitor
+      (case (:type monitor)
+        "http" [:& http-monitor-detail {:monitor monitor}]
+        "ssl"  [:div "TODO"]
+        nil))))
+
 

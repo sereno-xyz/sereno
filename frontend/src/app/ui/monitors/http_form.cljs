@@ -7,7 +7,7 @@
 ;;
 ;; Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
 
-(ns app.ui.monitor-form
+(ns app.ui.monitors.http-form
   (:require
    [app.common.data :as d]
    [app.common.exceptions :as ex]
@@ -75,10 +75,7 @@
                   (<= min-cadence (d/parse-integer value))))
             cadence-options)))
 
-(defmulti prepare-submit-data (fn [form] (get-in form [:data :type])))
-(defmethod prepare-submit-data :default [_] (ex/raise :type :not-implemented))
-
-(defmethod prepare-submit-data "http"
+(defn- prepare-submit-data
   [form]
   (let [bparams {:id (get-in form [:clean-data :id])
                  :type (get-in form [:clean-data :type])
@@ -308,10 +305,10 @@
         [:& monitor-test {:form form}]]]]]))
 
 
-(mf/defc monitor-form-modal
+(mf/defc http-monitor-form-modal
   {::mf/wrap-props false
    ::mf/register modal/components
-   ::mf/register-as :monitor-form}
+   ::mf/register-as :http-monitor-form}
   [props]
   (let [on-close (st/emitf (modal/hide))]
     [:div.modal-overlay

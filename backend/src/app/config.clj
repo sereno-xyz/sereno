@@ -9,17 +9,17 @@
 
 (ns app.config
   (:require
-   [integrant.core :as ig]
-   [cuerdas.core :as str]
-   [clojure.spec.alpha :as s]
-   [buddy.core.codecs :as bc]
-   [buddy.core.kdf :as bk]
-   [clojure.tools.logging :as log]
-   [cuerdas.core :as str]
-   [environ.core :refer [env]]
    [app.common.exceptions :as ex]
    [app.common.spec :as us]
-   [app.util.time :as tm]))
+   [app.util.time :as tm]
+   [buddy.core.codecs :as bc]
+   [buddy.core.kdf :as bk]
+   [clojure.spec.alpha :as s]
+   [clojure.tools.logging :as log]
+   [cuerdas.core :as str]
+   [cuerdas.core :as str]
+   [environ.core :refer [env]]
+   [integrant.core :as ig]))
 
 (s/def ::database-password (s/nilable ::us/string))
 (s/def ::database-uri ::us/string)

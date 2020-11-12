@@ -13,6 +13,7 @@
    [app.init :as init]
    [app.util.time :as dt]
    [app.util.transit :as t]
+   [app.common.exceptions :as ex]
    [clj-kondo.core :as kondo]
    [clojure.data.json :as json]
    [clojure.java.io :as io]
@@ -23,7 +24,17 @@
    [clojure.tools.namespace.repl :as repl]
    [clojure.walk :refer [macroexpand-all]]
    [criterium.core :refer [quick-bench bench with-progress-reporting]]
-   [integrant.core :as ig]))
+   [integrant.core :as ig])
+  (:import
+   java.net.URL
+   java.security.cert.Certificate
+   java.security.cert.CertificateException
+   java.security.cert.X509Certificate
+   java.util.Date
+   javax.net.ssl.HttpsURLConnection
+   javax.net.ssl.SSLContext
+   javax.net.ssl.TrustManager
+   javax.net.ssl.X509TrustManager))
 
 (repl/disable-reload! (find-ns 'integrant.core))
 
@@ -72,3 +83,39 @@
   []
   (stop)
   (repl/refresh-all :after 'user/start))
+
+
+(defn install-trust!
+  []
+  (let [trust  (reify X509TrustManager
+                 (getAcceptedIssuers [it] nil)
+                 (checkServerTrusted [it a b] nil)
+                 (checkClientTrusted [it a b] nil))
+        trusts (into-array TrustManager [trust])
+        sslctx (SSLContext/getInstance "SSL")
+        _      (.init sslctx nil trusts (java.security.SecureRandom.))]
+    (HttpsURLConnection/setDefaultSSLSocketFactory (.getSocketFactory sslctx))))
+
+(defn check
+  [uri]
+  (let [url   (URL. ^String uri)
+        conn  (.openConnection url)]
+    (when-not (instance? HttpsURLConnection conn)
+      (ex/raise :type :invalid-arguments
+                :code :not-https-uri-provided))
+
+    (.setConnectTimeout ^HttpsURLConnection conn 5000)
+    (.connect ^HttpsURLConnection conn)
+
+    (try
+      (let [certs (.getServerCertificates ^HttpsURLConnection conn)]
+        (doseq [^X509Certificate cert (seq certs)]
+          (let [name   (.. cert getSubjectDN getName)
+                expire (.getNotAfter cert)
+                expire (.toInstant expire)]
+            (prn "cert:" name "," expire))))
+      (finally
+        (.disconnect ^HttpsURLConnection conn)))))
+
+
+

@@ -103,6 +103,9 @@
 
     {:name "0017-mod-change-notify-trigger"
      :fn (mg/resource "app/db/sql/0017-mod-change-notify-trigger.sql")}
+
+    {:name "0018-mod-monitor-table-add-expired-at"
+     :fn (mg/resource "app/db/sql/0018-mod-monitor-table-add-expired-at.sql")}
     ]})
 
 (s/def ::uri ::us/not-empty-string)

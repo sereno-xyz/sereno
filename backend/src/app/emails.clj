@@ -37,8 +37,11 @@
 (def password-recovery
   (emails/template-factory ::password-recovery))
 
-(def monitor-notification
-  (emails/template-factory ::monitor-notification))
+(def http-monitor-notification
+  (emails/template-factory ::http-monitor-notification))
+
+(def ssl-monitor-notification
+  (emails/template-factory ::ssl-monitor-notification))
 
 (def change-email
   (emails/template-factory ::change-email))
