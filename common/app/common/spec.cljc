@@ -104,6 +104,39 @@
     v
     ::s/invalid))
 
+
+(let [header-re #"([\w\d_\-]+)\:\s*([^\n]+)"
+      conform   (fn [s]
+                  (cond
+                    (s/valid? (s/map-of string? string?) s)
+                    s
+
+                    (string? s)
+                    (let [items (re-seq header-re s)]
+                      (cond
+                        (empty? s)
+                        {}
+
+                        (nil? items)
+                        ::s/invalid
+
+                        :else
+                        (reduce (fn [acc [a b c]]
+                                  (assoc acc (str/lower b) c))
+                                {}
+                                items)))
+                    :else
+                    ::s/invalid))
+      unform   (fn [s]
+                 (reduce-kv (fn [base k v]
+                              (if (empty? base)
+                                (str k ": " v)
+                                (str base "\n" k ": " v)))
+                            ""
+                            s))]
+  (s/def ::headers-map (s/conformer conform unform)))
+
+
 ;; --- Default Specs
 
 (s/def ::keyword (s/conformer keyword-conformer name))
