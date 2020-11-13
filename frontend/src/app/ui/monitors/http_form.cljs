@@ -26,37 +26,6 @@
    [potok.core :as ptk]
    [rumext.alpha :as mf]))
 
-(let [header-re #"([\w\d_\-]+)\:\s*([^\n]+)"
-      conform   (fn [s]
-                  (cond
-                    (s/valid? (s/map-of string? string?) s)
-                    s
-
-                    (string? s)
-                    (let [items (re-seq header-re s)]
-                      (cond
-                        (empty? s)
-                        {}
-
-                        (nil? items)
-                        ::s/invalid
-
-                        :else
-                        (reduce (fn [acc [a b c]]
-                                  (assoc acc (str/lower b) c))
-                                {}
-                                items)))
-                    :else
-                    ::s/invalid))
-      unform   (fn [s]
-                 (reduce-kv (fn [base k v]
-                              (if (empty? base)
-                                (str k ": " v)
-                                (str base "\n" k ": " v)))
-                            ""
-                            s))]
-  (s/def ::headers-map (s/conformer conform unform)))
-
 (def cadence-options
   [{:value "60"    :label "1 minute"}
    {:value "120"   :label "2 minutes"}
@@ -67,7 +36,7 @@
    {:value "21600" :label "6 hours"}
    {:value "43200" :label "12 hours"}])
 
-(defn get-cadence-options
+(defn- get-cadence-options
   [{:keys [limits-min-cadence] :as profile}]
   (let [min-cadence (or limits-min-cadence 300)]
     (filter (fn [{:keys [value] :as item}]
@@ -77,27 +46,19 @@
 
 (defn- prepare-submit-data
   [form]
-  (let [bparams {:id (get-in form [:clean-data :id])
-                 :type (get-in form [:clean-data :type])
-                 :name (get-in form [:clean-data :name])
-                 :tags (get-in form [:clean-data :tags])
-                 :cadence (get-in form [:clean-data :cadence])
-                         :contacts (get-in form [:clean-data :contacts])}
-
-        mparams {:method  (get-in form [:clean-data :method])
-                 :headers (get-in form [:clean-data :headers])
-                 :uri     (get-in form [:clean-data :uri])
-                 :should-include (get-in form [:clean-data :should-include])}]
+  (let [cdata   (:clean-data form)
+        bparams (select-keys cdata [:id :type :name :tags :cadence :contacts])
+        mparams (select-keys cdata [:method :headers :uri :should-include])]
     (assoc (d/remove-nil-vals bparams)
            :params (d/remove-nil-vals mparams))))
 
 (mf/defc monitor-test
-  [{:keys [form] :as props}]
+  [{:keys [form prepare-fn] :as props}]
   (let [load? (mf/use-state false)
         res   (mf/use-state nil)
         check (fn []
                 (reset! load? true)
-                (let [data (prepare-submit-data @form)]
+                (let [data (prepare-fn @form)]
                   (->> (rp/req! :test-monitor data)
                        (rx/subs (fn [result]
                                   (swap! res result))
@@ -130,18 +91,42 @@
         (= "down" (:status @res))
         [:span {:title (:reason @res)} "Failed"])]]))
 
-(mf/defc monitor-form-base
-  [{:keys [profile contacts] :as props}]
-  (let [coptions       (get-cadence-options profile)
-        form           (fm/use-form)
-        available-tags (mf/use-state (get-in @form [:data :tags]))]
+(mf/defc tags-input
+  []
+  (let [form (fm/use-form)
+        tags (mf/use-state (get-in @form [:data :tags]))]
 
     (mf/use-effect
      (fn []
-       (->> (rp/req! :retrieve-all-tags {})
-            (rx/subs (fn [tags]
-                       (swap! available-tags into tags))))))
+       (->> (rp/req! :retrieve-all-tags)
+            (rx/subs (fn [v] (swap! tags into v))))))
 
+    [:div.form-row
+     [:& fm/tags-select
+      {:options @tags
+       :label "Tags"
+       :name :tags}]]))
+
+(mf/defc contacts-input
+  []
+  (let [contacts (mf/deref st/contacts-ref)]
+    [:div.form-row
+     [:& fm/select
+      {:label "Conctacts:"
+       :options (map #(array-map :value (:id %)
+                                 :label (:name %))
+                     (vals contacts))
+
+       :value-fn (fn [id]
+                   (let [contact (get contacts id)]
+                     #js {:value id :label (:name contact)}))
+
+       :name :contacts
+       :multiple true}]]))
+
+(mf/defc left-column
+  [{:keys [profile] :as props}]
+  (let [coptions (get-cadence-options profile)]
     [:div.column
      [:div.form-row
       [:& fm/input
@@ -157,25 +142,73 @@
         :label "Interval:"
         :name :cadence}]]
 
-     [:div.form-row
-      [:& fm/tags-select
-       {:options @available-tags
-        :label "Tags"
-        :name :tags}]]
+     [:& tags-input]
+     [:& contacts-input]]))
 
-     [:div.form-row
-      [:& fm/select
-       {:label "Conctacts:"
-        :options (map #(array-map :value (:id %)
-                                  :label (:name %))
-                      (vals contacts))
+(mf/defc right-column
+  []
+  [:div.column
+   [:div.form-row
+    [:& fm/input
+     {:type "text"
+      :name :uri
+      :label "URI:"}]]
 
-        :value-fn (fn [id]
-                    (let [contact (get contacts id)]
-                      #js {:value id :label (:name contact)}))
+   [:div.form-row
+    [:& fm/select
+     {:label "Request method:"
+      :options [{:label "GET" :value :get}
+                {:label "HEAD" :value :head}]
+      :value-fn (fn [val]
+                       #js {:label (str/upper (name val)) :value val})
 
-        :name :contacts
-        :multiple true}]]]))
+      :name :method}]]
+
+   [:div.form-row
+    [:& fm/input
+     {:label "Should include text?"
+      :type "text"
+      :name :should-include}]]
+
+   [:div.form-row
+    [:& fm/input
+     {:label "Raw headers:"
+      :value-fn (fn [o]
+                  (if (map? o)
+                    (->> (reduce-kv #(conj %1 (str %2 ": " %3)) [] o)
+                         (str/join "\n"))
+                    o))
+      :type "textarea"
+      :name :headers}]]])
+
+(defn- on-error
+  [form err]
+  (cond
+    (and (= :validation (:type err))
+         (= :monitor-limits-reached (:code err)))
+    (rx/of (ev/show-message {:content "Monitors limits reached."
+                             :type :error
+                             :timeout 3000}))
+
+    (and (= :validation (:type err))
+         (= :cadence-limits-reached (:code err)))
+    (do
+      (swap! form assoc-in [:errors :cadence]
+             {:message "Cadence not allowed."})
+      (rx/empty))
+
+    :else
+    (rx/throw err)))
+
+(defn- on-submit
+  [form]
+  (let [params (prepare-submit-data @form)
+        params (with-meta params
+                 {:on-success  #(modal/hide!)
+                  :on-error (partial on-error form)})]
+    (if (get-in @form [:data :id])
+      (st/emit! (ptk/event :update-http-monitor params))
+      (st/emit! (ptk/event :create-http-monitor params)))))
 
 (s/def ::type #{"http"})
 (s/def ::name ::us/not-empty-string)
@@ -184,49 +217,18 @@
 (s/def ::method ::us/keyword)
 (s/def ::uri ::us/uri)
 (s/def ::should-include ::us/string)
-(s/def ::headers ::headers-map)
+(s/def ::headers ::us/headers-map)
 (s/def ::tags (s/coll-of ::us/string :kind set?))
 
-(s/def ::http-monitor-form
+(s/def ::monitor-form
   (s/keys :req-un [::name ::type ::cadence ::contacts ::method ::uri]
           :opt-un [::id ::headers ::should-include ::tags]))
 
-(mf/defc http-monitor-form
+(mf/defc monitor-form
   [{:keys [item on-error] :as props}]
   (let [profile    (mf/deref st/profile-ref)
-        contacts   (mf/deref st/contacts-ref)
         cancel-fn  (st/emitf (modal/hide))
-
-        on-success #(modal/hide!)
-        on-error   (fn [form err]
-                     (cond
-                       (and (= :validation (:type err))
-                            (= :monitor-limits-reached (:code err)))
-                       (rx/of (ev/show-message {:content "Monitors limits reached."
-                                                :type :error
-                                                :timeout 3000}))
-
-                       (and (= :validation (:type err))
-                            (= :cadence-limits-reached (:code err)))
-                       (do
-                         (swap! form assoc-in [:errors :cadence]
-                                {:message "Cadence not allowed."})
-                         (rx/empty))
-
-                       :else
-                       (rx/throw err)))
-
-        on-submit
-        (fn [form]
-          (let [params (prepare-submit-data @form)
-                params (with-meta params
-                         {:on-success on-success
-                          :on-error (partial on-error form)})]
-            (if item
-              (st/emit! (ptk/event :update-monitor params))
-              (st/emit! (ptk/event :create-monitor params)))))
-
-        params (:params item)
+        params     (:params item)
 
         initial
         (mf/use-memo
@@ -248,7 +250,7 @@
               :type "http"
               :contacts #{}})))
 
-        form (fm/use-form :spec ::http-monitor-form
+        form (fm/use-form :spec ::monitor-form
                           :initial initial)]
 
     [:div.modal.monitor-form-modal.form-container
@@ -262,48 +264,13 @@
         {:on-click cancel-fn} i/times]]
 
       [:div.modal-content.columns
-       [:& monitor-form-base {:profile profile
-                              :form form
-                              :contacts contacts}]
-       [:div.column
-        [:div.form-row
-         [:& fm/input
-          {:type "text"
-           :name :uri
-           :label "URI:"}]]
-
-        [:div.form-row
-         [:& fm/select
-          {:label "Request method:"
-           :options [{:label "GET" :value :get}
-                     {:label "HEAD" :value :head}]
-           :value-fn (fn [val]
-                       #js {:label (str/upper (name val)) :value val})
-
-           :name :method}]]
-
-        [:div.form-row
-         [:& fm/input
-          {:label "Should include text?"
-           :type "text"
-           :name :should-include}]]
-
-        [:div.form-row
-         [:& fm/input
-          {:label "Raw headers:"
-           :value-fn (fn [o]
-                       (if (map? o)
-                         (->> (reduce-kv #(conj %1 (str %2 ": " %3)) [] o)
-                              (str/join "\n"))
-                         o))
-           :type "textarea"
-           :name :headers}]]]]
+       [:& left-column {:profile profile}]
+       [:& right-column]]
 
       [:div.modal-footer
        [:div.action-buttons
         [:& fm/submit-button {:form form :label "Submit"}]
-        [:& monitor-test {:form form}]]]]]))
-
+        [:& monitor-test {:form form :prepare-fn prepare-submit-data}]]]]]))
 
 (mf/defc http-monitor-form-modal
   {::mf/wrap-props false
@@ -312,4 +279,4 @@
   [props]
   (let [on-close (st/emitf (modal/hide))]
     [:div.modal-overlay
-     [:> http-monitor-form props]]))
+     [:> monitor-form props]]))

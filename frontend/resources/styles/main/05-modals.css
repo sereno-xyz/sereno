@@ -178,6 +178,14 @@
   width: 900px;
   min-height: 557px;
 
+  &.ssl-monitor {
+    min-height: unset;
+
+    .columns {
+      overflow-y: unset;
+    }
+  }
+
   .modal-content {
     padding: 10px 10px;
   }

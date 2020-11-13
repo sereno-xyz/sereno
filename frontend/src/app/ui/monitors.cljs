@@ -16,20 +16,22 @@
    [app.store :as st]
    [app.ui.confirm]
    [app.ui.dropdown :refer [dropdown]]
-   [app.ui.forms :refer [tags-select]]
+   [app.ui.forms :as fm]
    [app.ui.icons :as i]
    [app.ui.modal :as modal]
    [app.ui.monitors.http-form]
+   [app.ui.monitors.ssl-form]
    [app.ui.monitors.http :refer [http-monitor-detail]]
    [app.util.dom :as dom]
-   [app.util.forms :as fm]
    [app.util.router :as r]
    [app.util.time :as dt]
+   [app.util.object :as obj]
    [beicon.core :as rx]
    [cljs.spec.alpha :as s]
    [clojure.set :as set]
    [cuerdas.core :as str]
    [okulary.core :as l]
+   [app.util.timers :as tm]
    [potok.core :as ptk]
    [rumext.alpha :as mf]))
 
@@ -37,6 +39,34 @@
 (s/def ::status ::us/not-empty-string)
 (s/def ::filters-form
   (s/keys :opt-un [::tags ::status]))
+
+(mf/defc tags-input
+  {::mf/wrap-props false
+   ::mf/wrap [#(mf/deferred % tm/raf)]}
+  [props]
+  (let [options   (obj/get props "options")
+        on-change (obj/get props "on-change")
+        value-fn  #(js-obj "label" % "value" %)
+        options   (into-array (map value-fn options))
+        value     (obj/get props "value")
+        value     (into-array (map value-fn value))
+
+        on-change*
+        (mf/use-callback
+         (fn [item]
+           (let [value (into #{} (map #(obj/get % "value")) (seq item))]
+             (on-change value))))]
+
+    [:div.form-field
+     [:> fm/creatable-select
+      {:options options
+       :defaultInputValue ""
+       :className "react-select"
+       :classNamePrefix "react-select"
+       :isMulti true
+       :onChange on-change*
+       :value value}]]))
+
 
 (mf/defc header-filters
   [{:keys [filters] :as props}]
@@ -67,7 +97,7 @@
 
     [:div.monitor-filters
      [:div.search
-      [:& tags-select
+      [:& tags-input
        {:options @tags
         :value (:tags filters)
         :on-change update-tags}]]

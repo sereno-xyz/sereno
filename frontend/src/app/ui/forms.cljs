@@ -9,19 +9,17 @@
 
 (ns app.ui.forms
   (:require
-   [rumext.alpha :as mf]
-   [cuerdas.core :as str]
+   ["react-select" :default Select]
+   ["react-select/creatable" :default CreatableSelect]
    [app.common.data :as d]
    [app.common.exceptions :as ex]
+   [app.util.dom :as dom]
+   [app.util.forms :as fm]
+   [app.util.i18n :as i18n :refer [t]]
    [app.util.object :as obj]
    [app.util.timers :as tm]
-   [app.util.forms :as fm]
-   [app.util.object :as obj]
-   [app.util.i18n :as i18n :refer [t]]
-   [app.util.dom :as dom]
-   ["react-select" :default Select]
-   ["react-select/creatable" :default CreatableSelect]))
-
+   [cuerdas.core :as str]
+   [rumext.alpha :as mf]))
 
 (def form-ctx (mf/create-context nil))
 
@@ -30,6 +28,7 @@
   ([& args] (apply fm/use-form args)))
 
 (def rselect Select)
+(def creatable-select CreatableSelect)
 
 (mf/defc input
   [{:keys [type label disabled name form hint children trim value-fn] :as props}]
@@ -107,34 +106,53 @@
   {::mf/wrap-props false
    ::mf/wrap [#(mf/deferred % tm/raf)]}
   [props]
-  (let [label     (obj/get props "label")
+  (let [form      (or (obj/get props "form")
+                      (mf/use-ctx form-ctx))
+        label     (obj/get props "label")
         name      (obj/get props "name")
         options   (obj/get props "options")
-        on-change (obj/get props "on-change")
 
         value-fn  #(js-obj "label" % "value" %)
         options   (into-array (map value-fn options))
 
-        value     (obj/get props "value")
+        touched?  (get-in @form [:touched name])
+        error     (get-in @form [:errors name])
+
+        value     (or (get-in @form [:data name]) [])
         value     (into-array (map value-fn value))
 
-        on-change*
+        on-blur
         (mf/use-callback
+         (mf/deps form)
+         (fn [event]
+           (when-not (get-in @form [:touched name])
+             (swap! form assoc-in [:touched name] true))))
+
+        on-change
+        (mf/use-callback
+         (mf/deps form)
          (fn [item]
            (let [value (into #{} (map #(obj/get % "value")) (seq item))]
-             (on-change value))))
+             (swap! form (fn [state]
+                           (-> state
+                               (assoc-in [:data name] value)
+                               (update :errors dissoc name)))))))
 
-        props (-> (obj/without props [:from :children :label :on-change :value])
+        props (-> (obj/without props [:from :children :label])
                   (obj/merge #js {:options options
                                   :defaultInputValue ""
                                   :className "react-select"
                                   :classNamePrefix "react-select"
                                   :isMulti true
-                                  :onChange on-change*
+                                  :onBlur on-blur
+                                  :onChange on-change
                                   :value value}))]
     [:div.form-field
      (when label [:label label])
-     [:> CreatableSelect props]]))
+     [:> CreatableSelect props]
+     (when (and touched? (:message error))
+       [:span.error (:message error)])]))
+
 
 (mf/defc select
   {::mf/wrap-props false

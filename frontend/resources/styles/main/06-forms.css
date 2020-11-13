@@ -100,6 +100,7 @@ input {
 
 
 input[type=password],
+input[type=number],
 input[type=text] {
   padding: 10px;
   border-radius: 2px;

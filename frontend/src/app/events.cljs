@@ -418,20 +418,20 @@
 
 (s/def ::params (s/map-of ::us/keyword any?))
 
-(s/def ::create-monitor-params
+(s/def ::create-http-monitor
   (s/keys :req-un [::name ::cadence ::contacts ::params]
           :opt-un [::tags]))
 
-(defmethod ptk/resolve :create-monitor
+(defmethod ptk/resolve :create-http-monitor
   [_ params]
-  (us/assert ::create-monitor-params params)
-  (ptk/reify ::create-monitor
+  (us/assert ::create-http-monitor params)
+  (ptk/reify ::create-http-monitor
     ptk/WatchEvent
     (watch [_ state stream]
       (let [{:keys [on-success on-error]
              :or {on-success identity
                   on-error identity}} (meta params)]
-        (->> (rp/req! :create-monitor params)
+        (->> (rp/req! :create-http-monitor params)
              (rx/tap on-success)
              (rx/map #(ptk/event :fetch-monitors))
              (rx/catch (fn [error]
@@ -441,14 +441,14 @@
                            (rx/throw error)))))))))
 
 
-(s/def ::update-monitor
+(s/def ::update-http-monitor
   (s/keys :req-un [::id ::name ::cadence ::contacts ::params]
           :opt-un [::tags]))
 
-(defmethod ptk/resolve :update-monitor
+(defmethod ptk/resolve :update-http-monitor
   [_ {:keys [id] :as params}]
-  (us/assert ::update-monitor params)
-  (ptk/reify ::update-monitor
+  (us/assert ::update-http-monitor params)
+  (ptk/reify ::update-http-monitor
     ptk/UpdateEvent
     (update [_ state]
       (update-in state [:monitors id] merge params))
@@ -458,7 +458,7 @@
       (let [{:keys [on-success on-error]
              :or {on-error identity
                   on-success identity}} (meta params)]
-        (->> (rp/req! :update-monitor params)
+        (->> (rp/req! :update-http-monitor params)
              (rx/tap on-success)
              (rx/catch (fn [error]
                          (or (on-error error)
@@ -476,7 +476,6 @@
     (watch [_ state stream]
       (->> (rp/req! :delete-monitor {:id id})
            (rx/map #(ptk/event :fetch-monitors))))))
-
 
 (defn pause-monitor
   [{:keys [id] :as params}]
