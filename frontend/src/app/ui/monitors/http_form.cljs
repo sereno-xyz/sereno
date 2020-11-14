@@ -12,6 +12,7 @@
    [app.common.data :as d]
    [app.common.exceptions :as ex]
    [app.common.spec :as us]
+   [app.events.messages :as em]
    [app.events :as ev]
    [app.repo :as rp]
    [app.store :as st]
@@ -44,21 +45,13 @@
                   (<= min-cadence (d/parse-integer value))))
             cadence-options)))
 
-(defn- prepare-submit-data
-  [form]
-  (let [cdata   (:clean-data form)
-        bparams (select-keys cdata [:id :type :name :tags :cadence :contacts])
-        mparams (select-keys cdata [:method :headers :uri :should-include])]
-    (assoc (d/remove-nil-vals bparams)
-           :params (d/remove-nil-vals mparams))))
-
 (mf/defc monitor-test
-  [{:keys [form prepare-fn] :as props}]
+  [{:keys [form] :as props}]
   (let [load? (mf/use-state false)
         res   (mf/use-state nil)
         check (fn []
                 (reset! load? true)
-                (let [data (prepare-fn @form)]
+                (let [data (d/remove-nil-vals (:clean-data @form))]
                   (->> (rp/req! :test-monitor data)
                        (rx/subs (fn [result]
                                   (swap! res result))
@@ -200,11 +193,22 @@
     :else
     (rx/throw err)))
 
+(defn- on-success
+  [form]
+  (st/emit! (modal/hide))
+  (if (get-in @form [:data :id])
+    (st/emit! (em/show {:content "Monitor updated"
+                        :timeout 2000
+                        :type :success}))
+    (st/emit! (em/show {:content "Monitor created"
+                        :timeout 2000
+                        :type :success}))))
+
 (defn- on-submit
   [form]
-  (let [params (prepare-submit-data @form)
+  (let [params (d/remove-nil-vals (:clean-data @form))
         params (with-meta params
-                 {:on-success  #(modal/hide!)
+                 {:on-success (partial on-success form)
                   :on-error (partial on-error form)})]
     (if (get-in @form [:data :id])
       (st/emit! (ptk/event :update-http-monitor params))
@@ -270,7 +274,7 @@
       [:div.modal-footer
        [:div.action-buttons
         [:& fm/submit-button {:form form :label "Submit"}]
-        [:& monitor-test {:form form :prepare-fn prepare-submit-data}]]]]]))
+        [:& monitor-test {:form form}]]]]]))
 
 (mf/defc http-monitor-form-modal
   {::mf/wrap-props false

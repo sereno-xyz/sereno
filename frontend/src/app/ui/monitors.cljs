@@ -210,6 +210,7 @@
 
        (case (:type item)
          "http" i/cloud
+         "ssl"  i/shield-alt
          nil)]
 
       [:div.monitor-title

@@ -406,21 +406,18 @@
                      #(assoc-in % [:monitors id] monitor)))))))
 
 (s/def ::name string?)
-(s/def ::uri string?)
 (s/def ::cadence ::us/integer)
-(s/def ::contacts
-  (s/coll-of ::us/uuid :min-count 1))
+(s/def ::contacts (s/coll-of ::us/uuid :min-count 1))
+(s/def ::tags (s/coll-of ::us/string :kind set?))
 
+(s/def ::uri string?)
 (s/def ::headers (s/nilable (s/map-of string? string?)))
 (s/def ::should-include ::us/string)
 (s/def ::method ::us/keyword)
-(s/def ::tags (s/coll-of ::us/string :kind set?))
-
-(s/def ::params (s/map-of ::us/keyword any?))
 
 (s/def ::create-http-monitor
-  (s/keys :req-un [::name ::cadence ::contacts ::params]
-          :opt-un [::tags]))
+  (s/keys :req-un [::name ::cadence ::contacts ::method ::uri]
+          :opt-un [::tags ::should-include ::headers]))
 
 (defmethod ptk/resolve :create-http-monitor
   [_ params]
@@ -434,25 +431,38 @@
         (->> (rp/req! :create-http-monitor params)
              (rx/tap on-success)
              (rx/map #(ptk/event :fetch-monitors))
-             (rx/catch (fn [error]
-                         (if (fn? on-error)
-                           (let [res (on-error error)]
-                             (if (rx/observable? res) res (rx/empty)))
-                           (rx/throw error)))))))))
+             (rx/catch on-error))))))
+
+(s/def ::alert-before (s/and ::us/integer pos?))
+
+(s/def ::create-ssl-monitor
+  (s/keys :req-un [::name ::contacts ::uri ::alert-before]
+          :opt-un [::tags]))
+
+(defmethod ptk/resolve :create-ssl-monitor
+  [_ params]
+  (us/assert ::create-ssl-monitor params)
+  (ptk/reify ::create-ssl-monitor
+    ptk/WatchEvent
+    (watch [_ state stream]
+      (prn ":create-ssl-monitor" params)
+      (let [{:keys [on-success on-error]
+             :or {on-success identity
+                  on-error identity}} (meta params)]
+        (->> (rp/req! :create-ssl-monitor params)
+             (rx/tap on-success)
+             (rx/map #(ptk/event :fetch-monitors))
+             (rx/catch on-error))))))
 
 
 (s/def ::update-http-monitor
-  (s/keys :req-un [::id ::name ::cadence ::contacts ::params]
-          :opt-un [::tags]))
+  (s/keys :req-un [::id ::name ::cadence ::contacts ::method ::uri]
+          :opt-un [::tags ::should-include ::headers]))
 
 (defmethod ptk/resolve :update-http-monitor
   [_ {:keys [id] :as params}]
   (us/assert ::update-http-monitor params)
   (ptk/reify ::update-http-monitor
-    ptk/UpdateEvent
-    (update [_ state]
-      (update-in state [:monitors id] merge params))
-
     ptk/WatchEvent
     (watch [_ state stream]
       (let [{:keys [on-success on-error]
@@ -460,6 +470,28 @@
                   on-success identity}} (meta params)]
         (->> (rp/req! :update-http-monitor params)
              (rx/tap on-success)
+             (rx/map #(ptk/event :fetch-monitors))
+             (rx/catch (fn [error]
+                         (or (on-error error)
+                             (rx/empty)))))))))
+
+
+(s/def ::update-ssl-monitor
+  (s/keys :req-un [::id ::name ::contacts ::uri ::alert-before]
+          :opt-un [::tags]))
+
+(defmethod ptk/resolve :update-ssl-monitor
+  [_ {:keys [id] :as params}]
+  (us/assert ::update-ssl-monitor params)
+  (ptk/reify ::update-ssl-monitor
+    ptk/WatchEvent
+    (watch [_ state stream]
+      (let [{:keys [on-success on-error]
+             :or {on-error identity
+                  on-success identity}} (meta params)]
+        (->> (rp/req! :update-ssl-monitor params)
+             (rx/tap on-success)
+             (rx/map #(ptk/event :fetch-monitors))
              (rx/catch (fn [error]
                          (or (on-error error)
                              (rx/empty)))))))))

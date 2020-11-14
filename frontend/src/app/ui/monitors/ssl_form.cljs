@@ -13,6 +13,7 @@
    [app.common.exceptions :as ex]
    [app.common.spec :as us]
    [app.events :as ev]
+   [app.events.messages :as em]
    [app.repo :as rp]
    [app.store :as st]
    [app.ui.forms :as fm]
@@ -77,17 +78,27 @@
     :else
     (rx/throw err)))
 
+(defn- on-success
+  [form]
+  (st/emit! (modal/hide))
+  (if (get-in @form [:data :id])
+    (st/emit! (em/show {:content "Monitor updated"
+                        :timeout 2000
+                        :type :success}))
+    (st/emit! (em/show {:content "Monitor created"
+                        :timeout 2000
+                        :type :success}))))
+
 (defn- on-submit
   [form]
-  (let [params (prepare-submit-data @form)
+  (let [params (d/remove-nil-vals (:clean-data @form))
         params (with-meta params
-                 {:on-success  #(modal/hide!)
+                 {:on-success (partial on-success form)
                   :on-error (partial on-error form)})]
     (if (get-in @form [:data :id])
       (st/emit! (ptk/event :update-ssl-monitor params))
       (st/emit! (ptk/event :create-ssl-monitor params)))))
 
-(s/def ::type #{"ssl"})
 (s/def ::name ::us/not-empty-string)
 (s/def ::contacts (s/coll-of ::us/uuid :min-count 1))
 (s/def ::uri ::us/uri)
@@ -95,7 +106,7 @@
 (s/def ::alert-before (s/and ::us/integer pos?))
 
 (s/def ::monitor-form
-  (s/keys :req-un [::name ::type::contacts ::uri ::alert-before]
+  (s/keys :req-un [::name ::contacts ::uri ::alert-before]
           :opt-un [::id ::tags]))
 
 (mf/defc monitor-form
@@ -114,9 +125,10 @@
               :type     (:type item)
               :contacts (:contacts item #{})
               :tags     (or (:tags item) #{})
+              :alert-before (:alert-before item 5)
               :uri      (:uri params)}
              {:alert-before 5
-              :type "http"
+              :type "ssl"
               :contacts #{}})))
 
         form (fm/use-form :spec ::monitor-form

@@ -73,11 +73,11 @@
     (.connect ^HttpsURLConnection conn)
 
     (try
-      (let [certs (.getServerCertificates ^HttpsURLConnection conn)]
-        (doseq [^X509Certificate cert (seq certs)]
-          (let [name   (.. cert getSubjectDN getName)
-                expire (.getNotAfter cert)]
-            (.toInstant expire))))
+      (let [certs  (.getServerCertificates ^HttpsURLConnection conn)
+            cert   (first certs)
+            name   (.. ^X509Certificate cert getSubjectDN getName)
+            expire (.getNotAfter ^X509Certificate cert)]
+        (.toInstant expire))
       (finally
         (.disconnect ^HttpsURLConnection conn)))))
 
@@ -105,13 +105,12 @@
                :status "down"
                :reason "certificate-expired")
 
-        (< remaining (inst-ms (dt/duration {:days 7})))
+        (< remaining (inst-ms (dt/duration {:days (:alert-before params)})))
         (assoc result
                :status "warn"
                :reason "near-expiration")
 
         :else
-        (assoc result :status "up"))
-        {:status "up"})
+        (assoc result :status "up")))
     (catch Exception e
       (handle-exception e monitor))))

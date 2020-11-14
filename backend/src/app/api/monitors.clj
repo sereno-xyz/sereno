@@ -35,11 +35,10 @@
 (s/def ::headers (s/map-of ::us/string ::us/string))
 (s/def ::cadence ::us/integer)
 (s/def ::contacts (s/coll-of ::us/uuid :min-count 1))
-(s/def ::params (s/map-of ::us/keyword any?))
 (s/def ::tags (s/coll-of ::us/string :kind set?))
 
 (s/def ::create-http-monitor
-  (s/keys :req-un [::name ::cadence ::profile-id ::contacts ::params ::method ::uri]
+  (s/keys :req-un [::name ::cadence ::profile-id ::contacts ::method ::uri]
           :opt-un [::tags ::should-include ::headers]))
 
 (sv/defmethod ::create-http-monitor
@@ -416,10 +415,10 @@
    "30days"   (db/interval "12 hours")})
 
 (s/def ::period #(contains? bucket-size %))
-(s/def ::retrieve-monitor-latency-summary
+(s/def ::retrieve-monitor-summary
   (s/keys :req-un [::id ::period]))
 
-(sv/defmethod ::retrieve-monitor-latency-summary
+(sv/defmethod ::retrieve-monitor-summary
   [{:keys [pool]} {:keys [id profile-id period]}]
   (db/with-atomic [conn pool]
     (let [monitor   (db/exec-one! conn [sql:retrieve-monitor profile-id id])

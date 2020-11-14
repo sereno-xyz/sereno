@@ -16,6 +16,7 @@
    [app.tasks :as tasks]
    [app.emails :as emails]
    [app.util.time :as dt]
+   [app.tasks.monitor-ssl  :as mssl]
    [app.tasks.monitor-http :as mhttp]
    [cuerdas.core :as str]
    [clojure.spec.alpha :as s]
@@ -24,10 +25,9 @@
 
 (defn run-monitor
   [cfg monitor]
-  ;; (locking run-monitor
-  ;;   (prn "KAKA" monitor))
   (case (:type monitor)
     "http" (mhttp/run cfg monitor)
+    "ssl"  (mssl/run cfg monitor)
     (ex/raise :type :internal
               :code :not-implemented)))
 
@@ -121,9 +121,8 @@
             (let [result (run-monitor! cfg monitor)]
 
               ;; Execute the possible update-fn
-              (ex/ignoring
-               (when-let [update-fn (:update-fn result)]
-                 (update-fn conn)))
+              (when-let [update-fn (:update-fn result)]
+                (update-fn conn))
 
               (if (and (:retry result) (< (:retry-num tdata) (:max-retries tdata)))
                 (ex/raise :type :app.worker/retry
