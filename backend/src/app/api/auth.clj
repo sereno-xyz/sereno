@@ -7,7 +7,7 @@
 ;;
 ;; Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
 
-(ns app.api-auth
+(ns app.api.auth
   (:require
    [app.common.exceptions :as ex]
    [app.config :as cfg]

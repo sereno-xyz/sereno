@@ -172,6 +172,13 @@
      :else (recur (rest col1) col2 join-fn
                   (core/concat acc (map (partial join-fn (first col1)) col2))))))
 
+(defn domap
+  "A side effect map version."
+  ([f]
+   (map (fn [x] (f x) x)))
+  ([f coll]
+   (map (fn [x] (f x) x) coll)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; URI
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

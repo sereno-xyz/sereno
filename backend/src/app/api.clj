@@ -9,8 +9,7 @@
 
 (ns app.api
   (:require
-   [app.api-auth :as auth]
-   [app.api-impl :as impl]
+   [app.api.auth :as auth]
    [app.common.exceptions :as ex]
    [app.common.spec :as us]
    [app.db :as db]
@@ -142,9 +141,13 @@
 
 (defmethod ig/init-key :app.api/impl
   [_ cfg]
-  (->> (sv/scan-ns 'app.api-impl)
+  (->> (sv/scan-ns 'app.api.profile
+                   'app.api.monitors
+                   'app.api.contacts
+                   'app.api.token
+                   'app.api.export)
        (map (fn [vfn]
               (let [mdata (meta vfn)]
-                [(keyword (::name mdata))
+                [(keyword (::sv/name mdata))
                  (wrap-impl (deref vfn) mdata cfg)])))
        (into {})))
