@@ -9,16 +9,17 @@
 
 (ns app.http.middleware
   (:require
-   [clojure.java.io :as io]
+   [app.common.exceptions :as ex]
+   [app.config :as cfg]
+   [app.util.transit :as t]
    [clojure.data.json :as json]
+   [clojure.java.io :as io]
    [clojure.tools.logging :as log]
    [ring.middleware.cookies :refer [wrap-cookies]]
    [ring.middleware.keyword-params :refer [wrap-keyword-params]]
    [ring.middleware.multipart-params :refer [wrap-multipart-params]]
    [ring.middleware.params :refer [wrap-params]]
-   [ring.middleware.resource :refer [wrap-resource]]
-   [app.common.exceptions :as ex]
-   [app.util.transit :as t]))
+   [ring.middleware.resource :refer [wrap-resource]]))
 
 (defn- wrap-parse-request-body
   [handler]
@@ -55,9 +56,8 @@
    :compile (constantly wrap-parse-request-body)})
 
 (defn- impl-format-response-body
-  [response]
-  (let [body (:body response)
-        type :json]
+  [response type]
+  (let [body (:body response)]
     (cond
       (coll? body)
       (-> response
@@ -74,10 +74,11 @@
 
 (defn- wrap-format-response-body
   [handler]
-  (fn [request]
-    (let [response (handler request)]
-      (cond-> response
-        (map? response) (impl-format-response-body)))))
+  (let [type (if (:debug cfg/config) :json-verbose :json)]
+    (fn [request]
+      (let [response (handler request)]
+        (cond-> response
+          (map? response) (impl-format-response-body type))))))
 
 (def format-response-body
   {:name ::format-response-body

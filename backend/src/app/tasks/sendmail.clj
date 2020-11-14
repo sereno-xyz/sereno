@@ -9,21 +9,17 @@
 
 (ns app.tasks.sendmail
   (:require
-   [app.common.data :as d]
-   [app.common.exceptions :as ex]
-   [app.common.spec :as us]
    [app.util.emails :as emails]
-   [clojure.data.json :as json]
    [clojure.spec.alpha :as s]
    [clojure.tools.logging :as log]
-   [integrant.core :as ig]))
+   [integrant.core :as ig])
+  (:import
+   java.io.ByteArrayOutputStream))
 
-(defmulti sendmail (fn [config email] (:backend config)))
-
-(defmethod sendmail "console"
-  [{:keys [smtp] :as cfg} email]
-  (let [baos (java.io.ByteArrayOutputStream.)
-        mesg (emails/smtp-message smtp email)]
+(defn- send-console!
+  [cfg email]
+  (let [baos (ByteArrayOutputStream.)
+        mesg (emails/smtp-message cfg email)]
     (.writeTo mesg baos)
     (let [out (with-out-str
                 (println "email console dump:")
@@ -32,24 +28,14 @@
                 (println "******** end email "(:id email) "**********"))]
       (log/info out))))
 
-(defmethod sendmail "smtp"
-  [{:keys [smtp] :as cfg} email]
-  (emails/send! smtp email))
-
-(s/def ::http-client fn?)
-(s/def ::backend ::us/not-empty-string)
-
-;; TODO: use proper specs
-(s/def ::smtp (s/map-of ::us/keyword any?))
-
-(defmethod ig/pre-init-spec ::handler
-  [_]
-  (s/keys :req-un [::backend ::http-client ::smtp]))
+;; TODO: add specs
+;; (defmethod ig/pre-init-spec ::handler
+;;   [_]
+;;   (s/keys :req-un [::smtp]))
 
 (defmethod ig/init-key ::handler
-  [_ {:keys [smtp] :as cfg}]
+  [_ cfg]
   (fn [{:keys [props] :as tdata}]
-    ;; (let [props (cond-> props
-    ;; (nil? (:from props))
-    ;; (assoc :from (:default-from smtp)))]
-    (sendmail cfg props)))
+    (if (:enabled cfg)
+      (emails/send! cfg props)
+      (send-console! cfg props))))

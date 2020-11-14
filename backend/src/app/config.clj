@@ -31,7 +31,7 @@
 (s/def ::http-server-port ::us/integer)
 (s/def ::public-uri ::us/string)
 (s/def ::secret-key ::us/string)
-(s/def ::sendmail-backend ::us/string)
+(s/def ::smtp-enabled ::us/boolean)
 (s/def ::smtp-default-from ::us/email)
 (s/def ::smtp-default-reply-to ::us/email)
 (s/def ::smtp-host ::us/string)
@@ -42,12 +42,14 @@
 (s/def ::smtp-tls ::us/boolean)
 (s/def ::telegram-token ::us/string)
 (s/def ::telegram-id ::us/integer)
+(s/def ::debug ::us/boolean)
 
 (s/def ::config
   (s/keys :opt-un [::http-server-port
                    ::database-username
                    ::database-password
                    ::database-uri
+                   ::debug
                    ::secret-key
                    ::default-profile-type
                    ::error-reporter-webhook-uri
@@ -80,9 +82,25 @@
              {}
              env))
 
+(def default-config
+  {:debug true
+   :smtp-enabled false
+   :smtp-host "localhost"
+   :smtp-port 25
+   :smtp-default-reply-to "no-reply@example.com"
+   :smtp-default-from "no-reply@example.com"
+   :public-uri "http://localhost:4449"
+   :database-uri "postgresql://postgres:5432/sereno"
+   :database-username "sereno"
+   :database-password "sereno"
+   :repl-server-host "localhost"
+   :repl-server-port 4461
+   :http-server-port 4460})
+
 (def config
   (->> (env->config env)
-       (us/conform ::config)))
+       (us/conform ::config)
+       (merge default-config)))
 
 (defmethod ig/init-key ::secrets
   [type {:keys [key] :as opts}]

@@ -45,17 +45,18 @@
 
 (def system-config
   {:app.config/public-uri
-   (:public-uri cfg/config "http://localhost:4449")
+   (:public-uri cfg/config)
 
    :app.config/google
    {:client-id (:google-client-id cfg/config)
     :client-secret (:google-client-secret cfg/config)}
 
    :app.config/smtp
-   {:host (:smtp-host cfg/config "localhost")
-    :port (:smtp-port cfg/config 25)
-    :default-reply-to (:smtp-default-reply-to cfg/config "no-reply@sereno.xyz")
-    :default-from (:smtp-default-from cfg/config "no-reply@sereno.xyz")
+   {:host (:smtp-host cfg/config)
+    :port (:smtp-port cfg/config)
+    :default-reply-to (:smtp-default-reply-to cfg/config)
+    :default-from (:smtp-default-from cfg/config)
+    :enabled (:smtp-enabled cfg/config)
     :tls (:smtp-tls cfg/config)
     :username (:smtp-username cfg/config)
     :password (:smtp-password cfg/config)}
@@ -67,9 +68,9 @@
    {}
 
    :app.db/pool
-   {:uri (:database-uri cfg/config "postgresql://postgres:5432/sereno")
-    :username (:database-username cfg/config "sereno")
-    :password (:database-password cfg/config "sereno")
+   {:uri (:database-uri cfg/config)
+    :username (:database-username cfg/config)
+    :password (:database-password cfg/config)
     :metrics-registry (ig/ref :app.metrics/registry)
     :migrations (ig/ref :app.db/migrations)
     :name "main"
@@ -117,14 +118,14 @@
    {:executor (ig/ref :app.worker/executor)}
 
    :app.http/server
-   {:port (:http-server-port cfg/config 4460)
+   {:port (:http-server-port cfg/config)
     :ws {"/ws/notifications" (ig/ref :app.ws/notifications-handler)}
     :handler (ig/ref :app.api/handler)}
 
    :app.repl/server
    {:name "default"
-    :port (:repl-server-port cfg/config 4461)
-    :host "localhost"}
+    :port (:repl-server-port cfg/config)
+    :host (:repl-server-host cfg/config)}
 
    :app.worker/executor
    {:name "worker"
@@ -180,9 +181,7 @@
     :http-client (ig/ref :app.http/client)}
 
    :app.tasks.sendmail/handler
-   {:http-client (ig/ref :app.http/client)
-    :backend (:sendmail-backend cfg/config "console")
-    :smtp (ig/ref :app.config/smtp)}
+   {:smtp (ig/ref :app.config/smtp)}
 
    :app.tasks.mailjet-webhook/handler
    {:pool (ig/ref :app.db/pool)
