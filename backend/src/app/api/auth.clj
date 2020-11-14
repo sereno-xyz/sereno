@@ -10,14 +10,10 @@
 (ns app.api.auth
   (:require
    [app.common.exceptions :as ex]
-   [app.config :as cfg]
-   [app.db :as db]
    [app.session :as session]
    [app.util.time :as dt]
    [clojure.data.json :as json]
-   [clojure.spec.alpha :as s]
    [clojure.tools.logging :as log]
-   [integrant.core :as ig]
    [lambdaisland.uri :as uri]))
 
 (def gauth-uri "https://accounts.google.com/o/oauth2/v2/auth")
@@ -83,7 +79,7 @@
         nil))))
 
 (defn gauth-handler
-  [{:keys [pool tokens] :as cfg} request]
+  [{:keys [pool tokens] :as cfg} _]
   (let [claims {:iss :gauth
                 :exp (dt/plus (dt/now) #app/duration "5m")}
         token  ((:create tokens) claims)

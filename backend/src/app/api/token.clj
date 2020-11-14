@@ -10,24 +10,11 @@
 (ns app.api.token
   (:require
    [app.common.exceptions :as ex]
-   [app.common.spec :as us]
-   [app.common.uuid :as uuid]
-   [app.config :as cfg]
    [app.db :as db]
-   [app.emails :as emails]
-   [app.http :as http]
-   [app.telegram :as telegram]
    [app.util.time :as dt]
    [app.api.profile :refer [check-profile-existence!]]
-   [app.util.transit :as t]
-   [buddy.hashers :as bh]
    [app.util.services :as sv]
-   [clojure.core.async :as a]
-   [clojure.java.io :as io]
-   [clojure.spec.alpha :as s]
-   [clojure.tools.logging :as log]
-   [cuerdas.core :as str]
-   [ring.core.protocols :as rp]))
+   [clojure.spec.alpha :as s]))
 
 ;; --- Mutation: Verify Profile Token
 
@@ -43,10 +30,10 @@
       (process-token (assoc cfg :conn conn) claims))))
 
 
-(defmulti process-token (fn [cfg token] (:iss token)))
+(defmulti process-token (fn [_ token] (:iss token)))
 
 (defmethod process-token :change-email
-  [{:keys [conn] :as cfg} {:keys [profile-id] :as claims}]
+  [{:keys [conn]} {:keys [profile-id] :as claims}]
   (let [profile (db/get-by-id conn :profile profile-id {:for-update true})]
     (check-profile-existence! conn {:email (:email claims)})
     (db/update! conn :profile
@@ -55,7 +42,7 @@
     claims))
 
 (defmethod process-token :verify-profile
-  [{:keys [conn] :as cfg} {:keys [profile-id] :as claims}]
+  [{:keys [conn]} {:keys [profile-id] :as claims}]
   (let [profile (db/get-by-id conn :profile profile-id {:for-update true})]
     (when (:is-active profile)
       (ex/raise :type :validation
@@ -73,7 +60,7 @@
     claims))
 
 (defmethod process-token :verify-contact
-  [{:keys [conn] :as cfg} {:keys [contact-id] :as claims}]
+  [{:keys [conn]} {:keys [contact-id] :as claims}]
   (db/update! conn :contact
               {:validated-at (dt/now)}
               {:id contact-id})
@@ -81,21 +68,21 @@
   claims)
 
 (defmethod process-token :unsub-monitor
-  [{:keys [conn] :as cfg} {:keys [id] :as claims}]
+  [{:keys [conn]} {:keys [id] :as claims}]
   (db/delete! conn :monitor-contact-rel {:id id})
   claims)
 
 (defmethod process-token :delete-contact
-  [{:keys [conn] :as cfg} {:keys [contact-id] :as claims}]
+  [{:keys [conn]} {:keys [contact-id] :as claims}]
   (db/delete! conn :contact {:id contact-id})
   claims)
 
 (defmethod process-token :gauth
-  [cfg token]
+  [_ token]
   token)
 
 (defmethod process-token :default
-  [cfg token]
+  [_ token]
   (ex/raise :type :validation
             :code :invalid-token
             :context token))

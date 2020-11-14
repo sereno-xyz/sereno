@@ -19,7 +19,6 @@
    [app.util.time :as dt]
    [buddy.hashers :as bh]
    [clojure.spec.alpha :as s]
-   [clojure.tools.logging :as log]
    [cuerdas.core :as str]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -227,7 +226,7 @@
 
 (sv/defmethod ::request-profile-recovery {:auth false}
   [{:keys [pool tokens] :as cfg} {:keys [email] :as params}]
-  (letfn [(create-recovery-token [conn {:keys [id] :as profile}]
+  (letfn [(create-recovery-token [{:keys [id] :as profile}]
             (let [claims {:profile-id id
                           :iss :password-recovery
                           :exp (dt/plus (dt/now) #app/duration "10m")}
@@ -248,7 +247,7 @@
     (db/with-atomic [conn pool]
       (some->> email
                (retrieve-profile-by-email conn)
-               (create-recovery-token conn)
+               (create-recovery-token)
                (send-email-notification conn))
       nil)))
 
@@ -261,7 +260,7 @@
 
 (sv/defmethod ::recover-profile {:auth false}
   [{:keys [pool tokens]} {:keys [token password]}]
-  (letfn [(validate-token [conn token]
+  (letfn [(validate-token [token]
             (let [params {:iss :password-recovery}
                   claims ((:verify tokens) token params)]
               (:profile-id claims)))
@@ -271,7 +270,7 @@
               (db/update! conn :profile {:password pwd} {:id profile-id})))]
 
     (db/with-atomic [conn pool]
-      (->> (validate-token conn token)
+      (->> (validate-token token)
            (update-password conn))
       nil)))
 

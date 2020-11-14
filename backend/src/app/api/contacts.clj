@@ -18,9 +18,7 @@
    [app.telegram :as telegram]
    [app.util.time :as dt]
    [app.util.services :as sv]
-   [clojure.spec.alpha :as s]
-   [clojure.tools.logging :as log]
-   [cuerdas.core :as str]))
+   [clojure.spec.alpha :as s]))
 
 (defn- validate-contacts-limits!
   [conn profile]

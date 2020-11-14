@@ -9,7 +9,6 @@
 
 (ns app.api.export
   (:require
-   [app.common.exceptions :as ex]
    [app.common.spec :as us]
    [app.common.uuid :as uuid]
    [app.db :as db]
@@ -21,13 +20,10 @@
    [clojure.java.io :as io]
    [clojure.spec.alpha :as s]
    [clojure.tools.logging :as log]
-   [cuerdas.core :as str]
    [ring.core.protocols :as rp])
   (:import
    java.util.zip.GZIPInputStream
-   java.util.zip.GZIPOutputStream
-   java.io.InputStream
-   java.io.OutputStream))
+   java.util.zip.GZIPOutputStream))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Exports & Imports
@@ -87,7 +83,7 @@
     (write-body-to-stream [_ _ out]
       (try
         (generate-export! cfg (assoc params :out out))
-        (catch org.eclipse.jetty.io.EofException e)
+        (catch org.eclipse.jetty.io.EofException _)
         (catch Exception e
           (log/errorf e "Exception on export"))))))
 
@@ -95,7 +91,7 @@
   [cfg params]
   (with-meta {}
     {:transform-response
-     (fn [request response]
+     (fn [_ _]
        {:status 200
         :headers {"content-type" "text/plain"
                   "content-disposition" "attachment; filename=\"export.data\""}

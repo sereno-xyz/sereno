@@ -13,13 +13,11 @@
    [app.common.spec :as us]
    [app.common.uuid :as uuid]
    [app.db :as db]
-   [app.emails :as emails]
    [app.api.profile :refer [get-profile]]
    [app.tasks.monitor :refer [run-monitor!]]
    [app.util.time :as dt]
    [app.util.services :as sv]
-   [clojure.spec.alpha :as s]
-   [clojure.tools.logging :as log])
+   [clojure.spec.alpha :as s])
   (:import
    org.postgresql.jdbc.PgArray))
 

@@ -85,6 +85,19 @@
   (repl/refresh-all :after 'user/start))
 
 
+(defn lint
+  [path]
+  (-> (kondo/run! {:lint [path]
+                   :config
+                   {:linters
+                    {:unused-binding
+                     {:exclude-destructured-keys-in-fn-args true
+                      :exclude-destructured-as true}
+                     :unresolved-symbol
+                     {:exclude ['(app.util.services/defmethod)
+                                '(app.db/with-atomic)]}}}})
+      (kondo/print!)))
+
 (defn install-trust!
   []
   (let [trust  (reify X509TrustManager
