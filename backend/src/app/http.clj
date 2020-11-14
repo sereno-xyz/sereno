@@ -26,12 +26,6 @@
    org.eclipse.jetty.util.SocketAddressResolver$Sync
    org.eclipse.jetty.util.ssl.SslContextFactory$Client))
 
-(defrecord Response [status body])
-
-(defn response?
-  [v]
-  (instance? Response v))
-
 (defmethod ig/init-key ::server
   [_ {:keys [handler ws port] :as opts}]
   (log/info "Starting http server.")

@@ -14,18 +14,19 @@
    [app.common.exceptions :as ex]
    [app.common.spec :as us]
    [app.db :as db]
-   [app.metrics :as mtx]
    [app.http :as http]
    [app.http.errors :as errors]
    [app.http.middleware :as middleware]
+   [app.metrics :as mtx]
    [app.session :as session]
+   [app.util.services :as sv]
    [clojure.spec.alpha :as s]
    [clojure.tools.logging :as log]
    [cuerdas.core :as str]
    [integrant.core :as ig]
    [reitit.ring :as rr]
-   [ring.util.response :refer [resource-response]]
-   [ring.adapter.jetty9 :as jetty]))
+   [ring.adapter.jetty9 :as jetty]
+   [ring.util.response :refer [resource-response]]))
 
 (defn- echo-handler
   [opts req]
@@ -43,21 +44,21 @@
   (resource-response "index.html" {:root "public"}))
 
 (defn rpc-handler
-  [impl req]
-  (let [type    (keyword (get-in req [:path-params :cmd]))
-        data    (merge (:params req)
-                       (:body-params req)
-                       (:uploads req))
+  [impl request]
+  (let [type    (keyword (get-in request [:path-params :cmd]))
+        data    (merge (:params request)
+                       (:body-params request)
+                       (:uploads request))
 
-        data    (if (:profile-id req)
-                  (assoc data :profile-id (:profile-id req))
+        data    (if (:profile-id request)
+                  (assoc data :profile-id (:profile-id request))
                   (dissoc data :profile-id))
-        handler (get impl type default-handler)
-        resp    (handler (with-meta data {:req req}))]
-    (if (http/response? resp)
-      resp
-      {:status 200
-       :body resp})))
+
+        result  ((get impl type default-handler) data)
+        mdata   (meta result)]
+
+    (cond->> {:status (if (nil? (seq result)) 204 200) :body result}
+      (fn? (:transform-response mdata)) ((:transform-response mdata) request))))
 
 (defn- router
   [{:keys [auth impl webhooks] :as cfg}]
@@ -89,8 +90,8 @@
 
 
        ["/rpc/:cmd" {:handler #(rpc-handler impl %)}]
-       ["/echo" {:get #(echo-handler cfg %)
-                 :post #(echo-handler cfg %)}]]
+       #_["/echo" {:get #(echo-handler cfg %)
+                   :post #(echo-handler cfg %)}]]
       ["/" {:get index-handler}]])))
 
 
@@ -119,37 +120,31 @@
                  [session/middleware cfg]]}))
 
 (defn- wrap-impl
-  [sname f cfg]
-  (assert (var? f) "`f` should be a var")
+  [f mdata cfg]
   (let [mreg  (:metrics-registry cfg)
         mobj  (mtx/create
-               {:name (-> (str "api_" sname "_response_millis")
+               {:name (-> (str "api_" (::sv/name mdata) "_response_millis")
                           (str/replace "-" "_"))
                 :registry mreg
                 :type :summary
-                :help (str/format "Service '%s' response time in milliseconds." sname)})
-        mdata (meta f)
-        f     (mtx/wrap-summary (deref f) mobj)
-        spec  (or (:spec mdata)
-                  (s/spec any?))]
-    (log/debug (str/format "Registering '%s' command to rpc service."
-                           (str (:name mdata))))
+                :help (str/format "Service '%s' response time in milliseconds." (::sv/name mdata))})
+        f     (mtx/wrap-summary f mobj)
+        spec  (or (::sv/spec mdata) (s/spec any?))]
+
+    (log/debugf "Registering '%s' command to rpc service." (::sv/name mdata))
     (fn [params]
-      (when (and (:auth mdata true)
-                 (not (uuid? (:profile-id params))))
+      (when (and (:auth mdata true) (not (uuid? (:profile-id params))))
         (ex/raise :type :not-authenticated))
-      (->> (us/conform spec params)
-           (f cfg)))))
+      (f cfg (us/conform spec params)))))
 
 (defmethod ig/pre-init-spec :app.api/impl [_]
   (s/keys :req-un [::db/pool]))
 
 (defmethod ig/init-key :app.api/impl
   [_ cfg]
-  (reduce-kv (fn [res sname vfn]
-               (cond-> res
-                 (:spec (meta vfn))
-                 (assoc (keyword sname)
-                        (wrap-impl sname vfn cfg))))
-             {}
-             (ns-publics (find-ns 'app.api-impl))))
+  (->> (sv/scan-ns 'app.api-impl)
+       (map (fn [vfn]
+              (let [mdata (meta vfn)]
+                [(keyword (::name mdata))
+                 (wrap-impl (deref vfn) mdata cfg)])))
+       (into {})))

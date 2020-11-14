@@ -24,10 +24,18 @@
 
 (defn run-monitor
   [cfg monitor]
+  ;; (locking run-monitor
+  ;;   (prn "KAKA" monitor))
   (case (:type monitor)
-    :http (mhttp/run cfg monitor)
+    "http" (mhttp/run cfg monitor)
     (ex/raise :type :internal
               :code :not-implemented)))
+
+
+(s/def ::type ::us/string)
+(s/def ::parasm map?)
+(s/def ::name ::us/string)
+(s/def ::id ::us/uuid)
 
 (s/def ::monitor
   (s/keys :req-un [::type ::params ::name]

@@ -22,6 +22,7 @@
    [app.util.time :as dt]
    [app.util.transit :as t]
    [buddy.hashers :as bh]
+   [app.util.services :as sv]
    [clojure.core.async :as a]
    [clojure.java.io :as io]
    [clojure.spec.alpha :as s]
@@ -58,8 +59,7 @@
       (ex/raise :type :validation
                 :code :wrong-credentials))))
 
-(defn login
-  {:spec ::login :auth false}
+(sv/defmethod ::login {:auth false}
   [{:keys [pool]} {:keys [email password] :as params}]
   (letfn [(validate-profile [profile]
             (when-not profile
@@ -91,8 +91,7 @@
 (s/def ::register-profile
   (s/keys :req-un [::email ::password ::fullname]))
 
-(defn register-profile
-  {:spec ::register-profile :auth false}
+(sv/defmethod ::register-profile {:auth false}
   [{:keys [pool tokens] :as cfg} params]
   (db/with-atomic [conn pool]
     (check-profile-existence! conn params)
@@ -162,8 +161,7 @@
 (s/def ::login-or-register
   (s/keys :req-un [::email ::fullname ::external-id]))
 
-(defn login-or-register
-  {:spec ::login-or-register :auth false}
+(sv/defmethod ::login-or-register {:auth false}
   [{:keys [pool]} {:keys [email fullname external-id] :as params}]
   (letfn [(create-profile [conn {:keys [fullname email]}]
             (db/insert! conn :profile
@@ -189,8 +187,7 @@
 (s/def ::update-profile
   (s/keys :req-un [::fullname ::profile-id]))
 
-(defn update-profile
-  {:spec ::update-profile :auth true}
+(sv/defmethod ::update-profile
   [{:keys [pool]} {:keys [fullname profile-id]}]
   (db/update! pool :profile
               {:fullname fullname}
@@ -207,8 +204,7 @@
   (s/keys :req-un [::profile-id ::password]
           :opt-un [::old-password]))
 
-(defn update-profile-password
-  {:spec ::update-profile-password :auth true}
+(sv/defmethod ::update-profile-password
   [{:keys [pool]} {:keys [password profile-id old-password] :as params}]
   (db/with-atomic [conn pool]
     (let [profile (db/get-by-id conn :profile profile-id {:for-update true})]
@@ -229,8 +225,7 @@
 (s/def ::delete-profile
   (s/keys :req-un [::profile-id ::password]))
 
-(defn delete-profile
-  {:spec ::delete-profile :auth true}
+(sv/defmethod ::delete-profile
   [{:keys [pool]} {:keys [profile-id password] :as params}]
   (db/with-atomic [conn pool]
     (let [profile (db/get-by-id conn :profile profile-id {:for-update true})]
@@ -245,8 +240,7 @@
 (s/def ::request-profile-recovery
   (s/keys :req-un [::email]))
 
-(defn request-profile-recovery
-  {:spec ::request-profile-recovery :auth false}
+(sv/defmethod ::request-profile-recovery {:auth false}
   [{:keys [pool tokens] :as cfg} {:keys [email] :as params}]
   (letfn [(create-recovery-token [conn {:keys [id] :as profile}]
             (let [claims {:profile-id id
@@ -280,8 +274,7 @@
 (s/def ::recover-profile
   (s/keys :req-un [::token ::password]))
 
-(defn recover-profile
-  {:spec ::recover-profile :auth false}
+(sv/defmethod ::recover-profile {:auth false}
   [{:keys [pool tokens]} {:keys [token password]}]
   (letfn [(validate-token [conn token]
             (let [params {:iss :password-recovery}
@@ -307,8 +300,7 @@
 (s/def ::request-email-change
   (s/keys :req-un [::email]))
 
-(defn request-email-change
-  {:spec ::request-email-change :auth true}
+(sv/defmethod ::request-email-change
   [{:keys [pool tokens] :as cfg} {:keys [profile-id email] :as params}]
   (db/with-atomic [conn pool]
     (let [email   (str/lower email)
@@ -330,19 +322,22 @@
                      :token token})
       nil)))
 
+
 ;; --- Mutation: Verify Profile Token
 
-(defmulti process-token (fn [cfg token] (:iss token)))
+(declare process-token)
 
 (s/def ::verify-token
   (s/keys :req-un [::token]))
 
-(defn verify-token
-  {:spec ::verify-token :auth false}
+(sv/defmethod ::verify-token {:auth false}
   [{:keys [pool tokens] :as cfg} {:keys [token] :as params}]
   (let [claims ((:verify tokens) token)]
     (db/with-atomic [conn pool]
       (process-token (assoc cfg :conn conn) claims))))
+
+
+(defmulti process-token (fn [cfg token] (:iss token)))
 
 (defmethod process-token :change-email
   [{:keys [conn] :as cfg} {:keys [profile-id] :as claims}]
@@ -429,8 +424,7 @@
 (s/def ::retrieve-profile
   (s/keys :opt-un [::profile-id]))
 
-(defn retrieve-profile
-  {:spec ::retrieve-profile :auth false}
+(sv/defmethod ::retrieve-profile
   [{:keys [pool]} {:keys [profile-id] :as params}]
   (if profile-id
     (let [data (get-profile pool profile-id)]
@@ -507,21 +501,18 @@
 (s/def ::params (s/map-of ::us/keyword any?))
 (s/def ::tags (s/coll-of ::us/string :kind set?))
 
-(s/def ::create-monitor
+(s/def ::create-http-monitor
   (s/keys :req-un [::type ::name ::cadence ::profile-id ::contacts ::params]
           :opt-un [::tags]))
 
-(defn create-monitor
-  {:spec ::create-monitor :auth true}
+(sv/defmethod ::create-http-monitor
   [{:keys [pool]} {:keys [cadence type params profile-id name contacts tags] :as data}]
   (db/with-atomic [conn pool]
     (let [id      (uuid/next)
           now-t   (dt/now)
           cron    (parse-and-validate-cadence! cadence)
           profile (get-profile conn profile-id)
-          params  (case type
-                    "http" (prepare-http-monitor-params params)
-                    (ex/raise :type :not-implemented))]
+          params  (prepare-http-monitor-params params)]
 
       (validate-monitor-limits! conn profile)
       (validate-cadence-limits! profile cadence)
@@ -567,8 +558,7 @@
   (s/keys :req-un [::id ::name ::cadence ::profile-id ::contacts ::params]
           :opt-un [::tags]))
 
-(defn update-monitor
-  {:spec ::update-monitor :auth true}
+(sv/defmethod ::update-monitor
   [{:keys [pool]} {:keys [id name type cadence profile-id contacts params tags]}]
   (db/with-atomic [conn pool]
     (let [params  (case type
@@ -617,8 +607,7 @@
 (s/def ::test-monitor
   (s/keys :req-un [::type ::cadence ::params]))
 
-(defn test-monitor
-  {:spec ::test-monitor :auth true}
+(sv/defmethod ::test-monitor
   [cfg params]
   (run-monitor! cfg params))
 
@@ -643,8 +632,7 @@
 (s/def ::pause-monitor
   (s/keys :req-un [::id ::profile-id]))
 
-(defn pause-monitor
-  {:spec ::pause-monitor :auth true}
+(sv/defmethod ::pause-monitor
   [{:keys [pool]} {:keys [id profile-id]}]
   (db/with-atomic [conn pool]
     (let [monitor (db/get-by-params conn :monitor
@@ -664,8 +652,7 @@
 (s/def ::resume-monitor
   (s/keys :req-un [::id ::profile-id]))
 
-(defn resume-monitor
-  {:spec ::resume-monitor :auth true}
+(sv/defmethod ::resume-monitor
   [{:keys [pool]} {:keys [id profile-id]}]
   (db/with-atomic [conn pool]
     (let [monitor (db/get-by-params conn :monitor
@@ -684,8 +671,7 @@
 (s/def ::delete-monitor
   (s/keys :req-un [::id ::profile-id]))
 
-(defn delete-monitor
-  {:spec ::delete-monitor :auth true}
+(sv/defmethod ::delete-monitor
   [{:keys [pool]} {:keys [id profile-id]}]
   (db/delete! pool :monitor {:id id ::owner-id profile-id})
   nil)
@@ -709,9 +695,6 @@
          (= "uuid" (.getBaseTypeName ^PgArray contacts)))
     (assoc :contacts (set (.getArray ^PgArray contacts)))))
 
-(s/def ::retrieve-monitors
-  (s/keys :req-un [::profile-id]))
-
 (def sql:retrieve-monitors
   "select m.*,
           (select array_agg(contact_id) from monitor_contact_rel
@@ -720,8 +703,10 @@
     where m.owner_id = ?
     order by m.created_at")
 
-(defn retrieve-monitors
-  {:spec ::retrieve-monitors :auth true}
+(s/def ::retrieve-monitors
+  (s/keys :req-un [::profile-id]))
+
+(sv/defmethod ::retrieve-monitors
   [{:keys [pool]} {:keys [profile-id]}]
   (let [result (db/exec! pool [sql:retrieve-monitors profile-id])]
     (mapv decode-monitor-row result)))
@@ -735,14 +720,12 @@
 (s/def ::retrieve-monitor
   (s/keys :req-un [::profile-id ::id]))
 
-(defn retrieve-monitor
-  {:spec ::retrieve-monitor :auth true}
+(sv/defmethod ::retrieve-monitor
   [{:keys [pool]} {:keys [profile-id id] :as params}]
   (let [row (db/exec-one! pool [sql:retrieve-monitor profile-id id])]
     (when-not row
       (ex/raise :type :not-found))
     (decode-monitor-row row)))
-
 
 ;; --- Query: Retrieve Monitor Latency Summary
 
@@ -760,8 +743,7 @@
 (s/def ::retrieve-monitor-latency-summary
   (s/keys :req-un [::id ::period]))
 
-(defn retrieve-monitor-summary
-  {:spec ::retrieve-monitor-latency-summary :auth true}
+(sv/defmethod ::retrieve-monitor-latency-summary
   [{:keys [pool]} {:keys [id profile-id period]}]
   (db/with-atomic [conn pool]
     (let [monitor   (db/exec-one! conn [sql:retrieve-monitor profile-id id])
@@ -809,12 +791,6 @@
 
 ;; --- Query: Retrieve Monitor Status
 
-(s/def ::limit ::us/integer)
-(s/def ::since ::us/inst)
-(s/def ::retrieve-monitor-status-history
-  (s/keys :req-un [::id ::profile-id ::limit]
-          :opt-un [::since]))
-
 (def sql:monitor-status-history
   "select e.*
      from monitor_status as e
@@ -823,8 +799,13 @@
     order by e.created_at desc
     limit ?")
 
-(defn retrieve-monitor-status-history
-  {:spec ::retrieve-monitor-status-history :auth true}
+(s/def ::limit ::us/integer)
+(s/def ::since ::us/inst)
+(s/def ::retrieve-monitor-status-history
+  (s/keys :req-un [::id ::profile-id ::limit]
+          :opt-un [::since]))
+
+(sv/defmethod ::retrieve-monitor-status-history
   [{:keys [pool]} {:keys [id profile-id since limit]}]
   (let [since   (or since (dt/now))
         limit   (min limit 50)
@@ -847,8 +828,7 @@
 (s/def ::retrieve-monitor-log
   (s/keys :req-un [::profile-id ::id ::since ::limit]))
 
-(defn retrieve-monitor-log
-  {:spec ::retrieve-monitor-log :auth true}
+(sv/defmethod ::retrieve-monitor-log
   [{:keys [pool]} {:keys [id profile-id since limit] :as params}]
   (let [limit   (min limit 50)
         monitor (db/exec-one! pool [sql:retrieve-monitor profile-id id])
@@ -870,12 +850,11 @@
 (s/def ::retrieve-all-tags
   (s/keys :req-un [::profile-id]))
 
-(defn retrieve-all-tags
-  {:spec ::retrieve-all-tags :auth true}
+(sv/defmethod ::retrieve-all-tags
   [{:keys [pool]} {:keys [profile-id]}]
-  (let [tags (->> (db/exec! pool [sql:retrieve-all-tags profile-id])
-                  (into #{} (map :tag)))]
-    tags))
+  (->> (db/exec! pool [sql:retrieve-all-tags profile-id])
+       (into #{} (map :tag))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Contacts
@@ -897,8 +876,7 @@
 (s/def ::create-email-contact
   (s/keys :req-un [::profile-id ::name ::email]))
 
-(defn create-email-contact
-  {:spec ::create-email-contact :auth true}
+(sv/defmethod ::create-email-contact
   [{:keys [pool tokens] :as cfg} {:keys [profile-id name email] :as props}]
   (db/with-atomic [conn pool]
     (let [id      (uuid/next)
@@ -942,8 +920,7 @@
 (s/def ::create-mattermost-contact
   (s/keys :req-un [::profile-id ::name ::us/uri]))
 
-(defn create-mattermost-contact
-  {:spec ::create-mattermost-contact :auth true}
+(sv/defmethod ::create-mattermost-contact
   [{:keys [pool] :as cfg} {:keys [profile-id name uri] :as props}]
   (db/with-atomic [conn pool]
     (let [id      (uuid/next)
@@ -971,8 +948,7 @@
 (s/def ::create-telegram-contact
   (s/keys :req-un [::profile-id ::name]))
 
-(defn create-telegram-contact
-  {:spec ::create-telegram-contact :auth true}
+(sv/defmethod ::create-telegram-contact
   [{:keys [pool] :as cfg} {:keys [profile-id name] :as props}]
   (db/with-atomic [conn pool]
     (let [id      (uuid/next)
@@ -996,13 +972,12 @@
 (s/def ::update-contact
   (s/keys :req-un [::id ::name ::is-paused ::profile-id]))
 
-(defn update-contact
-  {:spec ::update-contact :auth true}
+(sv/defmethod ::update-contact
   [{:keys [pool]} {:keys [id profile-id name is-paused] :as props}]
   (db/with-atomic [conn pool]
-    (let [item   (db/get-by-params conn :contact
-                                   {:id id :owner-id profile-id}
-                                   {:for-update true})]
+    (let [item (db/get-by-params conn :contact
+                                 {:id id :owner-id profile-id}
+                                 {:for-update true})]
       (when-not item
         (ex/raise :type :not-found
                   :code :object-not-found))
@@ -1024,8 +999,7 @@
 (s/def ::delete-contact
   (s/keys :req-un [::id ::profile-id]))
 
-(defn delete-contact
-  {:spec ::delete-contact :auth true}
+(sv/defmethod ::delete-contact
   [{:keys [pool]} {:keys [id profile-id]}]
   (db/with-atomic [conn pool]
     (let [item (db/get-by-params conn :contact
@@ -1059,8 +1033,7 @@
 (s/def ::retrieve-contacts
   (s/keys :req-un [::profile-id]))
 
-(defn retrieve-contacts
-  {:spec ::retrieve-contacts :auth true}
+(sv/defmethod ::retrieve-contacts
   [{:keys [pool]} {:keys [profile-id]}]
   (->> (db/query pool :contact {:owner-id profile-id})
        (map decode-contact-row)))
@@ -1097,8 +1070,7 @@
               (db/exec! conn [sql until since profile-id limit])))]
 
     (db/with-atomic [conn pool]
-      (with-open [zout (GZIPOutputStream. out)
-                  ]
+      (with-open [zout (GZIPOutputStream. out)]
         (let [writer (t/writer zout {:type :json})]
           (t/write! writer {:type :export :format 1 :created-at (dt/now)})
           (doseq [monitor (retrieve-monitors conn)]
@@ -1118,20 +1090,25 @@
   (s/keys :opt-un [::profile-id
                    :internal.api.request-export/days]))
 
-(defn request-export
-  {:spec ::request-export :auth true}
+(defn- generate-export-body
   [cfg params]
-  (http/map->Response
-   {:status 200
-    :headers {"content-type" "text/plain"
-              "Content-Disposition" "attachment; filename=\"export.data\""}
-    :body (reify rp/StreamableResponseBody
-            (write-body-to-stream [_ _ out]
-              (try
-                (generate-export! cfg (assoc params :out out))
-                (catch org.eclipse.jetty.io.EofException e)
-                (catch Exception e
-                  (log/errorf e "Exception on export")))))}))
+  (reify rp/StreamableResponseBody
+    (write-body-to-stream [_ _ out]
+      (try
+        (generate-export! cfg (assoc params :out out))
+        (catch org.eclipse.jetty.io.EofException e)
+        (catch Exception e
+          (log/errorf e "Exception on export"))))))
+
+(sv/defmethod ::request-export
+  [cfg params]
+  (with-meta {}
+    {:transform-response
+     (fn [request response]
+       {:status 200
+        :headers {"content-type" "text/plain"
+                  "content-disposition" "attachment; filename=\"export.data\""}
+        :body (generate-export-body cfg params)})}))
 
 ;; --- Request Import
 
@@ -1213,11 +1190,8 @@
 (s/def ::request-import
   (s/keys :req-un [::file ::profile-id]))
 
-(defn request-import
-  {:spec ::request-import :auth true}
+(sv/defmethod ::request-import
   [{:keys [pool]} {:keys [profile-id file] :as params}]
   (db/with-atomic [conn pool]
     (process-import! conn params)
     nil))
-
-
