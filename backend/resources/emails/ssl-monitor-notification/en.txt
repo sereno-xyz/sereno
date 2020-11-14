@@ -1,8 +1,8 @@
 This is a generic notification about state change of one of your monitors.
 
-{% if reason == "near-expiration" %}
+{% if reason = "near-expiration" %}
 The monitor {{monitor-name}} is going to expire in 7 days
-{% elif reason == "certificate-expired" %}
+{% elif reason = "certificate-expired" %}
 The monitor {{monitor-name}} is expired.
 {% else %}
 The monitor {{monitor-name}} has changed the state from {{old-status|upper}} to {{new-status|upper}}.

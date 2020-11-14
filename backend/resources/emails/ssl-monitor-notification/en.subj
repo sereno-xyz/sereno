@@ -1,6 +1,6 @@
-{% if reason == "certificate-expired" %}
+{% if reason = "certificate-expired" %}
 Monitor '{{monitor-name}}' is expired.
-{% elif reason == "near-expiration" %}
+{% elif reason = "near-expiration" %}
 Monitor '{{monitor-name}}' is going to expire in 7 days.
 {% else %}
 Monitor '{{monitor-name}}' experienced an error related to ssl.
