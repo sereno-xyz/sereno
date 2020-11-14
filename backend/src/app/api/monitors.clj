@@ -21,7 +21,82 @@
   (:import
    org.postgresql.jdbc.PgArray))
 
-;; --- Mutation: Create monitor
+;; --- Mutation: Create http monitor
+
+(declare validate-monitor-limits!)
+(declare validate-cadence-limits!)
+(declare parse-and-validate-cadence!)
+(declare prepare-http-monitor-params)
+
+(s/def ::id ::us/uuid)
+(s/def ::method ::us/keyword)
+(s/def ::uri ::us/uri)
+(s/def ::should-include ::us/string)
+(s/def ::headers (s/map-of ::us/string ::us/string))
+(s/def ::cadence ::us/integer)
+(s/def ::contacts (s/coll-of ::us/uuid :min-count 1))
+(s/def ::params (s/map-of ::us/keyword any?))
+(s/def ::tags (s/coll-of ::us/string :kind set?))
+
+(s/def ::create-http-monitor
+  (s/keys :req-un [::name ::cadence ::profile-id ::contacts ::params ::method ::uri]
+          :opt-un [::tags ::should-include ::headers]))
+
+(sv/defmethod ::create-http-monitor
+  [{:keys [pool]} {:keys [cadence profile-id name contacts tags] :as data}]
+  (db/with-atomic [conn pool]
+    (let [id      (uuid/next)
+          now-t   (dt/now)
+          cron    (parse-and-validate-cadence! cadence)
+          profile (get-profile conn profile-id)
+          params  (prepare-http-monitor-params data)]
+
+      (validate-monitor-limits! conn profile)
+      (validate-cadence-limits! profile cadence)
+
+      (db/insert! conn :monitor
+                  {:id id
+                   :owner-id profile-id
+                   :name name
+                   :cadence cadence
+                   :cron-expr (str cron)
+                   :created-at now-t
+                   :status "started"
+                   :type "http"
+                   :params (db/tjson params)
+                   :tags (into-array String tags)
+                   })
+
+      (db/insert! conn :monitor-status
+                  {:monitor-id id
+                   :status "created"
+                   :created-at now-t
+                   :finished-at now-t})
+
+      (db/insert! conn :monitor-status
+                  {:monitor-id id
+                   :status "started"
+                   :created-at now-t})
+
+      (db/insert! conn :monitor-schedule
+                  {:monitor-id id})
+
+      (doseq [cid contacts]
+        (db/insert! conn :monitor-contact-rel
+                    {:monitor-id id
+                     :contact-id cid}))
+      nil)))
+
+
+(defn- prepare-http-monitor-params
+  [{:keys [uri method headers should-include]}]
+  (cond-> {:uri uri
+           :method (or method :get)}
+    (map? headers)
+    (assoc :headers headers)
+
+    (string? should-include)
+    (assoc :should-include should-include)))
 
 (def cadence-map
   {20    "*/20 * * * * ?"
@@ -60,60 +135,36 @@
       (ex/raise :type :validation
                 :code :cadence-limits-reached))))
 
-(s/def ::method ::us/keyword)
-(s/def ::uri ::us/uri)
-(s/def ::should-include ::us/string)
-(s/def ::headers (s/map-of ::us/string ::us/string))
 
-(s/def ::http-monitor-params
-  (s/keys :req-un [::method ::uri]
-          :opt-un [::should-include ::headers]))
+;; --- Mutation: Create SSL Monitor
 
-(defn- prepare-http-monitor-params
-  [params]
-  (let [{:keys [uri method headers should-include]} (us/conform ::http-monitor-params params)]
-    (cond-> {:uri uri
-             :method (or method :get)}
-      (map? headers)
-      (assoc :headers headers)
-
-      (string? should-include)
-      (assoc :should-include should-include))))
-
-(s/def ::type ::us/string)
-(s/def ::cadence ::us/integer)
-(s/def ::contacts (s/coll-of ::us/uuid :min-count 1))
-(s/def ::params (s/map-of ::us/keyword any?))
-(s/def ::tags (s/coll-of ::us/string :kind set?))
-
-(s/def ::create-http-monitor
-  (s/keys :req-un [::type ::name ::cadence ::profile-id ::contacts ::params]
+(s/def ::create-ssl-monitor
+  (s/keys :req-un [::profile-id ::name ::contacts ::uri ::alert-before]
           :opt-un [::tags]))
 
-(sv/defmethod ::create-http-monitor
-  [{:keys [pool]} {:keys [cadence type params profile-id name contacts tags] :as data}]
+(sv/defmethod ::create-ssl-monitor
+  [{:keys [pool]} {:keys [profile-id name contacts tags uri alert-before]}]
   (db/with-atomic [conn pool]
     (let [id      (uuid/next)
           now-t   (dt/now)
-          cron    (parse-and-validate-cadence! cadence)
+          cexpr   (get cadence-map 60)
           profile (get-profile conn profile-id)
-          params  (prepare-http-monitor-params params)]
+          params  {:uri uri
+                   :alert-before alert-before}]
 
       (validate-monitor-limits! conn profile)
-      (validate-cadence-limits! profile cadence)
 
       (db/insert! conn :monitor
                   {:id id
                    :owner-id profile-id
                    :name name
-                   :cadence cadence
-                   :cron-expr (str cron)
+                   :cadence 60
+                   :cron-expr cexpr
                    :created-at now-t
                    :status "started"
-                   :type type
+                   :type "ssl"
                    :params (db/tjson params)
-                   :tags (into-array String tags)
-                   })
+                   :tags (into-array String tags)})
 
       (db/insert! conn :monitor-status
                   {:monitor-id id
@@ -138,29 +189,29 @@
 
 ;; --- Mutation: Update Http Monitor
 
-(s/def ::id ::us/uuid)
-(s/def ::update-monitor
-  (s/keys :req-un [::id ::name ::cadence ::profile-id ::contacts ::params]
-          :opt-un [::tags]))
+(s/def ::update-http-monitor
+  (s/keys :req-un [::id ::name ::cadence ::profile-id ::contacts ::uri ::method]
+          :opt-un [::tags ::should-include ::headers]))
 
-(sv/defmethod ::update-monitor
-  [{:keys [pool]} {:keys [id name type cadence profile-id contacts params tags]}]
+(sv/defmethod ::update-http-monitor
+  [{:keys [pool]} {:keys [id name cadence profile-id contacts tags] :as data}]
   (db/with-atomic [conn pool]
-    (let [params  (case type
-                    "http" (prepare-http-monitor-params params)
-                    (ex/raise :type :not-implemented))
-
+    (let [params  (prepare-http-monitor-params data)
           monitor (db/get-by-params conn :monitor
                                     {:id id :owner-id profile-id}
                                     {:for-update true})
-
           cron    (parse-and-validate-cadence! cadence)
           offset  (dt/get-cron-offset cron (:created-at monitor))]
 
       (validate-cadence-limits! profile-id cadence)
+
       (when-not monitor
         (ex/raise :type :not-found
                   :code :object-does-not-found))
+
+      (when (not= "http" (:type monitor))
+        (ex/raise :type :validation
+                  :code :wront-monitor-type))
 
       (db/update! conn :monitor-schedule
                   {:scheduled-at (dt/get-next-inst cron offset)
@@ -176,9 +227,46 @@
                   {:id id
                    :owner-id profile-id})
 
-      (db/delete! conn :monitor-contact-rel
-                  {:monitor-id id})
+      (db/delete! conn :monitor-contact-rel {:monitor-id id})
+      (doseq [cid contacts]
+        (db/insert! conn :monitor-contact-rel
+                    {:monitor-id id
+                     :contact-id cid}))
 
+      nil)))
+
+
+;; --- Mutation: Update Http Monitor
+
+(s/def ::update-ssl-monitor
+  (s/keys :req-un [::id ::name ::profile-id ::contacts ::uri ::alert-before]
+          :opt-un [::tags]))
+
+(sv/defmethod ::update-ssl-monitor
+  [{:keys [pool]} {:keys [id name profile-id contacts tags uri alert-before] :as data}]
+  (db/with-atomic [conn pool]
+    (let [params  {:uri uri :alert-before alert-before}
+          monitor (db/get-by-params conn :monitor
+                                    {:id id :owner-id profile-id}
+                                    {:for-update true})]
+
+      (when-not monitor
+        (ex/raise :type :not-found
+                  :code :object-does-not-found))
+
+      (when (not= "ssl" (:type monitor))
+        (ex/raise :type :validation
+                  :code :wront-monitor-type
+                  :hint "expected ssl monitor"))
+
+      (db/update! conn :monitor
+                  {:name name
+                   :params (db/tjson params)
+                   :tags (into-array String tags)}
+                  {:id id
+                   :owner-id profile-id})
+
+      (db/delete! conn :monitor-contact-rel {:monitor-id id})
       (doseq [cid contacts]
         (db/insert! conn :monitor-contact-rel
                     {:monitor-id id
@@ -251,6 +339,7 @@
         (change-monitor-status! conn id "started"))
       nil)))
 
+
 ;; --- Mutation: Delete monitor
 
 (s/def ::delete-monitor
@@ -296,6 +385,7 @@
   (let [result (db/exec! pool [sql:retrieve-monitors profile-id])]
     (mapv decode-monitor-row result)))
 
+
 ;; --- Query: Retrieve Monitor
 
 (def sql:retrieve-monitor
@@ -311,6 +401,7 @@
     (when-not row
       (ex/raise :type :not-found))
     (decode-monitor-row row)))
+
 
 ;; --- Query: Retrieve Monitor Latency Summary
 

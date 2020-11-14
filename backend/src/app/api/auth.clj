@@ -70,9 +70,8 @@
                           :body (:body res)}))
     (try
       (let [data (json/read-str (:body res))]
-        ;; (clojure.pprint/pprint data)
-        {:id    (str "google:" (get data "sub"))
-         :email (get data "email")
+        {:id       (str "google:" (get data "sub"))
+         :email    (get data "email")
          :fullname (get data "name")})
       (catch Exception e
         (log/error "unexpected error on parsing response body from google access tooken request" e)
