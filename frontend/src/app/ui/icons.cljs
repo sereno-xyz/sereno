@@ -12,6 +12,7 @@
   (:require-macros [app.util.icons :refer [icon-xref]])
   (:require [rumext.alpha :as mf]))
 
+(def eye (icon-xref :eye))
 (def bomb (icon-xref :bomb))
 (def check (icon-xref :check))
 (def check-circle (icon-xref :check-circle))

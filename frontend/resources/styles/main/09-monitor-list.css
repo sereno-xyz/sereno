@@ -118,6 +118,7 @@
       display: flex;
       align-items: center;
       flex-grow: 1;
+      margin-right: 20px;
 
       span {
         display: block;
@@ -136,18 +137,40 @@
       align-items: center;
     }
 
+
     .monitor-tags {
-      width: 200px;
+      max-width: 230px;
+      width: 100%;
       display: flex;
       align-items: center;
       margin-right: 20px;
 
-      span {
+      .tags {
+        line-height: 20px;
         display: inline-block;
+        padding: 6px;
+        border-radius: 3px;
         text-overflow: ellipsis;
         white-space: nowrap;
         overflow: hidden;
+
+        span {
+          padding:6px;
+          margin-right: 3px;
+          border-radius: var(--default-border-radius);
+          background-color: var(--color-gray-5-05);
+          /* background-color: var(--color-primary-1); */
+          /* color: var(--color-white); */
+          font-weight: 400;
+        }
       }
+
+      /* span { */
+      /*   display: inline-block; */
+      /*   text-overflow: ellipsis; */
+      /*   white-space: nowrap; */
+      /*   overflow: hidden; */
+      /* } */
     }
 
     .monitor-updated {
@@ -185,6 +208,11 @@
   }
 
   .table-body .row {
+    > a {
+      display: flex;
+      width: 100%;
+    }
+
     .monitor-options {
       /* background-color: var(--color-gray-5-05); */
       background-color: var(--color-inactive-lighter);

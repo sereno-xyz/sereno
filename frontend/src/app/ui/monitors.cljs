@@ -170,6 +170,13 @@
 
         show-dropdown? (mf/use-state false)
         show-dropdown  (mf/use-callback #(reset! show-dropdown? true))
+
+        show-dropdown
+        (mf/use-callback
+         (fn [event]
+           (dom/prevent-default event)
+           (reset! show-dropdown? true)))
+
         hide-dropdown  (mf/use-callback #(reset! show-dropdown? false))]
 
     [:li.row {:key (:id item)
@@ -180,7 +187,7 @@
                       :success (= "up" status)
                       :failed  (= "down" status)
                       :nodata  (nil? status))}
-     [:*
+     [:a {:href uri}
       [:div.monitor-status
        {:title (str (str/upper (:type item)) ": "
                     (case status
@@ -194,13 +201,14 @@
          nil)]
 
       [:div.monitor-title
-       [:a {:href uri}
-        [:span (:name item)]]]
+       [:span (:name item)]]
 
-      [:div.monitor-tags
-       (if (seq (:tags item))
-         [:span (apply str (interpose " " (:tags item)))]
-         [:span "---"])]
+      (let [tags (apply str (interpose " " (:tags item)))]
+        [:div.monitor-tags {:title tags}
+         #_[:div.tags tags]
+         [:div.tags
+          (for [t (:tags item)]
+            [:span t])]])
 
       [:div.monitor-updated
        {:on-mouse-enter on-hover
@@ -248,7 +256,7 @@
        [:div.table
         [:div.table-header
          [:div.row
-           [:div.monitor-status ""]
+          [:div.monitor-status ""]
           [:div.monitor-title "Title"]
           [:div.monitor-tags "Tags"]
           [:div.monitor-updated "Monitored at"]
