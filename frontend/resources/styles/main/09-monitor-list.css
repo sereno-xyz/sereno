@@ -130,16 +130,10 @@
     }
 
     .monitor-options {
-      min-width: 80px;
+      min-width: 30px;
       display: flex;
-      justify-content: space-evenly;
+      justify-content: center;
       align-items: center;
-
-      > div {
-        cursor: pointer;
-        display: flex;
-        justify-content: center;
-      }
     }
 
     .monitor-tags {
@@ -170,16 +164,12 @@
     }
 
     @media (max-width: 500px) {
-      > li {
+      > .row {
         height: 45px;
       }
 
       .monitor-name {
         padding-left: 0px;
-      }
-
-      .monitor-options {
-        min-width: 80px;
       }
 
       .monitor-updated {
@@ -195,6 +185,21 @@
   }
 
   .table-body .row {
+    .monitor-options {
+      /* background-color: var(--color-gray-5-05); */
+      background-color: var(--color-inactive-lighter);
+      cursor: pointer;
+      position: relative;
+
+
+      .dropdown {
+        width: 130px;
+        top: 60px;
+        right: 0px;
+      }
+    }
+
+
     &.inactive {
       border-left: 3px solid var(--color-inactive);
     }

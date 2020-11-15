@@ -25,6 +25,7 @@
 (def cloud (icon-xref :cloud))
 (def download (icon-xref :download))
 (def edit (icon-xref :edit))
+(def ellipsis-v (icon-xref :ellipsis-v))
 (def envelope (icon-xref :envelope))
 (def exclamation (icon-xref :exclamation))
 (def globe (icon-xref :globe))

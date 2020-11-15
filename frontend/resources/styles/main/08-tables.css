@@ -8,12 +8,6 @@
       color: var(--color-gray-50);
       display: flex;
       line-height: 3rem;
-      cursor: pointer;
-
-      > a {
-        display: flex;
-        width: 100%;
-      }
     }
   }
 

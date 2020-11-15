@@ -19,7 +19,7 @@
    [app.ui.forms :as forms]
    [app.ui.icons :as i]
    [app.ui.modal :as modal]
-   [app.ui.monitors.http :refer [monitor-status-history monitor-title]]
+   [app.ui.monitors.common :refer [monitor-title monitor-history]]
    [app.util.dom :as dom]
    [app.util.router :as r]
    [app.util.time :as dt]
@@ -172,5 +172,5 @@
   [:main.monitor-detail-section
    [:section
     [:& monitor-summary {:monitor monitor}]
-    [:& monitor-status-history {:monitor monitor}]]])
+    [:& monitor-history {:monitor monitor}]]])
 

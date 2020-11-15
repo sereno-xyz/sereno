@@ -21,6 +21,7 @@
    [app.ui.modal :as modal]
    [app.ui.monitors.http-form]
    [app.ui.monitors.ssl-form]
+   [app.ui.monitors.common :refer [monitor-options]]
    [app.ui.monitors.http :refer [http-monitor-detail]]
    [app.ui.monitors.ssl :refer [ssl-monitor-detail]]
    [app.util.dom :as dom]
@@ -154,47 +155,22 @@
          [:div.icon i/heartbeat]
          [:div.text "Keepalive"]]]]]]))
 
-
 (mf/defc monitor-item
   [{:keys [item] :as props}]
   (let [status (:status item)
         router (mf/deref st/router-ref)
         uri    (str "#" (r/resolve router :monitor-detail {:id (:id item)}))
 
-        delete-fn
-        (mf/use-callback
-         (mf/deps item)
-         (st/emitf (ev/delete-monitor item)))
-
-        on-delete
-        (mf/use-callback
-         (mf/deps item)
-         (fn [event]
-           (dom/prevent-default event)
-           (dom/stop-propagation event)
-           (st/emit! (modal/show
-                      {:type :confirm
-                       :title "Deleting monitor"
-                       :on-accept delete-fn
-                       :accept-label "Delete monitor"
-                       :message "Do you want to delete this monitor?"}))))
-
-        on-edit
-        (mf/use-callback
-         (mf/deps item)
-         (fn [event]
-           (dom/prevent-default event)
-           (dom/stop-propagation event)
-           (case (:type item)
-             "http" (st/emit! (modal/show {:type :http-monitor-form :item item}))
-             "ssl"  (st/emit! (modal/show {:type :ssl-monitor-form :item item})))))
-
         on-hover
         (mf/use-callback
          (mf/deps item)
          (fn [event]
            (let [target (dom/get-target event)]
-             (.setAttribute target "title" (dt/timeago (:modified-at item))))))]
+             (.setAttribute target "title" (dt/timeago (:modified-at item))))))
+
+        show-dropdown? (mf/use-state false)
+        show-dropdown  (mf/use-callback #(reset! show-dropdown? true))
+        hide-dropdown  (mf/use-callback #(reset! show-dropdown? false))]
 
     [:li.row {:key (:id item)
               :class (dom/classnames
@@ -204,7 +180,7 @@
                       :success (= "up" status)
                       :failed  (= "down" status)
                       :nodata  (nil? status))}
-     [:a {:href uri}
+     [:*
       [:div.monitor-status
        {:title (str (str/upper (:type item)) ": "
                     (case status
@@ -218,7 +194,8 @@
          nil)]
 
       [:div.monitor-title
-       [:span (:name item)]]
+       [:a {:href uri}
+        [:span (:name item)]]]
 
       [:div.monitor-tags
        (if (seq (:tags item))
@@ -232,9 +209,12 @@
          (dt/format ma :datetime-med)
          "---")]
 
-      [:div.monitor-options
-       [:div {:on-click on-edit} i/pen-square]
-       [:div {:on-click on-delete} i/trash-alt]]]]))
+      [:div.monitor-options {:on-click show-dropdown}
+       i/ellipsis-v
+       [:& dropdown {:show @show-dropdown?
+                     :on-close hide-dropdown}
+
+        [:& monitor-options {:monitor item}]]]]]))
 
 (defn- apply-filters
   [filters monitors]
@@ -272,7 +252,7 @@
           [:div.monitor-title "Title"]
           [:div.monitor-tags "Tags"]
           [:div.monitor-updated "Monitored at"]
-          [:div.monitor-options "Options"]
+          [:div.monitor-options ""]
           ]]
         [:div.table-body
          (for [item monitors]

@@ -20,6 +20,7 @@
    [app.ui.icons :as i]
    [app.ui.modal :as modal]
    [app.ui.dropdown :refer [dropdown]]
+   [app.ui.monitors.common :refer [monitor-title monitor-history]]
    [app.util.dom :as dom]
    [app.util.router :as r]
    [app.util.time :as dt]
@@ -92,45 +93,6 @@
 (defn summary-ref
   [id]
   (l/derived (l/in [:monitor-summary id]) st/state))
-
-(mf/defc monitor-title
-  [{:keys [monitor]}]
-  (let [pause     (st/emitf (ev/pause-monitor monitor))
-        resume    (st/emitf (ev/resume-monitor monitor))
-        edit      (st/emitf (modal/show {:type (case (:type monitor)
-                                                 "ssl" :ssl-monitor-form
-                                                 "http" :http-monitor-form)
-                                         :item monitor}))
-
-        show-dropdown? (mf/use-state false)
-        show-dropdown  (mf/use-callback #(reset! show-dropdown? true))
-        hide-dropdown  (mf/use-callback #(reset! show-dropdown? false))]
-
-
-    [:div.section-title-bar
-     [:h2 (:name monitor)]
-     [:span.options {:on-click show-dropdown}
-      [:span.label "Options"]
-      [:span.icon i/chevron-down]]
-
-     [:& dropdown {:show @show-dropdown?
-                    :on-close hide-dropdown}
-       [:ul.dropdown
-        (if (= "paused" (:status monitor))
-          [:li {:on-click resume
-                :title "Resume"}
-           [:div.icon i/play]
-           [:div.text "Resume"]]
-          [:li {:on-click pause
-                :title "Pause"}
-           [:div.icon i/pause]
-           [:div.text "Pause"]])
-        [:li.disabled {:title "Export"}
-         [:div.icon i/download]
-         [:div.text "Export"]]
-        [:li.danger {:title "Delete"}
-         [:div.icon i/trash-alt]
-         [:div.text "Delete"]]]]]))
 
 (mf/defc monitor-summary
   [{:keys [monitor]}]
@@ -222,66 +184,11 @@
      [:& monitor-info {:summary summary-data
                        :monitor monitor}]]))
 
-
-(defn history-ref
-  [id]
-  (l/derived (l/in [:monitor-status-history id]) st/state))
-
-(mf/defc monitor-status-history
-  {::mf/wrap [mf/memo]}
-  [{:keys [monitor] :as props}]
-  (let [history-ref (mf/use-memo (mf/deps (:id monitor)) #(history-ref (:id monitor)))
-        history     (mf/deref history-ref)
-        load        #(st/emit! (ptk/event :load-more-status-history monitor))]
-
-    (mf/use-effect
-     (mf/deps (:id monitor))
-     (fn []
-       (st/emit! (ptk/event :initialize-monitor-status-history monitor))
-       (st/emitf (ptk/event :finalize-monitor-status-history monitor))))
-
-    [:div.main-content
-     [:div.section-title-bar.secondary
-      [:h2 "Status History"]]
-     [:hr]
-
-     [:div.history-table
-      [:ul.table-header
-       [:li.icon ""]
-       [:li.status "Status"]
-       [:li.created-at "Created At"]
-       [:li.duration "Duration"]]
-      [:div.table-body
-       (for [item (->> (vals (:items history))
-                       (sort-by :created-at)
-                       (reverse))]
-         [:ul.table-body-item {:key (:id item)
-                               :title (:reason item "")
-                               :class (dom/classnames
-                                       :status-warn (= (:status item) "warn")
-                                       :status-up (= (:status item) "up")
-                                       :status-down (= (:status item) "down"))}
-          [:li.icon (case (:status item)
-                      "warn" i/info-circle
-                      "up" i/chevron-circle-up
-                      "down" i/chevron-circle-down
-                      "paused" i/chevron-circle-down
-                      "started" i/chevron-circle-up
-                      "created" i/circle
-                      nil)]
-          [:li.status (str/upper (:status item))]
-          [:li.created-at (dt/format (:created-at item) :datetime-med)]
-          [:li.duration (dt/format-time-distance (:created-at item)
-                                                 (:finished-at item (dt/now)))]])
-       [:div.load-more-button
-        (when (:load-more history)
-          [:a {:on-click load} "Load more"])]]]]))
-
 (mf/defc http-monitor-detail
   {::mf/wrap [mf/memo]}
   [{:keys [monitor] :as props}]
   [:main.monitor-detail-section
    [:section
     [:& monitor-summary {:monitor monitor}]
-    [:& monitor-status-history {:monitor monitor}]]])
+    [:& monitor-history {:monitor monitor}]]])
 
