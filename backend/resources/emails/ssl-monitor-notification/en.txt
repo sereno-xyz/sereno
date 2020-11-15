@@ -1,12 +1,13 @@
 This is a generic notification about state change of one of your monitors.
 
-{% if reason = "near-expiration" %}
-The monitor {{monitor-name}} is going to expire in 7 days
-{% elif reason = "certificate-expired" %}
-The monitor {{monitor-name}} is expired.
+{% if status = "down" %}
+Monitor '{{monitor-name}}' is now expired / invalid.
+Cause message: {{reason}}.
+{% elif new-status = "warn" %}
+Monitor '{{monitor-name}}' is near expiration.
+Is going to expire on '{{expired-at}}'.
 {% else %}
-The monitor {{monitor-name}} has changed the state from {{old-status|upper}} to {{new-status|upper}}.
-Cause message: {{reason}}
+Monitor '{{monitor-name}}' is now valid.
 {% endif %}
 
 ----

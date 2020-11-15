@@ -32,6 +32,7 @@
 (def heartbeat (icon-xref :heartbeat))
 (def history (icon-xref :history))
 (def info (icon-xref :info))
+(def info-circle (icon-xref :info-circle))
 (def key (icon-xref :key))
 (def list-alt (icon-xref :list-alt))
 (def logo (icon-xref :logo))

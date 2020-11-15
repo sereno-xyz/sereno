@@ -7,7 +7,7 @@
 ;;
 ;; Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
 
-(ns app.ui.monitors.http
+(ns app.ui.monitors.ssl
   (:require
    ["./http_chart" :as ilc]
    [app.common.data :as d]
@@ -19,6 +19,7 @@
    [app.ui.forms :as forms]
    [app.ui.icons :as i]
    [app.ui.modal :as modal]
+   [app.ui.monitors.http :refer [monitor-status-history]]
    [app.util.dom :as dom]
    [app.util.router :as r]
    [app.util.time :as dt]
@@ -50,16 +51,18 @@
        [:div.details-field
         {:class (dom/classnames :success (= "up" (:status monitor))
                                 :fail    (= "down" (:status monitor)))}
-        (str/upper (:status monitor))]]
+        (case (:status monitor)
+          "up"   "VALID"
+          "warn" "NEAR EXPIRATION"
+          "down" "EXPIRED / INVALID"
+          (str/upper (:status monitor)))
+        ]]
       [:div.details-row
        [:div.details-field "Type"]
        [:div.details-field (str/upper (:type monitor))]]
       [:div.details-row
        [:div.details-field "URI:"]
        [:div.details-field (get-in monitor [:params :uri])]]
-      [:div.details-row
-       [:div.details-field "Cadence"]
-       [:div.details-field (dt/humanize-duration (* 1000 (:cadence monitor)))]]
       [:div.details-row
        [:div.details-field "Tags"]
        [:div.details-field (apply str (interpose ", " (:tags monitor)))]]]
@@ -74,19 +77,11 @@
        [:div.details-field "Uptime (%)"]
        [:div.details-field (mth/precision uptime 2) "%"]]
       [:div.details-row
-       [:div.details-field "Downtime"]
-       [:div.details-field (dt/humanize-duration (* 1000 dsecs))]]
+       [:div.details-field "Alert before"]
+       [:div.details-field (get-in monitor [:params :alert-before]) " days"]]
       [:div.details-row
        [:div.details-field "AVG Latency"]
-       [:div.details-field (mth/precision (:latency-avg summary) 0) " ms"]]
-      [:div.details-row
-       [:div.details-field "Q90 Latency"]
-       [:div.details-field (mth/precision (:latency-p90 summary) 0) " ms"]]]]))
-
-(def period-options
-  [{:value "24hours" :label "24 hours"}
-   {:value "7days"   :label "7 days"}
-   {:value "30days"  :label "30 days"}])
+       [:div.details-field (mth/precision (:latency-avg summary) 0) " ms"]]]]))
 
 (defn summary-ref
   [id]
@@ -101,18 +96,8 @@
 
         summary-data    (:data summary)
         summary-buckets (:buckets summary)
-        summary-period  (:period summary)
-
         selected-bucket (mf/use-state nil)
-        value (d/seek #(= summary-period (:value %)) period-options)
 
-        on-period-change
-        (mf/use-callback
-         (mf/deps (:id monitor))
-         (fn [data]
-           (let [value (unchecked-get data "value")]
-             (st/emit! (ev/update-summary-period {:id (:id monitor)
-                                                    :period value})))))
         on-mouse-over
         (mf/use-callback
          (mf/deps summary-buckets)
@@ -125,28 +110,27 @@
          (fn []
            (reset! selected-bucket nil)))
 
-        go-back   (mf/use-callback #(st/emit! (r/nav :monitor-list)))
-        go-detail #(st/emit! (r/nav :monitor-detail {:id (:id monitor)}))
-        ;; go-log    #(st/emit! (r/nav :monitor-log {:id (:id monitor)}))
-        pause     #(st/emit! (ev/pause-monitor monitor))
-        resume    #(st/emit! (ev/resume-monitor monitor))
-        edit      #(modal/show! {::modal/type :monitor-form
-                                 :item monitor})]
+        go-back   (mf/use-callback (st/emitf (r/nav :monitor-list)))
+        pause     (st/emitf (ev/pause-monitor monitor))
+        resume    (st/emitf (ev/resume-monitor monitor))
+        edit      (st/emitf (modal/show {:type :ssl-monitor-form :item monitor}))]
 
     (mf/use-effect
      (mf/deps monitor)
      (fn []
-       (st/emit! (ptk/event :initialize-monitor-summary {:id (:id monitor)}))
-       (st/emitf (ptk/event :finalize-monitor-summary {:id (:id monitor)}))))
+       (st/emit! (ptk/event :initialize-monitor-summary
+                            {:id (:id monitor)
+                             :period "30days"}))
+       (st/emitf (ptk/event :finalize-monitor-summary monitor))))
 
     (mf/use-layout-effect
-     (mf/deps summary-buckets summary-period)
+     (mf/deps summary-buckets)
      (fn []
        (when summary-buckets
          (let [dom  (mf/ref-val chart-ref)
                data (clj->js summary-buckets)]
            (ilc/render dom #js {:width 1160
-                                :period summary-period
+                                :period "30days"
                                 :height (.-clientHeight dom)
                                 :onMouseOver on-mouse-over
                                 :onMouseOut on-mouse-out
@@ -165,22 +149,14 @@
      [:hr]
 
      [:div.topside-options
-      (when-let [data (deref selected-bucket)]
-        [:ul.period-info
+      (let [data (deref selected-bucket)]
+        [:ul.period-info {:class (dom/classnames :invisible (not data))}
          [:li
           [:span.label "Latency: "]
           [:span.value (str (:avg data) "ms")]]
          [:li
           [:span.label "Period: "]
-          [:span.value (dt/format (:ts data) :datetime-med)]]])
-      [:div.timeframe-selector
-       [:> forms/rselect
-        {:options (clj->js period-options)
-         :className "react-select"
-         :classNamePrefix "react-select"
-         :isClearable false
-         :onChange on-period-change
-         :value (clj->js value)}]]]
+          [:span.value (dt/format (:ts data) :datetime-med)]]])]
 
      [:div.latency-chart
       [:div.chart {:ref chart-ref}]]
@@ -188,62 +164,7 @@
      [:& monitor-info {:summary summary-data
                        :monitor monitor}]]))
 
-
-(defn history-ref
-  [id]
-  (l/derived (l/in [:monitor-status-history id]) st/state))
-
-(mf/defc monitor-status-history
-  {::mf/wrap [mf/memo]}
-  [{:keys [monitor] :as props}]
-  (let [history-ref (mf/use-memo (mf/deps (:id monitor)) #(history-ref (:id monitor)))
-        history     (mf/deref history-ref)
-        load        #(st/emit! (ptk/event :load-more-status-history monitor))]
-
-    (mf/use-effect
-     (mf/deps (:id monitor))
-     (fn []
-       (st/emit! (ptk/event :initialize-monitor-status-history monitor))
-       (st/emitf (ptk/event :finalize-monitor-status-history monitor))))
-
-    [:div.main-content
-     [:div.section-title-bar.secondary
-      [:h2 "Status History"]]
-     [:hr]
-
-     [:div.history-table
-      [:ul.table-header
-       [:li.icon ""]
-       [:li.status "Status"]
-       [:li.created-at "Created At"]
-       [:li.duration "Duration"]]
-      [:div.table-body
-       (for [item (->> (vals (:items history))
-                       (sort-by :created-at)
-                       (reverse))]
-         [:ul.table-body-item {:key (:id item)
-                               :title (:reason item "")
-                               :class (dom/classnames
-                                       :status-warn (= (:status item) "warn")
-                                       :status-up (= (:status item) "up")
-                                       :status-down (= (:status item) "down"))}
-          [:li.icon (case (:status item)
-                      "warn" i/info-circle
-                      "up" i/chevron-circle-up
-                      "down" i/chevron-circle-down
-                      "paused" i/chevron-circle-down
-                      "started" i/chevron-circle-up
-                      "created" i/circle
-                      nil)]
-          [:li.status (str/upper (:status item))]
-          [:li.created-at (dt/format (:created-at item) :datetime-med)]
-          [:li.duration (dt/format-time-distance (:created-at item)
-                                                 (:finished-at item (dt/now)))]])
-       [:div.load-more-button
-        (when (:load-more history)
-          [:a {:on-click load} "Load more"])]]]]))
-
-(mf/defc http-monitor-detail
+(mf/defc ssl-monitor-detail
   {::mf/wrap [mf/memo]}
   [{:keys [monitor] :as props}]
   [:main.monitor-detail-section

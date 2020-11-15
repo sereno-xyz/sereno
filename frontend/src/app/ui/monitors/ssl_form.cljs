@@ -63,7 +63,7 @@
      {:label "Alert before (days):"
       :type "number"
       :min 1
-      :max 30
+      :max 60
       :name :alert-before}]]])
 
 (defn- on-error
@@ -82,10 +82,10 @@
   [form]
   (st/emit! (modal/hide))
   (if (get-in @form [:data :id])
-    (st/emit! (em/show {:content "Monitor updated"
+    (st/emit! (em/show {:content "Monitor updated."
                         :timeout 2000
                         :type :success}))
-    (st/emit! (em/show {:content "Monitor created"
+    (st/emit! (em/show {:content "Monitor created."
                         :timeout 2000
                         :type :success}))))
 
@@ -125,7 +125,7 @@
               :type     (:type item)
               :contacts (:contacts item #{})
               :tags     (or (:tags item) #{})
-              :alert-before (:alert-before item 5)
+              :alert-before (:alert-before params 5)
               :uri      (:uri params)}
              {:alert-before 5
               :type "ssl"

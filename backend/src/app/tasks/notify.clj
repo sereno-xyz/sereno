@@ -98,12 +98,11 @@
         cdata  ((:create tokens) {:iss :contact
                                   :exp (dt/in-future {:days 7})
                                   :profile-id (:owner-id contact)
-                                  :contact-id (:id contact)})
-        email  (case (:type monitor)
-                 "http" emails/http-monitor-notification
-                 "ssl"  emails/ssl-monitor-notification)]
+                                  :contact-id (:id contact)})]
 
-    (emails/send! pool email
+    (case (:type monitor)
+      "http"
+      (emails/send! pool emails/http-monitor-notification
                   {:old-status (:status monitor)
                    :new-status (:status result)
                    :reason (:reason result)
@@ -112,7 +111,20 @@
                    :unsubscribe-token utoken
                    :delete-token dtoken
                    :to (get-in contact [:params :email])
-                   :custom-data cdata})))
+                   :custom-data cdata})
+
+      "ssl"
+      (emails/send! pool emails/ssl-monitor-notification
+                  {:status (:status result)
+                   :expired-at (str (:expired-at monitor))
+                   :reason (:reason result)
+                   :monitor-name (:name monitor)
+                   :monitor-params (:params monitor)
+                   :public-uri (:public-uri cfg)
+                   :unsubscribe-token utoken
+                   :delete-token dtoken
+                   :to (get-in contact [:params :email])
+                   :custom-data cdata}))))
 
 (defn annotate-and-check-email-send-limits!
   [cfg profile-id]

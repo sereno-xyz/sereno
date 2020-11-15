@@ -21,7 +21,6 @@
    [clojure.tools.logging :as log]
    [integrant.core :as ig]))
 
-
 (s/def ::type #{"http"})
 (s/def :internal.monitors.http/uri ::us/uri)
 (s/def :internal.monitors.http/method ::us/keyword)
@@ -42,7 +41,7 @@
   [^Exception e monitor]
   (cond
     (instance? java.util.concurrent.ExecutionException e)
-    (handle-exception (.getCause e) monitor)
+    (handle-exception (ex-cause e) monitor)
 
     (instance? java.net.ConnectException e)
     {:status "down"

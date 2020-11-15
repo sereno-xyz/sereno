@@ -22,6 +22,7 @@
    [app.ui.monitors.http-form]
    [app.ui.monitors.ssl-form]
    [app.ui.monitors.http :refer [http-monitor-detail]]
+   [app.ui.monitors.ssl :refer [ssl-monitor-detail]]
    [app.util.dom :as dom]
    [app.util.router :as r]
    [app.util.time :as dt]
@@ -184,7 +185,9 @@
          (fn [event]
            (dom/prevent-default event)
            (dom/stop-propagation event)
-           (st/emit! (modal/show {:type :http-monitor-form :item item}))))
+           (case (:type item)
+             "http" (st/emit! (modal/show {:type :http-monitor-form :item item}))
+             "ssl"  (st/emit! (modal/show {:type :ssl-monitor-form :item item})))))
 
         on-hover
         (mf/use-callback
@@ -195,6 +198,7 @@
 
     [:li.row {:key (:id item)
               :class (dom/classnames
+                      :warning (= "warn" status)
                       :inactive (= "paused" status)
                       :inactive (= "started" status)
                       :success (= "up" status)
@@ -308,7 +312,7 @@
     (when monitor
       (case (:type monitor)
         "http" [:& http-monitor-detail {:monitor monitor}]
-        "ssl"  [:div "TODO"]
+        "ssl"  [:& ssl-monitor-detail {:monitor monitor}]
         nil))))
 
 

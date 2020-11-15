@@ -207,6 +207,14 @@
       }
     }
 
+    &.warning {
+      border-left: 3px solid var(--color-warning);
+
+      .monitor-status svg {
+        fill: var(--color-warning);
+      }
+    }
+
     &.failed {
       border-left: 3px solid var(--color-danger);
 

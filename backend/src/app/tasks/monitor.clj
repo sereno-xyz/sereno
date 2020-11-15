@@ -126,6 +126,7 @@
 
               (if (and (:retry result) (< (:retry-num tdata) (:max-retries tdata)))
                 (ex/raise :type :app.worker/retry
+                          :delay (dt/duration {:minutes 1})
                           :hint "monitor does not passes all checks")
                 (do
                   (when (status-changed? monitor result)

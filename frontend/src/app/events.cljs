@@ -671,12 +671,12 @@
               (rx/take-until stoper)))))))
 
 (defmethod ptk/resolve :initialize-monitor-summary
-  [_ {:keys [id] :as params}]
+  [_ {:keys [id period] :or {period default-period} :as params}]
   (ptk/reify ::initialize-monitor-summary
     ptk/UpdateEvent
     (update [_ state]
       (update-in state [:monitor-summary id :period]
-                 (fn [v] (if (nil? v) default-period v))))
+                 (fn [v] (if (nil? v) period v))))
 
     ptk/WatchEvent
     (watch [_ state stream]

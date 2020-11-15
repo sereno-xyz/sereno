@@ -31,18 +31,22 @@
 (def ^:private
   sql:mark-as-retry
   "update task
-      set scheduled_at = clock_timestamp() + '10 seconds'::interval,
+      set scheduled_at = clock_timestamp() + ?::interval,
           modified_at = clock_timestamp(),
           error = ?,
           status = 'retry',
           retry_num = retry_num + ?
     where id = ?")
 
+(def default-delay
+  (dt/duration {:seconds 10}))
+
 (defn- mark-as-retry
-  [conn {:keys [task error inc-by]
-         :or {inc-by 1}}]
+  [conn {:keys [task error inc-by delay]
+         :or {inc-by 1 delay default-delay}}]
   (let [explain (ex-message error)
-        sqlv [sql:mark-as-retry explain inc-by (:id task)]]
+        delay   (db/interval delay)
+        sqlv    [sql:mark-as-retry delay explain inc-by (:id task)]]
     (db/exec-one! conn sqlv)
     nil))
 
@@ -82,20 +86,19 @@
 
 (defn- handle-exception
   [e item]
-  (let [data (ex-data e)]
-    (cond
-      (and (= ::retry (:type data))
-           (= ::noop (:strategy data)))
-      {:status :retry :task item :error e :inc-by 0}
+  (let [error (ex-data e)]
+    (if (and (< (:retry-num item)
+                (:max-retries item))
+             (= ::retry (:type error)))
+      (cond-> {:status :retry :task item :error e}
+        (dt/duration? (:delay error))
+        (assoc :delay (:delay error))
 
-      (and (< (:retry-num item)
-              (:max-retries item))
-           (= ::retry (:type data)))
-      {:status :retry :task item :error e}
+        (= ::noop (:strategy error))
+        (assoc :inc-by 0))
 
-      :else
       (do
-        (log/errorf e "Unhandled exception on task '%s' (retry: %s)\nProps: %s"
+        (log/errorf e "Unhandled exception on task '%s' (retry: %s) (props: '%s')"
                     (:name item) (:retry-num item) (pr-str (:props item)))
         (if (>= (:retry-num item) (:max-retries item))
           {:status :failed :task item :error e}

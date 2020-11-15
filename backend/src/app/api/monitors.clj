@@ -450,11 +450,12 @@
                    else e.created_at end) as duration
         from monitor_status as e
        where e.monitor_id = ?
+         and e.status in ('up', 'down', 'warn')
          and tstzrange(e.created_at, e.finished_at) && tstzrange(now() - ?::interval, now())
    )
    select (select extract(epoch from sum(duration)) from entries)::float8 as total_seconds,
           (select extract(epoch from sum(duration)) from entries where status = 'down')::float8 as down_seconds,
-          (select extract(epoch from sum(duration)) from entries where status = 'up')::float8 as up_seconds")
+          (select extract(epoch from sum(duration)) from entries where status = 'up' or status = 'warn')::float8 as up_seconds")
 
 (def sql:monitor-summary-buckets
    "select time_bucket(?::interval, created_at) as ts,
