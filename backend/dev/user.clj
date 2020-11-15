@@ -98,24 +98,26 @@
                                 '(app.db/with-atomic)]}}}})
       (kondo/print!)))
 
-(defn install-trust!
-  []
-  (let [trust  (reify X509TrustManager
-                 (getAcceptedIssuers [it] nil)
-                 (checkServerTrusted [it a b] nil)
-                 (checkClientTrusted [it a b] nil))
-        trusts (into-array TrustManager [trust])
-        sslctx (SSLContext/getInstance "SSL")
-        _      (.init sslctx nil trusts (java.security.SecureRandom.))]
-    (HttpsURLConnection/setDefaultSSLSocketFactory (.getSocketFactory sslctx))))
+;; (defn install-trust!
+;;   []
+;;   (let [trust  (reify X509TrustManager
+;;                  (getAcceptedIssuers [it] nil)
+;;                  (checkServerTrusted [it a b] nil)
+;;                  (checkClientTrusted [it a b] nil))
+;;         trusts (into-array TrustManager [trust])
+;;         sslctx (SSLContext/getInstance "SSL")
+;;         _      (.init sslctx nil trusts (java.security.SecureRandom.))]
+;;     (HttpsURLConnection/setDefaultSSLSocketFactory (.getSocketFactory sslctx))))
 
 (defn check
   [uri]
+  ;; (install-trust!)
   (let [url   (URL. ^String uri)
         conn  (.openConnection url)]
     (when-not (instance? HttpsURLConnection conn)
       (ex/raise :type :invalid-arguments
-                :code :not-https-uri-provided))
+                :code :not-https-uri-provided
+                :message "Provide a valid https uri."))
 
     (.setConnectTimeout ^HttpsURLConnection conn 5000)
     (.connect ^HttpsURLConnection conn)
