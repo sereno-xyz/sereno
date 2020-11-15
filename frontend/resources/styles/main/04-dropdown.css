@@ -31,9 +31,28 @@ ul.dropdown {
     height: 45px;
     padding: 0px 15px;
     font-size: var(--default-small-font-size);
+    border-radius: var(--default-border-radius);
 
     &:hover {
       background-color: var(--color-gray-5);
+    }
+
+    &.disabled {
+      color: var(--color-gray-20);
+
+      svg { fill: var(--color-gray-20); }
+    }
+
+    &.danger {
+      background-color: var(--color-danger);
+      color: var(--color-white);
+      font-weight: 600;
+
+      svg { fill: var(--color-white); }
+
+      &:hover {
+        background-color: var(--color-danger-dark);
+      }
     }
   }
 

@@ -27,6 +27,7 @@
 
   .section-title-bar {
     display: flex;
+    position: relative;
 
     &.secondary {
       margin-top: 50px;
@@ -44,24 +45,41 @@
       cursor: default;
     }
 
+    .dropdown {
+      right: 10px;
+      top: 35px;
+      width: 118px;
+    }
+
     .options {
       display: flex;
+      justify-content: center;
       align-items: center;
       padding-right: 5px;
 
-      .inline-button {
+      background-color: rgba(232, 233, 234, 0.4);
+
+      border-radius: 2px;
+      /* border: 1px solid var(--color-gray-5); */
+      padding: 0px 10px;
+      cursor: pointer;
+      margin-right: 10px;
+      width: 120px;
+
+
+      > .label {
+        margin-right: 10px;
+      }
+
+      > .icon {
         display: flex;
         align-items: center;
-        margin: 5px 10px;
-        color: var(--color-gray-50);
-        font-weight: 500;
-        font-size: var(--default-font-size);
       }
+
       svg {
         width: 15px;
         height: 15px;
         fill: var(--color-gray-50);
-        margin-right: 5px;
       }
     }
   }

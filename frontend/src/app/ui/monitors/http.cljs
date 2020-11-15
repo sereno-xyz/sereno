@@ -19,6 +19,7 @@
    [app.ui.forms :as forms]
    [app.ui.icons :as i]
    [app.ui.modal :as modal]
+   [app.ui.dropdown :refer [dropdown]]
    [app.util.dom :as dom]
    [app.util.router :as r]
    [app.util.time :as dt]
@@ -92,6 +93,45 @@
   [id]
   (l/derived (l/in [:monitor-summary id]) st/state))
 
+(mf/defc monitor-title
+  [{:keys [monitor]}]
+  (let [pause     (st/emitf (ev/pause-monitor monitor))
+        resume    (st/emitf (ev/resume-monitor monitor))
+        edit      (st/emitf (modal/show {:type (case (:type monitor)
+                                                 "ssl" :ssl-monitor-form
+                                                 "http" :http-monitor-form)
+                                         :item monitor}))
+
+        show-dropdown? (mf/use-state false)
+        show-dropdown  (mf/use-callback #(reset! show-dropdown? true))
+        hide-dropdown  (mf/use-callback #(reset! show-dropdown? false))]
+
+
+    [:div.section-title-bar
+     [:h2 (:name monitor)]
+     [:span.options {:on-click show-dropdown}
+      [:span.label "Options"]
+      [:span.icon i/chevron-down]]
+
+     [:& dropdown {:show @show-dropdown?
+                    :on-close hide-dropdown}
+       [:ul.dropdown
+        (if (= "paused" (:status monitor))
+          [:li {:on-click resume
+                :title "Resume"}
+           [:div.icon i/play]
+           [:div.text "Resume"]]
+          [:li {:on-click pause
+                :title "Pause"}
+           [:div.icon i/pause]
+           [:div.text "Pause"]])
+        [:li.disabled {:title "Export"}
+         [:div.icon i/download]
+         [:div.text "Export"]]
+        [:li.danger {:title "Delete"}
+         [:div.icon i/trash-alt]
+         [:div.text "Delete"]]]]]))
+
 (mf/defc monitor-summary
   [{:keys [monitor]}]
   (let [chart-ref    (mf/use-ref)
@@ -155,13 +195,7 @@
              (ilc/clear dom))))))
 
     [:div.main-content
-     [:div.section-title-bar
-      [:h2 (:name monitor)]
-      [:div.options
-       (if (= "paused" (:status monitor))
-         [:a.inline-button {:on-click resume} i/play "Resume"]
-         [:a.inline-button {:on-click pause} i/pause "Pause"])
-       [:a.inline-button {:on-click edit} i/edit "Edit"]]]
+     [:& monitor-title {:monitor monitor}]
      [:hr]
 
      [:div.topside-options

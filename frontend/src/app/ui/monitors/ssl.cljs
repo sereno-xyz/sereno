@@ -19,7 +19,7 @@
    [app.ui.forms :as forms]
    [app.ui.icons :as i]
    [app.ui.modal :as modal]
-   [app.ui.monitors.http :refer [monitor-status-history]]
+   [app.ui.monitors.http :refer [monitor-status-history monitor-title]]
    [app.util.dom :as dom]
    [app.util.router :as r]
    [app.util.time :as dt]
@@ -64,6 +64,9 @@
        [:div.details-field "URI:"]
        [:div.details-field (get-in monitor [:params :uri])]]
       [:div.details-row
+       [:div.details-field "Cadence"]
+       [:div.details-field (dt/humanize-duration (* 1000 (:cadence monitor)))]]
+      [:div.details-row
        [:div.details-field "Tags"]
        [:div.details-field (apply str (interpose ", " (:tags monitor)))]]]
 
@@ -73,6 +76,11 @@
        [:div.details-field
         {:on-mouse-enter on-hover}
         (dt/format (:monitored-at monitor) :datetime-med)]]
+      [:div.details-row
+       [:div.details-field "Expires"]
+       [:div.details-field
+        {:on-mouse-enter on-hover}
+        (dt/format (:expired-at monitor) :datetime-med)]]
       [:div.details-row
        [:div.details-field "Uptime (%)"]
        [:div.details-field (mth/precision uptime 2) "%"]]
@@ -139,13 +147,7 @@
              (ilc/clear dom))))))
 
     [:div.main-content
-     [:div.section-title-bar
-      [:h2 (:name monitor)]
-      [:div.options
-       (if (= "paused" (:status monitor))
-         [:a.inline-button {:on-click resume} i/play "Resume"]
-         [:a.inline-button {:on-click pause} i/pause "Pause"])
-       [:a.inline-button {:on-click edit} i/edit "Edit"]]]
+     [:& monitor-title {:monitor monitor}]
      [:hr]
 
      [:div.topside-options
