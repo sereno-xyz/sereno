@@ -23,7 +23,7 @@
    [clojure.tools.logging :as log]
    [integrant.core :as ig]))
 
-(defmulti notify! (fn [cfg contact monitor result] (:type contact)))
+(defmulti notify! (fn [{:keys [contact monitor]}] [(:type contact) (:type monitor)]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Task Handler
@@ -54,9 +54,8 @@
   [_ {:keys [pool] :as cfg}]
   (fn [{:keys [props] :as task}]
     (us/assert ::notify-props props)
-    (let [{:keys [contact monitor result]} props]
-      (notify! cfg contact monitor result)
-      nil)))
+    (notify! (merge cfg props))
+    nil))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Email Notification
@@ -79,52 +78,53 @@
                    :internal.contacts.email/subscription-id
                    :internal.contacts.email/params]))
 
-(defmethod notify! "email"
-  [{:keys [pool tokens] :as cfg} contact monitor result]
+(defn- generate-tokens
+  [{:keys [contact tokens] :as cfg}]
+  {:unsub  ((:create tokens) {:iss :unsub-monitor
+                              :exp (dt/in-future {:minutes 30})
+                              :id (:subscription-id contact)})
+   :delete ((:create tokens) {:iss :delete-contact
+                              :exp (dt/in-future {:hours 48})
+                              :contact-id (:id contact)})
+   :cdata  ((:create tokens) {:iss :contact
+                              :exp (dt/in-future {:days 7})
+                              :profile-id (:owner-id contact)
+                              :contact-id (:id contact)})})
+
+(defmethod notify! ["email" "http"]
+  [{:keys [pool monitor result contact] :as cfg}]
   (db/with-atomic [conn pool]
-    (let [cfg (assoc cfg :conn conn)]
+    (let [cfg (assoc cfg :conn conn)
+          tkn (generate-tokens cfg)]
       (annotate-and-check-email-send-limits! cfg (:owner-id monitor))
-      (send-email-notification cfg contact monitor result))))
-
-(defn- send-email-notification
-  [{:keys [pool tokens] :as cfg} contact monitor result]
-  (us/assert ::email-contact contact)
-  (let [utoken ((:create tokens) {:iss :unsub-monitor
-                                  :exp (dt/in-future {:minutes 30})
-                                  :id (:subscription-id contact)})
-        dtoken ((:create tokens) {:iss :delete-contact
-                                  :exp (dt/in-future {:hours 48})
-                                  :contact-id (:id contact)})
-        cdata  ((:create tokens) {:iss :contact
-                                  :exp (dt/in-future {:days 7})
-                                  :profile-id (:owner-id contact)
-                                  :contact-id (:id contact)})]
-
-    (case (:type monitor)
-      "http"
-      (emails/send! pool emails/http-monitor-notification
+      (emails/send! conn emails/http-monitor-notification
                   {:old-status (:status monitor)
                    :new-status (:status result)
+                   :to (get-in contact [:params :email])
                    :reason (:reason result)
                    :monitor-name (:name monitor)
                    :public-uri (:public-uri cfg)
-                   :unsubscribe-token utoken
-                   :delete-token dtoken
-                   :to (get-in contact [:params :email])
-                   :custom-data cdata})
+                   :unsubscribe-token (:unsub tkn)
+                   :delete-token (:delete tkn)
+                   :custom-data (:cdata tkn)}))))
 
-      "ssl"
-      (emails/send! pool emails/ssl-monitor-notification
+(defmethod notify! ["email" "ssl"]
+  [{:keys [pool monitor result contact] :as cfg}]
+  (db/with-atomic [conn pool]
+    (let [cfg (assoc cfg :conn conn)
+          tkn (generate-tokens cfg)]
+      (annotate-and-check-email-send-limits! cfg (:owner-id monitor))
+      (emails/send! conn emails/ssl-monitor-notification
                   {:status (:status result)
                    :expired-at (str (:expired-at monitor))
                    :reason (:reason result)
+                   :to (get-in contact [:params :email])
                    :monitor-name (:name monitor)
                    :monitor-params (:params monitor)
                    :public-uri (:public-uri cfg)
-                   :unsubscribe-token utoken
-                   :delete-token dtoken
-                   :to (get-in contact [:params :email])
-                   :custom-data cdata}))))
+                   :unsubscribe-token (:unsub tkn)
+                   :delete-token (:delete tkn)
+                   :custom-data (:cdata tkn)}))))
 
 (defn annotate-and-check-email-send-limits!
   [cfg profile-id]
@@ -164,24 +164,43 @@
 (s/def ::mattermost-contact
   (s/keys :req-un [:internal.contacts.mattermost/params]))
 
-(defmethod notify! "mattermost"
-  [cfg contact monitor result]
+(defn send-to-mattermost!
+  [{:keys [contact] :as cfg} content]
   (us/assert ::mattermost-contact contact)
   (let [send! (:http-client cfg)
         uri   (get-in contact [:params :uri])
-        text  (str/format "@channel **%s** status change from **%s** to **%s**"
-                          (:name monitor)
-                          (str/upper (:status monitor))
-                          (str/upper (:status result)))
         rsp   (send! {:uri uri
                       :method :post
                       :headers {"content-type" "application/json"}
-                      :body (json/write-str {:text text})})]
+                      :body (json/write-str {:text content})})]
     (when (not= (:status rsp) 200)
       (ex/raise :type :internal
                 :code :mattermost-webhook-not-reachable
                 :response rsp))))
 
+(defmethod notify! ["mattermost" "http"]
+  [{:keys [monitor result] :as cfg}]
+  (let [content (str/format "@channel **%s** status change from **%s** to **%s**"
+                            (:name monitor)
+                            (str/upper (:status monitor))
+                            (str/upper (:status result)))]
+    (send-to-mattermost! cfg content)))
+
+(defmethod notify! ["mattermost" "ssl"]
+  [{:keys [monitor result] :as cfg}]
+  (let [content
+        (cond
+          (= (:status result) "warn")
+          (str/format "@channel **%s** is near to expiration." (:name monitor))
+
+          (= (:status result) "down")
+          (str/format "@channel **%s** is now expired or has invalid ssl certificate."
+                            (:name monitor))
+
+          :else
+          (str/format "@channel **%s** is live." (:name monitor)))]
+
+    (send-to-mattermost! cfg content)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Telegram Notification
@@ -199,14 +218,33 @@
                    :internal.contacts.telegram/subscription-id
                    :internal.contacts.telegram/id]))
 
-(defmethod notify! "telegram"
-  [{:keys [telegram] :as cfg} contact monitor result]
+(defn send-to-teleram!
+  [{:keys [contact telegram] :as cfg} content]
   (us/assert ::telegram-contact contact)
   (when telegram
-    (let [chat-id (get-in contact [:params :chat-id])
-          text    (str/format "*%s* status change from __%s__ to __*%s*__"
-                              (:name monitor)
-                              (str/upper (:status monitor))
-                              (str/upper (:status result)))]
-      ((:send-message telegram) {:chat-id chat-id
-                                 :content text}))))
+    (let [chat-id (get-in contact [:params :chat-id])]
+      ((:send-message telegram) {:chat-id chat-id :content content}))))
+
+(defmethod notify! ["telegram" "http"]
+  [{:keys [monitor result] :as cfg}]
+  (let [content (str/format "*%s* status change from __%s__ to __*%s*__"
+                            (:name monitor)
+                            (str/upper (:status monitor))
+                            (str/upper (:status result)))]
+    (send-to-teleram! cfg content)))
+
+(defmethod notify! ["telegram" "ssl"]
+  [{:keys [monitor result] :as cfg}]
+  (let [content
+        (cond
+          (= (:status result) "warn")
+          (str/format "**%s** is near to expiration." (:name monitor))
+
+          (= (:status result) "down")
+          (str/format "**%s** is now expired or has invalid ssl certificate."
+                      (:name monitor))
+
+          :else
+          (str/format "**%s** is live." (:name monitor)))]
+
+    (send-to-teleram! cfg content)))
