@@ -76,22 +76,22 @@
     [:ul.dropdown
      (if (= "paused" (:status monitor))
        [:li {:on-click on-resume
-             :title "Resume"}
+             :title "Resume this monitor"}
         [:div.icon i/play]
         [:div.text "Resume"]]
        [:li {:on-click on-pause
-             :title "Pause"}
+             :title "Pause this monitor"}
         [:div.icon i/pause]
         [:div.text "Pause"]])
      [:li {:on-click on-edit
            :title "Edit"}
       [:div.icon i/pen-square]
       [:div.text "Edit"]]
-     [:li.disabled {:title "Export"}
+     [:li.disabled {:title "Export (not implemented yet)"}
       [:div.icon i/download]
       [:div.text "Export"]]
      [:li.danger {:on-click on-delete
-                  :title "Delete"}
+                  :title "Delete this monitor"}
       [:div.icon i/trash-alt]
       [:div.text "Delete"]]]))
 
