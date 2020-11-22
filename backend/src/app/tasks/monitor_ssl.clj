@@ -23,14 +23,10 @@
   (:import
    java.net.URL
    java.security.cert.Certificate
-   java.security.cert.CertificateException
    java.security.cert.X509Certificate
    java.util.Date
    javax.net.ssl.HttpsURLConnection
-   javax.net.ssl.SSLContext
-   javax.net.ssl.TrustManager
-   javax.net.ssl.X509TrustManager
-   java.security.cert.CertificateException))
+   javax.net.ssl.SSLContext))
 
 (s/def ::type #{"ssl"})
 (s/def :internal.monitors.ssl/uri

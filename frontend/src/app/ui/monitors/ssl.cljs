@@ -42,7 +42,7 @@
          (mf/deps (:id monitor))
          (fn [event]
            (let [target (dom/get-target event)]
-             (.setAttribute target "title" (dt/timeago (:modified-at monitor))))))]
+             (.setAttribute target "title" (str (dt/timeago (:modified-at monitor)) " ago")))))]
 
     [:div.details-table
      [:div.details-column
@@ -79,7 +79,7 @@
       [:div.details-row
        [:div.details-field "Expires"]
        [:div.details-field
-        {:on-mouse-enter on-hover}
+        {:title (str "Expires in: " (or (dt/timeago (:expired-at monitor)) "---"))}
         (dt/format (:expired-at monitor) :datetime-med)]]
       [:div.details-row
        [:div.details-field "Uptime (%)"]

@@ -128,7 +128,8 @@
                 (ex/raise :type :app.worker/retry
                           :delay (dt/duration {:minutes 1})
                           :hint "monitor does not passes all checks")
-                (do
+
+                (let [result (dissoc result :update-fn)]
                   (when (status-changed? monitor result)
                     (insert-monitor-status-change! conn id result)
                     (when (not= "started" (:status monitor))
