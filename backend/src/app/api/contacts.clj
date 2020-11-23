@@ -101,7 +101,7 @@
         nil))))
 
 
-;; --- Mutation: Create Mattermost Contact
+;; --- Mutation: Create Telegram Contact
 
 (declare decode-contact-row)
 

@@ -84,6 +84,11 @@
      :retry false
      :reason (ex-message e)}
 
+    (instance? java.net.SocketTimeoutException 3)
+    {:status "down"
+     :retry true
+     :reason "connect-timeout"}
+
     :else
     (do
       (log/errorf e "Unexpected exception on monitor '%s' params: %s"
