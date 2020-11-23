@@ -1,5 +1,6 @@
 # Changelog #
 
+
 ## v1-2020-SNAPSHOT
 
 - Add telegram bot api and webhooks integration.
@@ -7,6 +8,8 @@
   external authententication provider.
 - Internal refactor of contacts.
 - Minor interface restyling.
+- Add SSL Certificate monitoring.
+- Monitor list minor restyling.
 
 
 ## v1-2020.10.16-0
