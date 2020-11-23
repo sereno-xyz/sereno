@@ -227,7 +227,7 @@
 
 (defmethod notify! ["telegram" "http"]
   [{:keys [monitor result] :as cfg}]
-  (let [content (str/format "*%s* status change from __%s__ to __*%s*__"
+  (let [content (str/format "<b>%s</b> status change from <u>%s</u> to <u><b>%s</b></u>"
                             (:name monitor)
                             (str/upper (:status monitor))
                             (str/upper (:status result)))]
@@ -238,13 +238,13 @@
   (let [content
         (cond
           (= (:status result) "warn")
-          (str/format "**%s** is near to expiration." (:name monitor))
+          (str/format "<b>%s</b> is near to expiration." (:name monitor))
 
           (= (:status result) "down")
-          (str/format "**%s** is now expired or has invalid ssl certificate."
+          (str/format "<b>%s</b> is now expired or has invalid ssl certificate."
                       (:name monitor))
 
           :else
-          (str/format "**%s** is live." (:name monitor)))]
+          (str/format "<b>%s</b> is live." (:name monitor)))]
 
     (send-to-teleram! cfg content)))

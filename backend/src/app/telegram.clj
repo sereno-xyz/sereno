@@ -42,7 +42,7 @@
   (when (and id token)
     (let [payload {:chat_id chat-id
                    :text content
-                   :parse_mode "MarkdownV2"}
+                   :parse_mode "HTML"}
           send!   (:http-client cfg)
           resp    (send! {:uri (fmt-uri (:token cfg) "sendMessage")
                           :headers {"content-type" "application/json"}
