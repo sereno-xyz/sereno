@@ -7,7 +7,7 @@
 ;;
 ;; Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
 
-(ns app.ui.contacts.mattermost
+(ns app.ui.contacts.discord
   (:require
    [app.common.data :as d]
    [app.common.exceptions :as ex]
@@ -32,12 +32,12 @@
    :name (get-in form [:clean-data :name])
    :uri (get-in form [:clean-data :uri])})
 
-(s/def ::mattermost-contact-form
+(s/def ::discord-contact-form
   (s/keys :req-un [::us/uri ::name]))
 
-(mf/defc mattermost-contact-modal
+(mf/defc discord-contact-modal
   {::mf/register modal/components
-   ::mf/register-as :mattermost-contact}
+   ::mf/register-as :discord-contact}
   [{:keys [id] :as props}]
   (let [on-close    (mf/use-fn (st/emitf (modal/hide)))
         contact-ref (mf/use-memo (mf/deps id) #(st/contact-ref id))
@@ -78,7 +78,7 @@
                            :on-error on-error})]
              (if contact
                (st/emit! (ev/update-contact params))
-               (st/emit! (ev/create-mattermost-contact params))))))
+               (st/emit! (ev/create-discord-contact params))))))
 
         initial
         (mf/use-memo
@@ -91,7 +91,7 @@
               :uri (get-in contact [:params :uri])}
              {:is-paused false})))
 
-        form (fm/use-form :spec ::mattermost-contact-form
+        form (fm/use-form :spec ::discord-contact-form
                           :initial initial)]
 
     [:div.modal-overlay
@@ -100,8 +100,8 @@
        [:div.modal-header
         [:div.modal-header-title
          (if contact
-           [:h2 "Update Mattermost Webhook"]
-           [:h2 "Create Mattermost Webhook"])]
+           [:h2 "Update Discord Webhook"]
+           [:h2 "Create Discord Webhook"])]
         [:div.modal-close-button
          {:on-click on-close} i/times]]
 

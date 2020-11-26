@@ -202,6 +202,70 @@
 
     (send-to-mattermost! cfg content)))
 
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Discord Notification
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(s/def :internal.contacts.discord/params
+  (s/keys :req-un [::us/uri]))
+
+(s/def ::discord-contact
+  (s/keys :req-un [:internal.contacts.discord/params]))
+
+(defn send-to-discord!
+  [{:keys [contact] :as cfg} content]
+  (us/assert ::discord-contact contact)
+  (let [send! (:http-client cfg)
+        uri   (get-in contact [:params :uri])
+        rsp   (send! {:uri uri
+                      :method :post
+                      :headers {"content-type" "application/json"}
+                      :body (json/write-str content)})]
+    (when (not= (:status rsp) 204)
+      (ex/raise :type :internal
+                :message (str/format "Unexpected status code (%s) received from discord." (:status rsp))
+                :code :discord-webhook-not-reachable
+                :response rsp))))
+
+(defmethod notify! ["discord" "http"]
+  [{:keys [monitor result] :as cfg}]
+  (let [embedd  {:title "Monitor status change notification"
+                 :description
+                 (str/format "Monitor **%s** status change from **%s** to **%s**."
+                             (:name monitor)
+                             (str/upper (:status monitor))
+                             (str/upper (:status result)))}
+        content {:username "sereno.xyz"
+                 :content "@everyone"
+                 :avatar_url "https://sereno.xyz/images/logo.png"
+                 :embeds [embedd]}]
+    (send-to-discord! cfg content)))
+
+(defmethod notify! ["discord" "ssl"]
+  [{:keys [monitor result] :as cfg}]
+  (let [text
+        (cond
+          (= (:status result) "warn")
+          (str/format "**%s** is near to expiration." (:name monitor))
+
+          (= (:status result) "down")
+          (str/format "**%s** is now expired or has invalid ssl certificate."
+                            (:name monitor))
+
+          :else
+          (str/format "**%s** is live." (:name monitor)))
+
+        embedd  {:title "Monitor status change notification"
+                 :description text}
+        content {:username "sereno.xyz"
+                 :content "@everyone"
+                 :avatar_url "https://sereno.xyz/images/logo.png"
+                 :embeds [embedd]}]
+    (send-to-discord! cfg content)))
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Telegram Notification
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -21,6 +21,7 @@
    [app.ui.contacts.email]
    [app.ui.contacts.mattermost]
    [app.ui.contacts.telegram]
+   [app.ui.contacts.discord]
    [app.ui.dropdown :refer [dropdown]]
    [app.ui.forms :as fm]
    [app.ui.icons :as i]
@@ -52,6 +53,7 @@
            (case (:type contact)
              "email" (modal/show! {:type :email-contact :id (:id contact)})
              "mattermost" (modal/show! {:type :mattermost-contact :id (:id contact)})
+             "discord" (modal/show! {:type :discord-contact :id (:id contact)})
              "telegram" (modal/show! {:type :telegram-contact :id (:id contact)}))))
 
         delete
@@ -74,6 +76,7 @@
      [:div.type (case (:type contact)
                   "email" i/envelope
                   "mattermost" i/mattermost
+                  "discord" i/discord
                   "telegram" i/telegram
                   nil)]
 
@@ -129,6 +132,7 @@
   []
   (let [add-email-contact (mf/use-callback (st/emitf (modal/show {:type :email-contact})))
         add-mattermost-contact (mf/use-callback (st/emitf (modal/show {:type :mattermost-contact})))
+        add-discord-contact (mf/use-callback (st/emitf (modal/show {:type :discord-contact})))
         add-telegram-contact (mf/use-callback (st/emitf (modal/show {:type :telegram-contact})))
         show-dropdown? (mf/use-state false)
         show-dropdown  (mf/use-callback #(reset! show-dropdown? true))
@@ -146,6 +150,10 @@
               :title "Add new mattermost contact"}
          [:div.icon i/mattermost]
          [:div.text "Mattermost"]]
+        [:li {:on-click add-discord-contact
+              :title "Add new discord contact"}
+         [:div.icon i/discord]
+         [:div.text "Discord"]]
         [:li {:on-click add-telegram-contact
               :title "Add new telegram contact"}
          [:div.icon i/telegram]

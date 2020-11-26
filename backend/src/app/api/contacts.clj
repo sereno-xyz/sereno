@@ -101,6 +101,32 @@
         nil))))
 
 
+;; --- Mutation: Create Discord Contact
+
+(s/def ::create-discord-contact
+  (s/keys :req-un [::profile-id ::name ::us/uri]))
+
+(sv/defmethod ::create-discord-contact
+  [{:keys [pool] :as cfg} {:keys [profile-id name uri] :as props}]
+  (db/with-atomic [conn pool]
+    (let [id      (uuid/next)
+          profile (get-profile conn profile-id)]
+
+      ;; Validate limits
+      (validate-contacts-limits! conn profile)
+
+      ;; Do the main logic
+      (let [params {:uri uri}]
+        (db/insert! conn :contact
+                    {:id id
+                     :owner-id profile-id
+                     :name name
+                     :type "discord"
+                     :validated-at (dt/now)
+                     :params (db/tjson params)})
+        nil))))
+
+
 ;; --- Mutation: Create Telegram Contact
 
 (declare decode-contact-row)

@@ -39,6 +39,7 @@
 (def list-alt (icon-xref :list-alt))
 (def logo (icon-xref :logo))
 (def mattermost (icon-xref :mattermost))
+(def discord (icon-xref :discord))
 (def pause (icon-xref :pause))
 (def pen-square (icon-xref :pen-square))
 (def play (icon-xref :play))

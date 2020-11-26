@@ -315,6 +315,23 @@
              (rx/map #(ptk/event :fetch-contacts))
              (rx/catch on-error))))))
 
+(s/def ::create-discord-contact
+  (s/keys :req-un [::name ::us/uri]))
+
+(defn create-discord-contact
+  [params]
+  (s/assert ::create-discord-contact params)
+  (ptk/reify ::create-discord-contact
+    ptk/WatchEvent
+    (watch [_ state stream]
+      (let [{:keys [on-error on-success]
+             :or {on-error identity
+                  on-success identity}} (meta params)]
+        (->> (rp/req! :create-discord-contact params)
+             (rx/tap on-success)
+             (rx/map #(ptk/event :fetch-contacts))
+             (rx/catch on-error))))))
+
 (s/def ::create-telegram-contact
   (s/keys :req-un [::name]))
 
