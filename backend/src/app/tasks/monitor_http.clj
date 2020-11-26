@@ -73,6 +73,11 @@
      :retry true
      :reason "eof"}
 
+    (instance? org.eclipse.jetty.client.HttpResponseException e)
+    {:status "down"
+     :retry true
+     :reason (ex-message e)}
+
     (instance? java.net.SocketTimeoutException e)
     {:status "down"
      :retry true
