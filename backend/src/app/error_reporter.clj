@@ -10,20 +10,20 @@
 (ns app.error-reporter
   "A mattermost integration for error reporting."
   (:require
-   [promesa.exec :as px]
-   [cuerdas.core :as str]
-   [clojure.data.json :as json]
-   [clojure.core.async :as a]
-   [clojure.spec.alpha :as s]
-   [app.config :as cfg]
    [app.common.exceptions :as ex]
    [app.common.spec :as us]
-   [clojure.tools.logging :as log]
+   [app.config :as cfg]
    [app.db :as db]
    [app.tasks :as tasks]
    [app.util.async :as aa]
    [app.util.emails :as emails]
-   [integrant.core :as ig]))
+   [clojure.core.async :as a]
+   [clojure.data.json :as json]
+   [clojure.spec.alpha :as s]
+   [clojure.tools.logging :as log]
+   [cuerdas.core :as str]
+   [integrant.core :as ig]
+   [promesa.exec :as px]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Email Error Reporting
@@ -44,7 +44,7 @@
     (log/info "Intializing error reporter.")
     (if uri
       (do
-        (alter-var-root #'queue-fn (constantly (fn [x] (a/>!! out x))))
+        (alter-var-root #'queue-fn (constantly (fn [x] (a/>!! out (str x)))))
         (a/go-loop []
           (let [val (a/<! out)]
             (if (nil? val)
