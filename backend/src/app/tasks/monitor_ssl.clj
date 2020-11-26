@@ -48,8 +48,8 @@
       (if (nil? cause)
         {:status "down"
          :retry true
-         :reason (ex-message e)})
-      (handle-exception cause monitor))
+         :reason (ex-message e)}
+        (handle-exception cause monitor)))
 
     (instance? sun.security.validator.ValidatorException e)
     (let [cause (ex-cause e)]
