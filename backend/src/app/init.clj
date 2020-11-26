@@ -64,7 +64,7 @@
    :app.metrics/registry
    {}
 
-   :app.db/migrations
+   :app.migrations/migrations
    {}
 
    :app.db/pool
@@ -72,7 +72,7 @@
     :username (:database-username cfg/config)
     :password (:database-password cfg/config)
     :metrics-registry (ig/ref :app.metrics/registry)
-    :migrations (ig/ref :app.db/migrations)
+    :migrations (ig/ref :app.migrations/migrations)
     :name "main"
     :min-pool-size 0
     :max-pool-size 10}

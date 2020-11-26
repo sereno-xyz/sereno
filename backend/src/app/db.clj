@@ -11,19 +11,16 @@
   (:require
    [app.common.exceptions :as ex]
    [app.common.spec :as us]
-   [app.util.migrations :as mg]
    [app.util.transit :as t]
    [app.util.time :as dt]
    [clojure.data.json :as json]
    [clojure.spec.alpha :as s]
    [clojure.string :as str]
-   [clojure.tools.logging :as log]
    [clojure.java.io :as io]
    [integrant.core :as ig]
    [next.jdbc :as jdbc]
    [next.jdbc.date-time :as jdbc-dt]
    [next.jdbc.optional :as jdbc-opt]
-   [next.jdbc.result-set :as jdbc-rs]
    [next.jdbc.sql :as jdbc-sql]
    [next.jdbc.sql.builder :as jdbc-bld])
   (:import
@@ -49,81 +46,21 @@
 ;; Initialization
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defmethod ig/init-key ::migrations
-  [_ cfg]
-  {:name "main"
-   :steps
-   [{:name "0001-add-extensions"
-     :fn (mg/resource "app/db/sql/0001-add-extensions.sql")}
-
-    {:name "0002-add-profile-tables"
-     :fn (mg/resource "app/db/sql/0002-add-profile-tables.sql")}
-
-    {:name "0003-add-monitors-tables"
-     :fn (mg/resource "app/db/sql/0003-add-monitors-tables.sql")}
-
-    {:name "0004-add-tasks-tables"
-     :fn (mg/resource "app/db/sql/0004-add-tasks-tables.sql")}
-
-    {:name "0005-add-generic-token-table"
-     :fn (mg/resource "app/db/sql/0005-add-generic-token-table.sql")}
-
-    {:name "0006-add-http-session-table"
-     :fn (mg/resource "app/db/sql/0006-add-http-session-table.sql")}
-
-    {:name "0007-mod-contact-table"
-     :fn (mg/resource "app/db/sql/0007-mod-contact-table.sql")}
-
-    {:name "0008-add-contact-bounce-table"
-     :fn (mg/resource "app/db/sql/0008-add-contact-bounce-table.sql")}
-
-    {:name "0009-mod-profile-table"
-     :fn (mg/resource "app/db/sql/0009-mod-profile-table.sql")}
-
-    {:name "0010-add-profile-counters-table"
-     :fn (mg/resource "app/db/sql/0010-add-profile-counters-table.sql")}
-
-    {:name "0011-mod-contact-table"
-     :fn (mg/resource "app/db/sql/0011-mod-contact-table.sql")}
-
-    {:name "0012-add-profile-incident-table"
-     :fn (mg/resource "app/db/sql/0012-add-profile-incident-table.sql")}
-
-    {:name "0013-mod-contact-table-add-email-index"
-     :fn (mg/resource "app/db/sql/0013-mod-contact-table-add-email-index.sql")}
-
-    {:name "0014-del-contact-bounce-table"
-     :fn (mg/resource "app/db/sql/0014-del-contact-bounce-table.sql")}
-
-    {:name "0015-del-generic-token-table"
-     :fn (mg/resource "app/db/sql/0015-del-generic-token-table.sql")}
-
-    {:name "0016-mod-contact-table-add-telegram-fields"
-     :fn (mg/resource "app/db/sql/0016-mod-contact-table-add-telegram-fields.sql")}
-
-    {:name "0017-mod-change-notify-trigger"
-     :fn (mg/resource "app/db/sql/0017-mod-change-notify-trigger.sql")}
-
-    {:name "0018-mod-monitor-table-add-expired-at"
-     :fn (mg/resource "app/db/sql/0018-mod-monitor-table-add-expired-at.sql")}
-    ]})
-
 (s/def ::uri ::us/not-empty-string)
 (s/def ::name ::us/not-empty-string)
 (s/def ::min-pool-size ::us/integer)
 (s/def ::max-pool-size ::us/integer)
+(s/def ::migrations fn?)
 
 (defmethod ig/pre-init-spec ::pool [_]
-  (s/keys :req-un [::uri ::name ::min-pool-size ::max-pool-size]
-          :opt-un [::mg/migrations]))
+  (s/keys :req-un [::uri ::name ::min-pool-size ::max-pool-size ::migrations]))
 
 (defmethod ig/init-key ::pool
   [_ {:keys [migrations] :as cfg}]
   (let [pool (create-pool cfg)]
     (when migrations
       (with-open [conn (open pool)]
-        (mg/setup! conn)
-        (mg/migrate! conn migrations)))
+        (migrations conn)))
     pool))
 
 (defmethod ig/halt-key! ::pool
