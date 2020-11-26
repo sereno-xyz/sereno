@@ -4,8 +4,8 @@ LABEL maintainer="Andrey Antukh <niwi@niwi.nz>"
 ARG DEBIAN_FRONTEND=noninteractive
 ARG EXTERNAL_UID=1000
 
-ENV NODE_VERSION=v15.2.0 \
-    CLOJURE_VERSION=1.10.1.727 \
+ENV NODE_VERSION=v15.3.0 \
+    CLOJURE_VERSION=1.10.1.739 \
     LANG=en_US.UTF-8 \
     LC_ALL=en_US.UTF-8
 
