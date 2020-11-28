@@ -29,9 +29,22 @@
 ;; Task Handler
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(s/def ::code ::us/keyword)
+(s/def ::hint ::us/string)
+(s/def ::ex-class ::us/string)
+(s/def ::ex-data map?)
+(s/def ::ex-stack ::us/string)
+(s/def ::ex-message ::us/string)
+
+(s/def ::cause
+  (s/keys :req-un [::code ::hint]
+          :opt-un [::ex-class
+                   ::ex-data
+                   ::ex-stack
+                   ::ex-message]))
+
 (s/def ::id ::us/uuid)
 (s/def ::type ::us/string)
-(s/def ::reason ::us/string)
 (s/def ::status ::us/string)
 (s/def ::name ::us/string)
 (s/def ::params map?)
@@ -45,7 +58,7 @@
 
 (s/def ::contact (s/keys :req-un [::id ::type ::params]))
 (s/def ::monitor (s/keys :req-un [::id ::status ::name]))
-(s/def ::result  (s/keys :req-un [::status] :opt-in [::reason]))
+(s/def ::result  (s/keys :req-un [::status] :opt-in [::cause]))
 
 (s/def ::notify-props
   (s/keys :req-un [::monitor ::result ::contact]))
@@ -101,7 +114,7 @@
                   {:old-status (:status monitor)
                    :new-status (:status result)
                    :to (get-in contact [:params :email])
-                   :reason (:reason result)
+                   :cause (:cause result)
                    :monitor-name (:name monitor)
                    :public-uri (:public-uri cfg)
                    :unsubscribe-token (:unsub tkn)
@@ -117,7 +130,7 @@
       (emails/send! conn emails/ssl-monitor-notification
                   {:status (:status result)
                    :expired-at (str (:expired-at monitor))
-                   :reason (:reason result)
+                   :cause (:cause result)
                    :to (get-in contact [:params :email])
                    :monitor-name (:name monitor)
                    :monitor-params (:params monitor)
@@ -180,28 +193,34 @@
 
 (defmethod notify! ["mattermost" "http"]
   [{:keys [monitor result] :as cfg}]
-  (let [content (str/format "@channel **%s** status change from **%s** to **%s**"
-                            (:name monitor)
-                            (str/upper (:status monitor))
-                            (str/upper (:status result)))]
+  (let [cause (:cause result)
+        content
+        (if (= "up" (:status result))
+          (str/fmt "@channel **%s** monitor is now **UP**" (:name monitor))
+          (str
+           (str/fmt "@channel **%s** monitor is now **DOWN**\n" (:name monitor))
+           (str/fmt "**Cause code:** %s\n" (name (:code cause)))
+           (str/fmt "**Cause hint:** %s\n" (:hint cause))))]
+
     (send-to-mattermost! cfg content)))
 
 (defmethod notify! ["mattermost" "ssl"]
   [{:keys [monitor result] :as cfg}]
-  (let [content
+  (let [cause (:cause result)
+        content
         (cond
           (= (:status result) "warn")
           (str/format "@channel **%s** is near to expiration." (:name monitor))
 
           (= (:status result) "down")
-          (str/format "@channel **%s** is now expired or has invalid ssl certificate."
-                            (:name monitor))
+          (str (str/fmt "@channel **%s** is now expired or has invalid ssl certificate.\n" (:name monitor))
+               (str/fmt "**Cause code:** %s\n" (name (:code cause)))
+               (str/fmt "**Cause hint:** %s\n" (:hint cause)))
 
           :else
           (str/format "@channel **%s** is live." (:name monitor)))]
 
     (send-to-mattermost! cfg content)))
-
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -231,12 +250,18 @@
 
 (defmethod notify! ["discord" "http"]
   [{:keys [monitor result] :as cfg}]
-  (let [embedd  {:title "Monitor status change notification"
-                 :description
-                 (str/format "Monitor **%s** status change from **%s** to **%s**."
-                             (:name monitor)
-                             (str/upper (:status monitor))
-                             (str/upper (:status result)))}
+  (let [cause (:cause result)
+        description
+        (if (= "up" (:status result))
+          (str/fmt "**%s** monitor is now **UP**" (:name monitor))
+          (str
+           (str/fmt "**%s** monitor is now **DOWN**\n" (:name monitor))
+           (str/fmt "**Cause code:** %s\n" (name (:code cause)))
+           (str/fmt "**Cause hint:** %s\n" (:hint cause))))
+
+        embedd  {:title "Monitor status change notification"
+                 :description description}
+
         content {:username "sereno.xyz"
                  :content "@everyone"
                  :avatar_url "https://sereno.xyz/images/logo.png"
@@ -245,20 +270,24 @@
 
 (defmethod notify! ["discord" "ssl"]
   [{:keys [monitor result] :as cfg}]
-  (let [text
+  (let [cause (:cause result)
+
+        description
         (cond
           (= (:status result) "warn")
           (str/format "**%s** is near to expiration." (:name monitor))
 
           (= (:status result) "down")
-          (str/format "**%s** is now expired or has invalid ssl certificate."
-                            (:name monitor))
+          (str
+           (str/fmt "**%s** is now expired or has invalid ssl certificate.\n" (:name monitor))
+           (str/fmt "**Cause code:** %s\n" (name (:code cause)))
+           (str/fmt "**Cause hint:** %s\n" (:hint cause)))
 
           :else
           (str/format "**%s** is live." (:name monitor)))
 
         embedd  {:title "Monitor status change notification"
-                 :description text}
+                 :description description}
         content {:username "sereno.xyz"
                  :content "@everyone"
                  :avatar_url "https://sereno.xyz/images/logo.png"
@@ -291,22 +320,29 @@
 
 (defmethod notify! ["telegram" "http"]
   [{:keys [monitor result] :as cfg}]
-  (let [content (str/format "<b>%s</b> status change from <u>%s</u> to <u><b>%s</b></u>"
-                            (:name monitor)
-                            (str/upper (:status monitor))
-                            (str/upper (:status result)))]
+  (let [cause (:cause result)
+        content
+        (if (= "up" (:status result))
+          (str/fmt "<b>%s</b> monitor is not <u><b>UP</b></u>" (:name monitor))
+          (str
+           (str/fmt "<b>%s</b> monitor is not <u><b>UP</b></u><br/>" (:name monitor))
+           (str/fmt "<b>Cause code:</b> <code>%s</code><br/>" (:code cause))
+           (str/fmt "<b>Cause hint:</b> <code>%s</code><br/>" (:hint cause))))]
     (send-to-teleram! cfg content)))
 
 (defmethod notify! ["telegram" "ssl"]
   [{:keys [monitor result] :as cfg}]
-  (let [content
+  (let [cause (:cause result)
+        content
         (cond
           (= (:status result) "warn")
           (str/format "<b>%s</b> is near to expiration." (:name monitor))
 
           (= (:status result) "down")
-          (str/format "<b>%s</b> is now expired or has invalid ssl certificate."
-                      (:name monitor))
+          (str
+           (str/fmt "<b>%s</b> monitor is now expired or has invalid ssl certificate.<br>" (:name monitor))
+           (str/fmt "<b>Cause code:</b> <code>%s</code><br/>" (:code cause))
+           (str/fmt "<b>Cause hint:</b> <code>%s</code><br/>" (:hint cause)))
 
           :else
           (str/format "<b>%s</b> is live." (:name monitor)))]

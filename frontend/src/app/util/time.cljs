@@ -87,7 +87,8 @@
 
 (defn timeago
   [v]
-  (let [nowms (inst-ms (now))
-        vms   (inst-ms v)]
-    (humanize-duration (- nowms vms))))
+  (when v
+    (let [nowms (inst-ms (now))
+          vms   (inst-ms v)]
+      (humanize-duration (- nowms vms)))))
 

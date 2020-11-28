@@ -46,53 +46,55 @@
     (instance? java.net.ConnectException e)
     {:status "down"
      :retry true
-     :reason "connection-refused"}
+     :cause (assoc (ex/->map e)
+                   :code :connection
+                   :hint "Unable to connect to the host.")}
 
-    (instance? java.util.concurrent.TimeoutException e)
+    (or (instance? java.nio.channels.ClosedChannelException e)
+        (instance? java.io.EOFException e)
+        (instance? java.io.IOException e))
     {:status "down"
      :retry true
-     :reason "timeout"}
+     :cause (assoc (ex/->map e)
+                   :code :connection
+                   :hint "Unable to complete connection to the host.")}
 
     (instance? java.net.NoRouteToHostException e)
     {:status "down"
      :retry true
-     :reason "no-route-to-host"}
-
-    (instance? java.nio.channels.ClosedChannelException e)
-    {:status "down"
-     :retry true
-     :reason "closed-connection"}
-
-    (instance? java.io.IOException e)
-    {:status "down"
-     :retry true
-     :reason "io"}
-
-    (instance? java.io.EOFException e)
-    {:status "down"
-     :retry true
-     :reason "eof"}
+     :cause (assoc (ex/->map e)
+                   :code :no-route
+                   :hint "Unable to find a correct route to host.")}
 
     (instance? org.eclipse.jetty.client.HttpResponseException e)
     {:status "down"
      :retry true
-     :reason (ex-message e)}
+     :cause (assoc (ex/->map e)
+                   :code :http
+                   :hint "Unable to complete http request.")}
 
-    (instance? java.net.SocketTimeoutException e)
+    (or (instance? java.util.concurrent.TimeoutException e)
+        (instance? java.net.SocketTimeoutException e))
     {:status "down"
      :retry true
-     :reason "connect-timeout"}
+     :cause (assoc (ex/->map e)
+                   :code :timeout
+                   :hint "Timeout reached on connecting to the host.")}
 
     (or (instance? javax.net.ssl.SSLHandshakeException e)
         (instance? java.security.cert.CertificateException e))
     {:status "down"
      :retry true
-     :reason "ssl-validation"}
+     :cause (assoc (ex/->map e)
+                   :code :ssl
+                   :hint "Unexpected error related to SSL certificate validation")}
 
     (instance? java.net.UnknownHostException e)
     {:status "down"
      :retry true
-     :reason "dns-lookup"}
+     :cause (assoc (ex/->map e)
+                   :code :dns-lookup
+                   :hint "Unable to resolve the domain name to a valid ip.")}
 
     :else
     (do
@@ -100,8 +102,9 @@
                   (:name monitor) (pr-str (:params monitor)))
       {:status "down"
        :retry true
-       :reason (str "unknown " (pr-str (ex-message e)))})))
-
+       :cause (assoc (ex/->map e)
+                     :code :unknown
+                     :hint "Not controlled error (see details on the exception).")})))
 
 (defn run
   [cfg {:keys [params] :as monitor}]
@@ -122,16 +125,23 @@
           (cond
             (and incl-t (not (string? (:body result))))
             {:status "down"
-             :reason "binary-body"}
+             :retry false
+             :cause {:code :binary-body
+                     :hint "Can't parse body, binary data found."}}
 
             (and incl-t (not (str/includes? (:body result) incl-t)))
             {:status "down"
-             :reason "include-check"}
+             :retry false
+             :cause {:code :include-check
+                     :hint "Include check failed."}}
 
             :else
             {:status "up"})
+
           {:status "down"
-           :reason (str "status-code " (pr-str (:status result)))}))
+           :cause {:code :http
+                   :status (:status result)
+                   :hint (str/format "Status code: %s" (:status result))}}))
 
       (catch Exception e
         (handle-exception e monitor)))))

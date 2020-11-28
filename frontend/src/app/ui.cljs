@@ -187,10 +187,18 @@
                          :type :error
                          :timeout 5000})))
 
-    :else
+    (= status 502)
     (ts/schedule
      (st/emitf (em/show {:content "Unable to connect to backend, wait a little bit and refresh."
+                         :type :error})))
+
+
+    :else
+    (ts/schedule
+     (st/emitf (em/show {:content "Error on processing API request. If this error persists, contact to support."
                          :type :error})))))
+
+
 
 (defmethod ptk/handle-error :default
   [error]

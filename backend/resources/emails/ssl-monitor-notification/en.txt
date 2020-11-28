@@ -2,7 +2,11 @@ This is a generic notification about state change of one of your monitors.
 
 {% if status = "down" %}
 Monitor '{{monitor-name}}' is now expired / invalid.
-Cause message: {{reason}}.
+
+{% if cause %}
+Cause code: {{ cause.code }}
+Cause hint: {{ cause.hint }}
+{% endif %}
 {% elif status = "warn" %}
 Monitor '{{monitor-name}}' is near expiration.
 Is going to expire on '{{expired-at}}'.

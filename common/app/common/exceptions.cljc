@@ -46,3 +46,15 @@
 (defmacro try
   [& exprs]
   `(try* (^:once fn* [] ~@exprs) identity))
+
+
+
+#?(:clj
+   (defn ->map
+     [^Exception err]
+     {:ex-class   (.getName (class err))
+      :ex-stack   (with-out-str
+                    (.printStackTrace err (java.io.PrintWriter. *out*)))
+      :ex-message (ex-message err)
+      :ex-data    (ex-data err)}))
+

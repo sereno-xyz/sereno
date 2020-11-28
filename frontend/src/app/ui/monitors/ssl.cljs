@@ -36,6 +36,7 @@
         dsecs   (mth/round (:down-seconds summary))
         psecs   (mth/round (- ttsecs dsecs usecs))
         uptime  (/ (* (+ usecs psecs) 100) ttsecs)
+        uptime  (mth/normalize-to-nil uptime)
 
         on-hover
         (mf/use-callback
@@ -43,7 +44,6 @@
          (fn [event]
            (let [target (dom/get-target event)]
              (.setAttribute target "title" (str (dt/timeago (:modified-at monitor)) " ago")))))]
-
     [:div.details-table
      [:div.details-column
       [:div.details-row
@@ -75,15 +75,25 @@
        [:div.details-field "Monitored"]
        [:div.details-field
         {:on-mouse-enter on-hover}
-        (dt/format (:monitored-at monitor) :datetime-med)]]
+        (if-let [monitored (:modified-at monitor)]
+          [:span (dt/format monitored :datetime-med)]
+          [:span "---"])]]
+
       [:div.details-row
        [:div.details-field "Expires"]
        [:div.details-field
         {:title (str "Expires in: " (or (dt/timeago (:expired-at monitor)) "---"))}
-        (dt/format (:expired-at monitor) :datetime-med)]]
+        (if-let [expired (:expired-at monitor)]
+          [:span (dt/format expired :datetime-med)]
+          [:span "---"])]]
+
       [:div.details-row
        [:div.details-field "Uptime (%)"]
-       [:div.details-field (mth/precision uptime 2) "%"]]
+       [:div.details-field
+        (if uptime
+          [:span (mth/precision uptime 2) "%"]
+          [:span "---"])]]
+
       [:div.details-row
        [:div.details-field "Alert before"]
        [:div.details-field (get-in monitor [:params :alert-before]) " days"]]

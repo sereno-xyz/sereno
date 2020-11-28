@@ -467,6 +467,8 @@
 
 ;; --- Query: Retrieve Monitor Status
 
+(declare decode-status-row)
+
 (def sql:monitor-status-history
   "select e.*
      from monitor_status as e
@@ -489,7 +491,14 @@
     (when-not monitor
       (ex/raise :type :not-found
                 :hint "monitor does not exists"))
-    (db/exec! pool [sql:monitor-status-history id since limit])))
+    (->> (db/exec! pool [sql:monitor-status-history id since limit])
+         (mapv decode-status-row))))
+
+(defn- decode-status-row
+  [{:keys [cause] :as row}]
+  (cond-> row
+    (db/pgobject? cause)
+    (assoc :cause (db/decode-transit-pgobject cause))))
 
 
 ;; --- Query: Retrieve Monitor Log

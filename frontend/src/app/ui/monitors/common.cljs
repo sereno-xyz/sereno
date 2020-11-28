@@ -144,7 +144,7 @@
                        (sort-by :created-at)
                        (reverse))]
          [:ul.table-body-item {:key (:id item)
-                               :title (:reason item "")
+                               :title (get-in item [:cause :hint])
                                :class (dom/classnames
                                        :status-warn (= (:status item) "warn")
                                        :status-up (= (:status item) "up")

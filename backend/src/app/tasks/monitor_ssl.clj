@@ -24,7 +24,6 @@
    java.net.URL
    java.security.cert.Certificate
    java.security.cert.X509Certificate
-   java.util.Date
    javax.net.ssl.HttpsURLConnection
    javax.net.ssl.SSLContext))
 
@@ -43,59 +42,59 @@
     (instance? java.util.concurrent.ExecutionException e)
     (handle-exception (ex-cause e) monitor)
 
-    (instance? javax.net.ssl.SSLHandshakeException e)
+    (or (instance? javax.net.ssl.SSLHandshakeException e)
+        (instance? sun.security.validator.ValidatorException e))
     (let [cause (ex-cause e)]
       (if (nil? cause)
         {:status "down"
          :retry true
-         :reason (ex-message e)}
+         :cause (assoc (ex/->map e)
+                       :code :ssl
+                       :hint "Error on validation of ssl certificate.")}
         (handle-exception cause monitor)))
 
-    (instance? sun.security.validator.ValidatorException e)
-    (let [cause (ex-cause e)]
-      (if (nil? cause)
-        {:status "down"
-         :retry true
-         :reason (ex-message e)})
-      (handle-exception cause monitor))
-
-    (instance? java.security.cert.CertPathValidatorException e)
+    (or (instance? java.security.cert.CertPathValidatorException e)
+        (instance? java.security.cert.CertificateException e)
+        (instance? sun.security.provider.certpath.SunCertPathBuilderException e)
+        (instance? javax.net.ssl.SSLException e))
     {:status "down"
      :retry false
-     :reason (ex-message e)}
-
-    (instance? java.security.cert.CertificateException e)
-    {:status "down"
-     :retry true
-     :reason (ex-message e)}
-
-    (instance? sun.security.provider.certpath.SunCertPathBuilderException e)
-    {:status "down"
-     :retry true
-     :reason (ex-message e)}
-
-    (instance? javax.net.ssl.SSLException e)
-    {:status "down"
-     :retry true
-     :reason (ex-message e)}
+     :cause (assoc (ex/->map e)
+                   :code :ssl
+                   :hint "Error on validation of ssl certificate.")}
 
     (instance? clojure.lang.ExceptionInfo e)
-    {:status "down"
-     :retry false
-     :reason (ex-message e)}
+    (let [data (ex-data e)]
+      {:status "down"
+       :retry false
+       :cause (assoc (ex/->map e)
+                     :code :ssl
+                     :hint (ex-message e))})
 
-    (instance? java.net.SocketTimeoutException 3)
+    (or (instance? java.util.concurrent.TimeoutException e)
+        (instance? java.net.SocketTimeoutException e))
     {:status "down"
      :retry true
-     :reason "connect-timeout"}
+     :cause (assoc (ex/->map e)
+                   :code :timeout
+                   :hint "Timeout reached on connecting to the host.")}
+
+    (instance? java.net.UnknownHostException e)
+    {:status "down"
+     :retry true
+     :cause (assoc (ex/->map e)
+                   :code :dns-lookup
+                   :hint "Unable to resolve the domain name to a valid ip.")}
 
     :else
     (do
-      (log/errorf e "Unexpected exception on monitor '%s' params: %s"
+      (log/errorf e "Unexpected exception on monitor '%s'\nparams: %s"
                   (:name monitor) (pr-str (:params monitor)))
       {:status "down"
-       :retry false
-       :reason (ex-message e)})))
+       :retry true
+       :cause (assoc (ex/->map e)
+                     :code :unknown
+                     :hint "Not controlled error (see details on the exception).")})))
 
 (defn- retrieve-certificate-expiration
   [uri]
@@ -104,7 +103,8 @@
 
     (when-not (instance? HttpsURLConnection conn)
       (ex/raise :type :invalid-arguments
-                :code :not-https-uri-provided))
+                :code :invalid-url
+                :message "Invalid URL, https-like url is required"))
 
     (.setConnectTimeout ^HttpsURLConnection conn 10000)
     (.connect ^HttpsURLConnection conn)

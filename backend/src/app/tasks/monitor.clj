@@ -69,8 +69,12 @@
 
 (defn- insert-monitor-entry!
   [conn id result]
-  (db/exec! conn ["insert into monitor_entry (monitor_id, latency, status, created_at, reason)
-                   values (?, ?, ?, now(), ?)" id (:latency result) (:status result) (:reason result)]))
+  (db/exec! conn ["insert into monitor_entry (monitor_id, latency, status, created_at, cause)
+                   values (?, ?, ?, now(), ?)"
+                  id
+                  (:latency result)
+                  (:status result)
+                  (db/tjson (:cause result))]))
 
 (defn- insert-monitor-status-change!
   [conn id result]
@@ -80,8 +84,11 @@
                                  and finished_at is null
                                order by created_at desc
                                limit 1)" id])
-  (db/exec! conn ["insert into monitor_status (monitor_id, status, created_at, reason)
-                   values (?, ?, now(), ?)" id (:status result) (:reason result)]))
+  (db/exec! conn ["insert into monitor_status (monitor_id, status, created_at, cause)
+                   values (?, ?, now(), ?)"
+                  id
+                  (:status result)
+                  (db/tjson (:cause result))]))
 
 (def sql:monitor-contacts
   "select c.*, mcr.id as subscription_id

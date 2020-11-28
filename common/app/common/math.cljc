@@ -70,3 +70,9 @@
   (when (and (number? v) (number? n))
     (let [d (pow 10 n)]
       (/ (round (* v d)) d))))
+
+(defn normalize-to-nil
+  [v]
+  (if (or (nan? v) (not (finite? v)))
+    nil
+    v))

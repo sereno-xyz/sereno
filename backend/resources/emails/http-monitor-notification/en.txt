@@ -2,6 +2,10 @@ The monitor {{monitor-name}} has changed the state from {{old-status|upper}} to 
 
 This is a generic notification about state change of one of your monitors.
 
+{% if cause %}
+Cause code: {{ cause.code }}
+Cause hint: {{ cause.hint }}
+{% endif %}
 
 ----
 
