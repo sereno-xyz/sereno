@@ -77,8 +77,12 @@ function build-bundle {
     rm -rf ./bundle/resources/public/fonts;
     rm -rf ./bundle/resources/public/fa
 
-    local default_name="sereno-$(date '+%Y.%m.%d-%H%M')";
-    local name=${1:-$default_name};
+
+    local git_branch=`git rev-parse --abbrev-ref HEAD`;
+    local version=${1:-$git_branch}
+    local name="sereno-$version";
+
+    echo $version > ./bundle/version.txt
 
     pushd bundle/
     tar -cvf ../$name.tar *;
@@ -103,18 +107,32 @@ function build-image {
         exit 2;
     fi
 
+    local DOCKER_REPOSITORY="niwinz/sereno-test"
+
     local BUNDLE_FILE_PATH=`readlink -f $BUNDLE_FILE`;
-    echo "Building prodenv with bundle: $BUNDLE_FILE_PATH."
+    echo "Building docker image from: $BUNDLE_FILE_PATH."
 
-    rm -rf ./docker/prodenv/bundle;
-    mkdir -p ./docker/prodenv/bundle;
+    rm -rf ./docker/image/bundle;
+    mkdir -p ./docker/image/bundle;
 
-    pushd ./docker/prodenv/bundle;
+    pushd ./docker/image/bundle;
     tar xvf $BUNDLE_FILE_PATH;
     popd
 
-    pushd ./docker/prodenv;
-    docker build -t localhost/sereno:latest .
+
+    pushd ./docker/image;
+
+    local version=`cat ./bundle/version.txt`;
+    set -x
+    docker buildx build --platform linux/amd64 -t $DOCKER_REPOSITORY:$version-amd64 .
+    docker buildx build --platform linux/arm64 -t $DOCKER_REPOSITORY:$version-arm64 .
+    docker push $DOCKER_REPOSITORY:$version-amd64;
+    docker push $DOCKER_REPOSITORY:$version-arm64;
+
+    docker manifest create $DOCKER_REPOSITORY:$version $DOCKER_REPOSITORY:$version-amd64 $DOCKER_REPOSITORY:$version-arm64
+    docker manifest push $DOCKER_REPOSITORY:$version
+
+    set +x
     popd
 }
 
