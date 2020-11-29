@@ -3,13 +3,20 @@
 
 ## v1-2020-SNAPSHOT
 
+- Add SSL Certificate monitoring.
+- Add discord webhooks integration.
 - Add telegram bot api and webhooks integration.
+- Enable query requests use GET http method.
 - Fix minor issue with user activation when is logged in using
   external authententication provider.
 - Internal refactor of contacts.
 - Minor interface restyling.
-- Add SSL Certificate monitoring.
 - Monitor list minor restyling.
+- Rewrite result handling on monitors.
+- Add tooling for easy create multiplatform docker images.
+- Normalize primary contacts (now they are permantent, not editable
+  and the email address is used from profile).
+
 
 
 ## v1-2020.10.16-0
