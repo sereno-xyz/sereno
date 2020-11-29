@@ -125,14 +125,14 @@
 
 (defn create-profile-relations
   [conn profile]
-  (let [params {:email (:email profile)}]
-    (db/insert! conn :contact
-                {:owner-id (:id profile)
-                 :name (str "Primary contact (" (:email profile) ")")
-                 :type "email"
-                 :validated-at (dt/now)
-                 :params (db/tjson params)})
-    profile))
+  (db/insert! conn :contact
+              {:owner-id (:id profile)
+               :created-at (:created-at profile)
+               :name "Primary Contact"
+               :type "owner"
+               :validated-at (:created-at profile)
+               :params (db/tjson {})})
+  profile)
 
 
 ;; --- Mutation: Login Or Register

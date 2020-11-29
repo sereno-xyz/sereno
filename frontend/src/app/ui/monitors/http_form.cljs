@@ -107,12 +107,17 @@
      [:& fm/select
       {:label "Conctacts:"
        :options (map #(array-map :value (:id %)
-                                 :label (:name %))
+                                 :label (if (= "owner" (:type %))
+                                          "Primary Contact"
+                                          (:name %)))
                      (vals contacts))
 
        :value-fn (fn [id]
-                   (let [contact (get contacts id)]
-                     #js {:value id :label (:name contact)}))
+                   (let [contact (get contacts id)
+                         label   (if (= "owner" (:type contact))
+                                   "Primary Contact"
+                                   (:name contact))]
+                     #js {:value id :label label}))
 
        :name :contacts
        :multiple true}]]))

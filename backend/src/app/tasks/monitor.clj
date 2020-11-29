@@ -91,9 +91,12 @@
                   (db/tjson (:cause result))]))
 
 (def sql:monitor-contacts
-  "select c.*, mcr.id as subscription_id
+  "select c.*,
+          mcr.id as subscription_id,
+          pf.email as owner_email
      from monitor_contact_rel as mcr
-    inner join contact as c on (c.id = mcr.contact_id)
+     join contact as c on (c.id = mcr.contact_id)
+     join profile as pf on (c.owner_id = pf.id)
     where mcr.monitor_id = ?
       and c.is_paused is false
       and c.is_disabled is false")
@@ -101,7 +104,13 @@
 (defn- notify-contacts!
   [conn monitor result]
   (let [contacts (->> (db/exec! conn [sql:monitor-contacts (:id monitor)])
-                      (map decode-row))]
+                      (map decode-row)
+                      (map (fn [contact]
+                             (cond-> contact
+                               (= "owner" (:type contact))
+                               (assoc :params {:email (:owner-email contact)}
+                                      :type "email")))))]
+
     ;; TODO: enable batch task submit
     (doseq [contact contacts]
       (tasks/submit! conn {:name "notify"

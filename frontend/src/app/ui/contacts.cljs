@@ -67,30 +67,29 @@
                                       :title "Deleting contact"
                                       :message message
                                       :accept-label "Delete contact"
-                                      :on-accept on-accept}))))))]
+                                      :on-accept on-accept}))))))
+        ]
 
     [:div.row {:class (dom/classnames
                        :disabled (not (:validated-at contact))
                        :paused   (:is-paused contact)
                        :disabled (:is-disabled contact))}
      [:div.type (case (:type contact)
+                  "owner" i/envelope
                   "email" i/envelope
                   "mattermost" i/mattermost
                   "discord" i/discord
                   "telegram" i/telegram
                   nil)]
 
-     [:div.title {:title (:email contact)} (:name contact)]
+     [:div.title
+      (if (= "owner" (:type contact))
+        [:span "Primary Contact"]
+        [:span (:name contact)])]
      [:div.options
-      (if (:validated-at contact)
-        (if (:is-paused contact)
-          [:a {:title "Enable" :on-click toggle-paused} i/play]
-          [:a {:title "Pause / Disable" :on-click toggle-paused} i/pause])
-        [:span.warning {:title "Contact pending validation"} i/exclamation])
-
       (cond
         (some? (:disable-reason contact))
-        (let [reason (:pause-reason contact)
+        (let [reason (:disable-reason contact)
               type   (:type reason)]
           [:span.warning
            {:title (str/format "Disable reason: %s | Incidence num: %s"
@@ -104,8 +103,17 @@
            {:title (str/format "Pause reason: %s" (name type))}
            i/exclamation]))
 
-      [:a {:title "Edit" :on-click edit} i/edit]
-      [:a {:title "Delete" :on-click delete} i/trash-alt]]]))
+      (when (not= "owner" (:type contact))
+        [:*
+         (if (:validated-at contact)
+           (if (:is-paused contact)
+             [:a {:title "Enable" :on-click toggle-paused} i/play]
+             [:a {:title "Pause / Disable" :on-click toggle-paused} i/pause])
+           [:span.warning {:title "Contact pending validation"} i/exclamation])
+
+
+         [:a {:title "Edit" :on-click edit} i/edit]
+         [:a {:title "Delete" :on-click delete} i/trash-alt]])]]))
 
 (mf/defc contacts-section
   {::mf/wrap [mf/memo]}

@@ -164,9 +164,15 @@
     (let [item (db/get-by-params conn :contact
                                  {:id id :owner-id profile-id}
                                  {:for-update true})]
+
       (when-not item
         (ex/raise :type :not-found
                   :code :object-not-found))
+
+      (when (= "owner" (:type item))
+        (ex/raise :type :validation
+                  :code :read-only-contact
+                  :hint "You can't edit owner contact."))
 
       (when (:is-blocked item)
         (ex/raise :type :validation
@@ -194,6 +200,12 @@
       (when-not item
         (ex/raise :type :not-found
                   :code :object-not-found))
+
+      (when (= "owner" (:type item))
+        (ex/raise :type :validation
+                  :code :read-only-contact
+                  :hint "You can't delete owner contact."))
+
       (db/delete! conn :contact
                   {:id id :owner-id profile-id})
       nil)))

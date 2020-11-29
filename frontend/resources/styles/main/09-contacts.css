@@ -60,7 +60,10 @@
       .options {
         display: flex;
         align-items: center;
-        width: 105px;
+        width: 135px;
+        justify-content: flex-end;
+        margin-right: 25px;
+
         a, span {
           display: flex;
           align-items: center;
