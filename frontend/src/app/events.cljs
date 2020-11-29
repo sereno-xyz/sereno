@@ -199,7 +199,7 @@
   (ptk/reify :retrieve-profile
     ptk/WatchEvent
     (watch [_ state s]
-      (->> (rp/req! :retrieve-profile)
+      (->> (rp/qry! :retrieve-profile)
            (rx/map profile-retrieved)))))
 
 ;; --- Update Profile
@@ -278,7 +278,7 @@
     (ptk/reify ::fetch-contacts
       ptk/WatchEvent
       (watch [_ state stream]
-        (->> (rp/req! :retrieve-contacts)
+        (->> (rp/qry! :retrieve-contacts)
              (rx/map #(partial fetched %)))))))
 
 (s/def ::create-email-contact
@@ -408,7 +408,7 @@
   (ptk/reify ::fetch-monitors
     ptk/WatchEvent
     (watch [_ state stream]
-      (->> (rp/req! :retrieve-monitors)
+      (->> (rp/qry! :retrieve-monitors)
            (rx/map (fn [result]
                      #(assoc % :monitors (d/index-by :id result))))))))
 
@@ -418,7 +418,7 @@
   (ptk/reify ::fetch-monitor
     ptk/WatchEvent
     (watch [_ state stream]
-      (->> (rp/req! :retrieve-monitor {:id id})
+      (->> (rp/qry! :retrieve-monitor {:id id})
            (rx/map (fn [monitor]
                      #(assoc-in % [:monitors id] monitor)))))))
 
@@ -581,7 +581,7 @@
       ptk/WatchEvent
       (watch [_ state stream]
         (let [period (get-in state [:monitor-summary id :period] default-period)]
-          (->> (rp/req! :retrieve-monitor-summary {:id id :period period})
+          (->> (rp/qry! :retrieve-monitor-summary {:id id :period period})
                (rx/map #(partial on-fetched %))))))))
 
 (defn update-summary-period
@@ -616,7 +616,7 @@
     (ptk/reify ::fetch-monitor-status-history
       ptk/WatchEvent
       (watch [_ state stream]
-        (->> (rp/req! :retrieve-monitor-status-history
+        (->> (rp/qry! :retrieve-monitor-status-history
                       {:id id
                        :since since
                        :limit limit})

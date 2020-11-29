@@ -91,7 +91,7 @@
 
     (mf/use-effect
      (fn []
-       (->> (rp/req! :retrieve-all-tags)
+       (->> (rp/qry! :retrieve-all-tags)
             (rx/subs (fn [v] (swap! tags into v))))))
 
     [:div.form-row

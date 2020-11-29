@@ -94,7 +94,7 @@
              (st/emit! (r/nav' :monitor-list {} filters)))))]
 
     (mf/use-effect
-     #(->> (rp/req! :retrieve-all-tags {})
+     #(->> (rp/qry! :retrieve-all-tags {})
            (rx/subs (fn [v] (swap! tags into v)))))
 
     [:div.monitor-filters

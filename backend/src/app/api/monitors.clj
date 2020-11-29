@@ -480,7 +480,8 @@
     limit ?")
 
 (s/def ::limit ::us/integer)
-(s/def ::since ::us/inst)
+(s/def ::since ::dt/instant)
+
 (s/def ::retrieve-monitor-status-history
   (s/keys :req-un [::id ::profile-id ::limit]
           :opt-un [::since]))

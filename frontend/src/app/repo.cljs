@@ -72,11 +72,19 @@
 (defmethod request :default
   [id params opts]
   (let [uri (str cfg/public-uri "/api/rpc/" (name id))]
-    (->> (http/send! {:method :post :uri uri :body params})
-         (rx/mapcat handle-response))))
+    (if (:query opts)
+      (->> (http/send! {:method :get :uri uri :query params})
+           (rx/mapcat handle-response))
+      (->> (http/send! {:method :post :uri uri :body params})
+           (rx/mapcat handle-response)))))
 
 (defn req!
   ([id] (request id {} {}))
   ([id params] (request id params {}))
   ([id params opts] (request id params opts)))
+
+(defn qry!
+  ([id] (request id {} {:query true}))
+  ([id params] (request id params {:query true}))
+  ([id params opts] (request id params (assoc opts :query true))))
 

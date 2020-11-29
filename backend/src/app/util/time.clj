@@ -10,16 +10,16 @@
 (ns app.util.time
   (:require
    [clojure.spec.alpha :as s]
-   [app.common.exceptions :as ex]
-   [cognitect.transit :as t])
+   [app.common.exceptions :as ex])
   (:import
+   java.time.Clock
+   java.time.Duration
    java.time.Instant
    java.time.OffsetDateTime
-   java.time.Duration
-   java.time.Clock
-   java.util.Date
-   java.time.temporal.TemporalAmount
+   java.time.format.DateTimeFormatter
    java.time.temporal.Temporal
+   java.time.temporal.TemporalAmount
+   java.util.Date
    org.apache.logging.log4j.core.util.CronExpression))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -27,10 +27,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (declare duration)
-
-(defn from-string
-  [s]
-  (Instant/parse s))
 
 (defn instant?
   [v]
@@ -110,12 +106,22 @@
   java.time.Duration
   (inst-ms* [v] (.toMillis ^Duration v)))
 
-(defmethod print-method Duration
-  [mv ^java.io.Writer writer]
-  (.write writer (str "#app/duration \"" (subs (str mv) 2) "\"")))
+(letfn [(conformer [v]
+          (cond
+            (instant? v) v
 
-(defmethod print-dup Duration [o w]
-  (print-method o w))
+            (string? v)
+            (try
+              (Instant/from (.parse DateTimeFormatter/ISO_INSTANT v))
+              (catch Exception e
+                ::s/invalid))
+
+            :else
+            ::s/invalid))
+        (unformer [v]
+          (.format DateTimeFormatter/ISO_INSTANT v))]
+  (s/def ::instant (s/conformer conformer unformer)))
+
 
 (letfn [(conformer [v]
           (cond
@@ -262,14 +268,6 @@
         drt    (duration-between t2 next-t)]
     (plus now-t drt)))
 
-(defmethod print-method CronExpression
-  [mv ^java.io.Writer writer]
-  (.write writer (str "#app/cron \"" (.toString ^CronExpression mv) "\"")))
-
-(defmethod print-dup CronExpression
-  [o w]
-  (print-ctor o (fn [o w] (print-dup (.toString ^CronExpression o) w)) w))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Clock
@@ -294,4 +292,17 @@
 (defmethod print-dup Instant [o w]
   (print-method o w))
 
+(defmethod print-method Duration
+  [mv ^java.io.Writer writer]
+  (.write writer (str "#app/duration \"" (subs (str mv) 2) "\"")))
 
+(defmethod print-dup Duration [o w]
+  (print-method o w))
+
+(defmethod print-method CronExpression
+  [mv ^java.io.Writer writer]
+  (.write writer (str "#app/cron \"" (.toString ^CronExpression mv) "\"")))
+
+(defmethod print-dup CronExpression
+  [o w]
+  (print-ctor o (fn [o w] (print-dup (.toString ^CronExpression o) w)) w))
