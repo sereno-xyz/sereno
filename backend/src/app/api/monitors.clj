@@ -146,7 +146,7 @@
   (db/with-atomic [conn pool]
     (let [id      (uuid/next)
           now-t   (dt/now)
-          cexpr   (get cadence-map 21600) ;; 6h
+          cadence 21600 ;; 6h
           profile (get-profile conn profile-id)
           params  {:uri uri
                    :alert-before alert-before}]
@@ -157,8 +157,8 @@
                   {:id id
                    :owner-id profile-id
                    :name name
-                   :cadence 60
-                   :cron-expr cexpr
+                   :cadence cadence
+                   :cron-expr (get cadence-map cadence)
                    :created-at now-t
                    :status "started"
                    :type "ssl"
@@ -257,6 +257,10 @@
         (ex/raise :type :validation
                   :code :wront-monitor-type
                   :hint "expected ssl monitor"))
+
+      (db/update! conn :monitor-schedule
+                  {:scheduled-at (dt/now)}
+                  {:monitor-id id})
 
       (db/update! conn :monitor
                   {:name name
