@@ -72,6 +72,9 @@
     {:name "0019-mod-monitor-status-table-add-cause"
      :fn (mg/resource "app/migrations/sql/0019-mod-monitor-status-table-add-cause.sql")}
 
+    {:name "0020-mod-contact-table"
+     :fn (mg/resource "app/migrations/sql/0020-mod-contact-table.sql")}
+
     ]})
 
 (defmethod ig/init-key ::migrations
