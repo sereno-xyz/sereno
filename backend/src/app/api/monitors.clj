@@ -276,12 +276,14 @@
 
 ;; --- Test Monitor
 
-(s/def ::test-monitor
-  (s/keys :req-un [::type ::cadence ::params]))
+(s/def ::test-http-monitor any?)
 
-(sv/defmethod ::test-monitor
-  [cfg params]
-  (run-monitor! cfg params))
+(sv/defmethod ::test-http-monitor
+  [cfg data]
+  (let [params (prepare-http-monitor-params data)]
+    (run-monitor! cfg {:type "http"
+                       :params params
+                       :name ""})))
 
 
 ;; --- Mutation: Pause monitor

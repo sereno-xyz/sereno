@@ -52,7 +52,7 @@
         check (fn []
                 (reset! load? true)
                 (let [data (d/remove-nil-vals (:clean-data @form))]
-                  (->> (rp/req! :test-monitor data)
+                  (->> (rp/req! :test-http-monitor data)
                        (rx/subs (fn [result]
                                   (swap! res result))
                                 (fn [error]

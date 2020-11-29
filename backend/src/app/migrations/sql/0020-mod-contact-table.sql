@@ -7,4 +7,4 @@ UPDATE contact
   FROM profile
  WHERE profile.id = contact.owner_id
    AND date_trunc('minute', profile.created_at) = date_trunc('minute', contact.created_at)
-   AND contact.type = 'owner';
+   AND contact.type = 'email';
