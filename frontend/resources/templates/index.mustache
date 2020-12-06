@@ -8,14 +8,19 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="HandheldFriendly" content="true">
     <title>sereno.xyz - the open-source uptime monitoring tool</title>
-    <link id="theme" href="/css/main.css?ts={{& ts}}"
-          rel="stylesheet" type="text/css" />
+    <link id="theme" href="/css/main.css?ts={{& ts}}" rel="stylesheet" type="text/css" />
     <link rel="icon" href="/images/logo.svg" />
+
+    <script>
+      window.appVersion = "%version%";
+    </script>
   </head>
   <body>
     {{>../images/sprites/symbol/svg/sprite.symbol.svg}}
-    <section id="app" tabindex="1"></section>
+
+    <section id="app"></section>
     <section id="modal"></section>
+
     {{# manifest}}
     <script src="{{& config}}"></script>
     <script src="{{& locales}}"></script>

@@ -11,6 +11,7 @@
   (:require
    [app.common.exceptions :as ex]
    [app.common.spec :as us]
+   [app.common.version :as v]
    [app.util.time :as tm]
    [buddy.core.codecs :as bc]
    [buddy.core.kdf :as bk]
@@ -21,8 +22,8 @@
    [environ.core :refer [env]]
    [integrant.core :as ig]))
 
-(s/def ::database-password (s/nilable ::us/string))
 (s/def ::database-uri ::us/string)
+(s/def ::database-password (s/nilable ::us/string))
 (s/def ::database-username (s/nilable ::us/string))
 (s/def ::default-profile-type ::us/string)
 (s/def ::error-reporter-webhook-uri ::us/string)
@@ -43,12 +44,14 @@
 (s/def ::telegram-token ::us/string)
 (s/def ::telegram-id ::us/integer)
 (s/def ::debug ::us/boolean)
+(s/def ::host ::us/string)
 
 (s/def ::config
   (s/keys :opt-un [::http-server-port
                    ::database-username
                    ::database-password
                    ::database-uri
+                   ::host
                    ::debug
                    ::secret-key
                    ::default-profile-type
@@ -99,8 +102,11 @@
 
 (def config
   (->> (env->config env)
-       (us/conform ::config)
-       (merge default-config)))
+       (merge default-config)
+       (us/conform ::config)))
+
+(def version
+  (v/parse "%version%"))
 
 (defmethod ig/init-key ::secrets
   [type {:keys [key] :as opts}]

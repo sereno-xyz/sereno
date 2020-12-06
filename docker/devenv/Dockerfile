@@ -2,7 +2,6 @@ FROM debian:buster
 LABEL maintainer="Andrey Antukh <niwi@niwi.nz>"
 
 ARG DEBIAN_FRONTEND=noninteractive
-ARG EXTERNAL_UID=1000
 
 ENV NODE_VERSION=v15.3.0 \
     CLOJURE_VERSION=1.10.1.739 \
@@ -28,6 +27,9 @@ RUN set -ex; \
         rlwrap \
         bzip2 \
         nginx \
+        jq \
+        unzip \
+        xz-utils \
     ; \
     echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen; \
     locale-gen; \
@@ -51,33 +53,47 @@ RUN set -ex; \
     apt-get -qqy install postgresql-client-13; \
     rm -rf /var/lib/apt/lists/*;
 
+COPY files/phantomjs-mock /usr/bin/phantomjs
 COPY files/bashrc         /root/.bashrc
 COPY files/vimrc          /root/.vimrc
 COPY files/tmux.conf      /root/.tmux.conf
-COPY files/start-tmux.sh  /home/start-tmux.sh
-COPY files/entrypoint.sh  /home/entrypoint.sh
-COPY files/init.sh        /home/init.sh
-COPY files/phantomjs-mock /usr/bin/phantomjs
+
 
 RUN set -ex; \
-    useradd -m -g users -s /bin/bash -u $EXTERNAL_UID sereno; \
+    useradd -m -g users -s /bin/bash sereno; \
     passwd sereno -d; \
     echo "sereno ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers;
 
-USER sereno
-WORKDIR /home/sereno
+
+WORKDIR /home
 
 RUN set -ex; \
-    git clone https://github.com/creationix/nvm.git .nvm; \
-    bash -c "source .nvm/nvm.sh && nvm install $NODE_VERSION"; \
-    bash -c "source .nvm/nvm.sh && nvm alias default $NODE_VERSION"; \
-    bash -c "source .nvm/nvm.sh && nvm use default"; \
-    bash -c "source .nvm/nvm.sh && npm install -g yarn";
+    mkdir -p /tmp/node; \
+    cd /tmp/node; \
+    export PATH="$PATH:/usr/local/nodejs/bin"; \
+    wget https://nodejs.org/dist/$NODE_VERSION/node-$NODE_VERSION-linux-x64.tar.xz; \
+    tar xvf node-$NODE_VERSION-linux-x64.tar.xz; \
+    mv /tmp/node/node-$NODE_VERSION-linux-x64 /usr/local/nodejs; \
+    chown -R root /usr/local/nodejs; \
+    /usr/local/nodejs/bin/npm install -g yarn; \
+    rm -rf /tmp/node;
+
+RUN set -ex; \
+    cd /tmp; \
+    wget https://github.com/borkdude/clj-kondo/releases/download/v2020.11.07/clj-kondo-2020.11.07-linux-amd64.zip; \
+    unzip clj-kondo-2020.11.07-linux-amd64.zip; \
+    mv clj-kondo /usr/local/bin/; \
+    rm clj-kondo-2020.11.07-linux-amd64.zip;
 
 EXPOSE 4448
 EXPOSE 4449
 EXPOSE 4460
 EXPOSE 4490
+
+COPY files/start-tmux.sh  /home/start-tmux.sh
+COPY files/entrypoint.sh  /home/entrypoint.sh
+COPY files/init.sh        /home/init.sh
+COPY files/bashrc         /home/sereno/.bashrc
 
 ENTRYPOINT ["bash", "/home/entrypoint.sh"]
 CMD ["/home/init.sh"]

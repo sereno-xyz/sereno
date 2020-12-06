@@ -2,7 +2,10 @@
 ;; License, v. 2.0. If a copy of the MPL was not distributed with this
 ;; file, You can obtain one at http://mozilla.org/MPL/2.0/.
 ;;
-;; Copyright (c) 2016-2019 Andrey Antukh <niwi@niwi.nz>
+;; This Source Code Form is "Incompatible With Secondary Licenses", as
+;; defined by the Mozilla Public License, v. 2.0.
+;;
+;; Copyright (c) 2016-2020 Andrey Antukh <niwi@niwi.nz>
 
 (ns app.common.data
   "Data manipulation and query helper functions."
@@ -12,9 +15,7 @@
             #?(:cljs [cljs.reader :as r]
                :clj [clojure.edn :as r])
             #?(:cljs [cljs.core :as core]
-               :clj [clojure.core :as core]))
-  #?(:clj
-     (:import linked.set.LinkedSet)))
+               :clj [clojure.core :as core])))
 
 (def sentinel
   #?(:clj (Object.)
@@ -178,6 +179,16 @@
    (map (fn [x] (f x) x)))
   ([f coll]
    (map (fn [x] (f x) x) coll)))
+
+(defn merge
+  "A faster merge."
+  [& maps]
+  (loop [res  (transient (first maps))
+         maps (next maps)]
+    (if (nil? maps)
+      (persistent! res)
+      (recur (reduce-kv assoc! res (first maps))
+             (next maps)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; URI

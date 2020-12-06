@@ -9,11 +9,11 @@
 
 (ns app.init
   (:require
-   [integrant.core :as ig]
+   [app.config :as cfg]
+   [app.util.time :as dt]
    [clojure.tools.logging :as log]
    [clojure.tools.namespace.repl :as repl]
-   [app.util.time :as dt]
-   [app.config :as cfg])
+   [integrant.core :as ig])
   (:gen-class))
 
 (defn- enable-asserts
@@ -23,9 +23,6 @@
 
 ;; Set value for all new threads bindings.
 (alter-var-root #'*assert* enable-asserts)
-
-;; Set value for current thread binding.
-;; (set! *assert* (enable-asserts))
 
 (Thread/setDefaultUncaughtExceptionHandler
  (reify Thread$UncaughtExceptionHandler
@@ -223,7 +220,9 @@
   (ig/load-namespaces system-config)
   (alter-var-root #'system (fn [sys]
                              (when sys (ig/halt! sys))
-                             (ig/init system-config))))
+                             (ig/init system-config)))
+  (log/infof "Welcome to penpot! Version: '%s'." (:full cfg/version)))
+
 
 (defn refresh-and-restart
   []
