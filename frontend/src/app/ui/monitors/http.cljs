@@ -85,11 +85,6 @@
        [:div.details-field "Q90 Latency"]
        [:div.details-field (mth/precision (:latency-p90 summary) 0) " ms"]]]]))
 
-(def period-options
-  [{:value "24hours" :label "24 hours"}
-   {:value "7days"   :label "7 days"}
-   {:value "30days"  :label "30 days"}])
-
 (defn summary-ref
   [{:keys [id] :as monitor}]
   #(l/derived (l/in [:monitor-summary id]) st/state))
@@ -102,18 +97,8 @@
         summary      (mf/deref summary-ref)
 
         buckets      (:buckets summary)
-        speriod      (:period summary)
 
         bucket       (mf/use-state nil)
-        value        (d/seek #(= speriod (:value %)) period-options)
-
-        on-period-change
-        (mf/use-callback
-         (mf/deps (:id monitor))
-         (fn [data]
-           (let [value (unchecked-get data "value")]
-             (st/emit! (ev/update-summary-period {:id (:id monitor)
-                                                  :period value})))))
         on-mouse-over
         (mf/use-callback
          (mf/deps buckets)
@@ -143,13 +128,12 @@
 
     ;; Render Chart
     (mf/use-layout-effect
-     (mf/deps buckets speriod)
+     (mf/deps buckets)
      (fn []
        (when buckets
          (let [dom  (mf/ref-val chart-ref)
                data (clj->js buckets)]
            (ilc/render dom #js {:width 1160
-                                :period speriod
                                 :height (.-clientHeight ^js dom)
                                 :onMouseOver on-mouse-over
                                 :onMouseOut on-mouse-out
@@ -162,22 +146,14 @@
      [:hr]
 
      [:div.topside-options
-      (when-let [data (deref bucket)]
-        [:ul.period-info
+      (let [data (deref bucket)]
+        [:ul.period-info {:class (dom/classnames :invisible (not data))}
          [:li
           [:span.label "Latency: "]
           [:span.value (str (:avg data) "ms")]]
          [:li
           [:span.label "Period: "]
-          [:span.value (dt/format (:ts data) :datetime-med)]]])
-      [:div.timeframe-selector
-       [:> forms/rselect
-        {:options (clj->js period-options)
-         :className "react-select"
-         :classNamePrefix "react-select"
-         :isClearable false
-         :onChange on-period-change
-         :value (clj->js value)}]]]
+          [:span.value (dt/format (:ts data) :date-med-with-weekday)]]])]
 
      [:div.latency-chart
       [:div.chart {:ref chart-ref}]]

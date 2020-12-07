@@ -415,29 +415,19 @@
 (declare sql:monitor-latencies)
 (declare sql:monitor-uptime)
 
-(def bucket-size
-  "Translates the period to the bucket size."
-  {"24hours"  (db/interval "30 minutes")
-   "7days"    (db/interval "3 hour")
-   "30days"   (db/interval "12 hours")})
-
-(s/def ::period #(contains? bucket-size %))
-
 (s/def ::retrieve-monitor-summary
-  (s/keys :req-un [::id ::period]))
+  (s/keys :req-un [::id]))
 
 (sv/defmethod ::retrieve-monitor-summary
-  [{:keys [pool]} {:keys [id profile-id period]}]
+  [{:keys [pool]} {:keys [id profile-id]}]
   (db/with-atomic [conn pool]
-    (let [monitor   (db/exec-one! conn [sql:retrieve-monitor profile-id id])
-          partition (get bucket-size period)]
+    (let [monitor (db/exec-one! conn [sql:retrieve-monitor profile-id id])]
       (when-not monitor
         (ex/raise :type :not-found
                   :hint "monitor does not exists"))
-
-      (let [buckets   (db/exec! conn [sql:monitor-chart-buckets partition id period])
-            latencies (db/exec-one! conn [sql:monitor-latencies id period])
-            uptime    (db/exec-one! conn [sql:monitor-uptime period period id period])]
+      (let [buckets   (db/exec! conn [sql:monitor-chart-buckets id])
+            latencies (db/exec-one! conn [sql:monitor-latencies id ])
+            uptime    (db/exec-one! conn [sql:monitor-uptime id ])]
         (d/merge latencies uptime {:buckets buckets})))))
 
 (def sql:monitor-latencies
@@ -445,30 +435,31 @@
           avg(latency)::float8 as latency_avg
      from monitor_entry as me
     where me.monitor_id = ?
-      and me.created_at > now() - ?::interval")
+      and me.created_at > now() - '90 days'::interval")
 
 (def sql:monitor-uptime
   "with entries as (
       select e.*,
              (coalesce(e.finished_at, now()) -
-              case when e.created_at < (now()-?::interval)
-                   then now()-?::interval
+              case when e.created_at < (now()-'90 days'::interval)
+                   then now()-'90 days'::interval
                    else e.created_at end) as duration
         from monitor_status as e
        where e.monitor_id = ?
          and e.status in ('up', 'down', 'warn')
-         and tstzrange(e.created_at, e.finished_at) && tstzrange(now() - ?::interval, now())
+         and tstzrange(e.created_at, e.finished_at) && tstzrange(now() - '90 days'::interval, now())
    )
    select (select extract(epoch from sum(duration)) from entries)::float8 as total_seconds,
           (select extract(epoch from sum(duration)) from entries where status = 'down')::float8 as down_seconds,
           (select extract(epoch from sum(duration)) from entries where status = 'up' or status = 'warn')::float8 as up_seconds")
 
+;; TODO: seems like the where condition is not very efficient
 (def sql:monitor-chart-buckets
-   "select time_bucket(?::interval, created_at) as ts,
+   "select time_bucket('1 day'::interval, created_at) as ts,
            round(avg(latency)::numeric, 2)::float8 as avg
      from monitor_entry
     where monitor_id = ?
-      and (now()-created_at) < ?::interval group by 1 order by 1")
+      and (now()-created_at) < '90 days'::interval group by 1 order by 1")
 
 
 ;; --- Query: Retrieve Monitor Status

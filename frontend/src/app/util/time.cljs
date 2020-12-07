@@ -37,6 +37,7 @@
     :datetime-med   (.-DATETIME_MED ^js DateTime)
     :datetime-full  (.-DATETIME_FULL ^js DateTime)
     :date-full      (.-DATE_FULL ^js DateTime)
+    :date-med-with-weekday (.-DATE_MED_WITH_WEEKDAY ^js DateTime)
     v))
 
 (defn format

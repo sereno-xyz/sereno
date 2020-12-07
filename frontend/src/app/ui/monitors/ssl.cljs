@@ -137,8 +137,7 @@
      (mf/deps monitor)
      (fn []
        (st/emit! (ptk/event :initialize-monitor-summary
-                            {:id (:id monitor)
-                             :period "30days"}))
+                            {:id (:id monitor)}))
        (st/emitf (ptk/event :finalize-monitor-summary monitor))))
 
 
@@ -170,7 +169,7 @@
           [:span.value (str (:avg data) "ms")]]
          [:li
           [:span.label "Period: "]
-          [:span.value (dt/format (:ts data) :datetime-med)]]])]
+          [:span.value (dt/format (:ts data) :date-med-with-weekday)]]])]
 
      [:div.latency-chart
       [:div.chart {:ref chart-ref}]]

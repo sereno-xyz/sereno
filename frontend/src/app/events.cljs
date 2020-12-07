@@ -566,8 +566,6 @@
                          (on-error err)
                          (rx/empty))))))))
 
-(def default-period "7days")
-
 (defmethod ptk/resolve :fetch-monitor-summary
   [_ {:keys [id] :as params}]
   (us/assert ::us/uuid id)
@@ -578,18 +576,8 @@
     (ptk/reify :fetch-monitor-summary
       ptk/WatchEvent
       (watch [_ state stream]
-        (let [period (get-in state [:monitor-summary id :period] default-period)]
-          (->> (rp/qry! :retrieve-monitor-summary {:id id :period period})
-               (rx/map #(partial on-fetched %))))))))
-
-(defn update-summary-period
-  [{:keys [id period] :as params}]
-  (us/assert ::us/uuid id)
-  (us/assert ::us/string period)
-  (ptk/reify :update-summary-period
-    ptk/UpdateEvent
-    (update [_ state]
-      (d/update-in-when state [:monitor-summary id] assoc :period period))))
+        (->> (rp/qry! :retrieve-monitor-summary {:id id})
+             (rx/map #(partial on-fetched %)))))))
 
 (defmethod ptk/resolve :fetch-monitor-status-history
   [_ {:keys [id since limit]
@@ -687,13 +675,8 @@
 
 
 (defmethod ptk/resolve :initialize-monitor-summary
-  [_ {:keys [id period] :or {period default-period} :as params}]
+  [_ {:keys [id] :as params}]
   (ptk/reify ::initialize-monitor-summary
-    ptk/UpdateEvent
-    (update [_ state]
-      (update-in state [:monitor-summary id :period]
-                 (fn [v] (if (nil? v) period v))))
-
     ptk/WatchEvent
     (watch [_ state stream]
       (let [stoper (rx/filter (ptk/type? :finalize-monitor-summary) stream)]
@@ -701,12 +684,6 @@
         (rx/merge
          ;; Initial fetch of summary data
          (rx/of (ptk/event :fetch-monitor-summary params))
-
-         ;; Watch for summary period updates
-         (->> stream
-              (rx/filter (ptk/type? :update-summary-period))
-              (rx/map #(ptk/event :fetch-monitor-summary params))
-              (rx/take-until stoper))
 
          ;; Watch for backend update notifications
          (->> stream

@@ -9,7 +9,6 @@ export function render(node, params) {
   const width = params["width"];
   const height = params["height"];
   const data = params["data"];
-  const period = params["period"];
   const onMouseOut = params["onMouseOut"];
   const onMouseOver = params["onMouseOver"];
 
@@ -20,32 +19,21 @@ export function render(node, params) {
                .attr("width", width)
                .attr("height", height));
 
-  const barWidth = 17;
+  const barWidth = 10;
   const bottomMargin = 30;
 
   let endDate, startDate;
 
-  if (period === "7days") {
-    endDate = dt.DateTime.local().plus(dt.Duration.fromObject({hours: 2}));
-    startDate = endDate.minus(dt.Duration.fromObject({days: 7, hours: 3}));
-  } else if (period === "30days") {
-    endDate = dt.DateTime.local().plus(dt.Duration.fromObject({hours: 6}));
-    startDate = endDate.minus(dt.Duration.fromObject({days: 30}));
-  } else {
-    // period === "24hours"
-    endDate = dt.DateTime.local().plus(dt.Duration.fromObject({minutes:10}));
-    startDate = endDate.minus(dt.Duration.fromObject({hours: 24}));
-  }
-
-  // console.log("start=", startDate.toString())
-  // console.log("end=  ", endDate.toString());
+  endDate = data[data.length-1].ts;
+  endDate = endDate.plus(dt.Duration.fromObject({days: 1}));
+  startDate = endDate.minus(dt.Duration.fromObject({days: 90}));
 
   const x = (d3.scaleUtc()
              .domain([startDate, endDate])
              .rangeRound([0, width]));
 
   const y = (d3.scaleLinear()
-             .domain([d3.max(data, d => d["avg"]), 0])
+             .domain([d3.max([500, d3.max(data, d => d["avg"])]), 0])
              .rangeRound([0, height-bottomMargin]));
 
   const xAxis = (g) => {
