@@ -16,10 +16,10 @@
    [app.common.uuid :as uuid]
    [app.events :as ev]
    [app.store :as st]
+   [app.ui.dropdown :refer [dropdown]]
    [app.ui.forms :as forms]
    [app.ui.icons :as i]
    [app.ui.modal :as modal]
-   [app.ui.dropdown :refer [dropdown]]
    [app.ui.monitors.common :refer [monitor-title monitor-history]]
    [app.util.dom :as dom]
    [app.util.router :as r]
@@ -91,22 +91,21 @@
    {:value "30days"  :label "30 days"}])
 
 (defn summary-ref
-  [id]
-  (l/derived (l/in [:monitor-summary id]) st/state))
+  [{:keys [id] :as monitor}]
+  #(l/derived (l/in [:monitor-summary id]) st/state))
 
 (mf/defc monitor-summary
   [{:keys [monitor]}]
   (let [chart-ref    (mf/use-ref)
 
-        summary-ref  (mf/use-memo (mf/deps (:id monitor)) #(summary-ref (:id monitor)))
+        summary-ref  (mf/use-memo (mf/deps monitor) (summary-ref monitor))
         summary      (mf/deref summary-ref)
 
-        summary-data    (:data summary)
-        summary-buckets (:buckets summary)
-        summary-period  (:period summary)
+        buckets      (:buckets summary)
+        speriod      (:period summary)
 
-        selected-bucket (mf/use-state nil)
-        value (d/seek #(= summary-period (:value %)) period-options)
+        bucket       (mf/use-state nil)
+        value        (d/seek #(= speriod (:value %)) period-options)
 
         on-period-change
         (mf/use-callback
@@ -114,18 +113,18 @@
          (fn [data]
            (let [value (unchecked-get data "value")]
              (st/emit! (ev/update-summary-period {:id (:id monitor)
-                                                    :period value})))))
+                                                  :period value})))))
         on-mouse-over
         (mf/use-callback
-         (mf/deps summary-buckets)
+         (mf/deps buckets)
          (fn [index]
-           (reset! selected-bucket (nth summary-buckets index))))
+           (reset! bucket (nth buckets index))))
 
         on-mouse-out
         (mf/use-callback
-         (mf/deps summary-buckets)
+         (mf/deps buckets)
          (fn []
-           (reset! selected-bucket nil)))
+           (reset! bucket nil)))
 
         go-back   (mf/use-callback #(st/emit! (r/nav :monitor-list)))
         go-detail #(st/emit! (r/nav :monitor-detail {:id (:id monitor)}))
@@ -135,21 +134,23 @@
         edit      #(modal/show! {::modal/type :monitor-form
                                  :item monitor})]
 
+    ;; Fetch Summary Data
     (mf/use-effect
      (mf/deps monitor)
      (fn []
        (st/emit! (ptk/event :initialize-monitor-summary {:id (:id monitor)}))
        (st/emitf (ptk/event :finalize-monitor-summary {:id (:id monitor)}))))
 
+    ;; Render Chart
     (mf/use-layout-effect
-     (mf/deps summary-buckets summary-period)
+     (mf/deps buckets speriod)
      (fn []
-       (when summary-buckets
+       (when buckets
          (let [dom  (mf/ref-val chart-ref)
-               data (clj->js summary-buckets)]
+               data (clj->js buckets)]
            (ilc/render dom #js {:width 1160
-                                :period summary-period
-                                :height (.-clientHeight dom)
+                                :period speriod
+                                :height (.-clientHeight ^js dom)
                                 :onMouseOver on-mouse-over
                                 :onMouseOut on-mouse-out
                                 :data data})
@@ -161,7 +162,7 @@
      [:hr]
 
      [:div.topside-options
-      (when-let [data (deref selected-bucket)]
+      (when-let [data (deref bucket)]
         [:ul.period-info
          [:li
           [:span.label "Latency: "]
@@ -181,7 +182,7 @@
      [:div.latency-chart
       [:div.chart {:ref chart-ref}]]
 
-     [:& monitor-info {:summary summary-data
+     [:& monitor-info {:summary summary
                        :monitor monitor}]]))
 
 (mf/defc http-monitor-detail

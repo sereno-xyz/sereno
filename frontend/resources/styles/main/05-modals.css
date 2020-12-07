@@ -385,3 +385,48 @@
   }
 }
 
+.monitor-cause-info {
+  width: 500px;
+  .modal-content {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .info-row {
+    display: flex;
+    font-size: 18px;
+
+    &.as-column {
+      flex-direction: column;
+    }
+
+
+    &:not(:last-child) {
+      margin-bottom: 7px;
+    }
+
+    .label {
+      font-weight: 500;
+      min-width: 60px;
+    }
+    .content {
+      font-weight: 200;
+      font-family: "JetBrains Mono", monospace;
+      padding: 5px;
+
+      &.ellipsis {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+
+      &.code-block {
+        white-space: pre;
+        font-size: 14px;
+        overflow: auto;
+        max-height: 200px;
+      }
+    }
+  }
+}

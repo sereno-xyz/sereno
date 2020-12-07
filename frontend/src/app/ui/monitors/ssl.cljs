@@ -40,10 +40,12 @@
 
         on-hover
         (mf/use-callback
-         (mf/deps (:id monitor))
+         (mf/deps monitor)
          (fn [event]
            (let [target (dom/get-target event)]
-             (.setAttribute target "title" (str (dt/timeago (:modified-at monitor)) " ago")))))]
+             (.setAttribute target "title" (str (dt/timeago (:modified-at monitor)) " ago")))))
+        ]
+
     [:div.details-table
      [:div.details-column
       [:div.details-row
@@ -102,37 +104,35 @@
        [:div.details-field (mth/precision (:latency-avg summary) 0) " ms"]]]]))
 
 (defn summary-ref
-  [id]
-  (l/derived (l/in [:monitor-summary id]) st/state))
+  [{:keys [id] :as monitor}]
+  #(l/derived (l/in [:monitor-summary id]) st/state))
 
 (mf/defc monitor-summary
   [{:keys [monitor]}]
   (let [chart-ref    (mf/use-ref)
-
-        summary-ref  (mf/use-memo (mf/deps (:id monitor)) #(summary-ref (:id monitor)))
+        summary-ref  (mf/use-memo (mf/deps monitor) (summary-ref monitor))
         summary      (mf/deref summary-ref)
-
-        summary-data    (:data summary)
-        summary-buckets (:buckets summary)
-        selected-bucket (mf/use-state nil)
+        buckets      (:buckets summary)
+        bucket       (mf/use-state nil)
 
         on-mouse-over
         (mf/use-callback
-         (mf/deps summary-buckets)
+         (mf/deps buckets)
          (fn [index]
-           (reset! selected-bucket (nth summary-buckets index))))
+           (reset! bucket (nth buckets index))))
 
         on-mouse-out
         (mf/use-callback
-         (mf/deps summary-buckets)
+         (mf/deps buckets)
          (fn []
-           (reset! selected-bucket nil)))
+           (reset! bucket nil)))
 
         go-back   (mf/use-callback (st/emitf (r/nav :monitor-list)))
         pause     (st/emitf (ev/pause-monitor monitor))
         resume    (st/emitf (ev/resume-monitor monitor))
         edit      (st/emitf (modal/show {:type :ssl-monitor-form :item monitor}))]
 
+    ;; Fetch Summary Data
     (mf/use-effect
      (mf/deps monitor)
      (fn []
@@ -141,12 +141,14 @@
                              :period "30days"}))
        (st/emitf (ptk/event :finalize-monitor-summary monitor))))
 
+
+    ;; Render Chart
     (mf/use-layout-effect
-     (mf/deps summary-buckets)
+     (mf/deps buckets)
      (fn []
-       (when summary-buckets
+       (when buckets
          (let [dom  (mf/ref-val chart-ref)
-               data (clj->js summary-buckets)]
+               data (clj->js buckets)]
            (ilc/render dom #js {:width 1160
                                 :period "30days"
                                 :height (.-clientHeight dom)
@@ -161,7 +163,7 @@
      [:hr]
 
      [:div.topside-options
-      (let [data (deref selected-bucket)]
+      (let [data (deref bucket)]
         [:ul.period-info {:class (dom/classnames :invisible (not data))}
          [:li
           [:span.label "Latency: "]
@@ -173,7 +175,7 @@
      [:div.latency-chart
       [:div.chart {:ref chart-ref}]]
 
-     [:& monitor-info {:summary summary-data
+     [:& monitor-info {:summary summary
                        :monitor monitor}]]))
 
 (mf/defc ssl-monitor-detail

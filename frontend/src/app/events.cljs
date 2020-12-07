@@ -571,12 +571,10 @@
 (defmethod ptk/resolve :fetch-monitor-summary
   [_ {:keys [id] :as params}]
   (us/assert ::us/uuid id)
-  (letfn [(on-fetched [{:keys [data buckets]} state]
+  (letfn [(on-fetched [data state]
             (update-in state [:monitor-summary id]
                        (fn [summary]
-                         (assoc summary
-                                :data data
-                                :buckets buckets))))]
+                         (d/merge summary data))))]
     (ptk/reify :fetch-monitor-summary
       ptk/WatchEvent
       (watch [_ state stream]
@@ -610,7 +608,7 @@
                   last-dt (:created-at (last items))]
               (-> state
                   (update-in [:monitor-status-history id :items] merge (d/index-by :id items))
-                  (assoc-in [:monitor-status-history id :last-dt] last-dt)
+                  (assoc-in [:monitor-status-history id :load-more-since] last-dt)
                   (assoc-in [:monitor-status-history id :load-more] more?))))]
 
     (ptk/reify ::fetch-monitor-status-history
@@ -628,7 +626,7 @@
   (ptk/reify ::load-more-status-history
     ptk/WatchEvent
     (watch [_ state stream]
-      (let [since (get-in state [:monitor-status-history id :last-dt])]
+      (let [since (get-in state [:monitor-status-history id :load-more-since])]
         (rx/of (ptk/event :fetch-monitor-status-history {:id id :since since}))))))
 
 (defmethod ptk/resolve :fetch-monitor-log

@@ -158,6 +158,5 @@
    ::mf/register modal/components
    ::mf/register-as :ssl-monitor-form}
   [props]
-  (let [on-close (st/emitf (modal/hide))]
-    [:div.modal-overlay
-     [:> monitor-form props]]))
+  [:div.modal-overlay
+   [:> monitor-form props]])

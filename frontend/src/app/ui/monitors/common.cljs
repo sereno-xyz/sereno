@@ -120,10 +120,18 @@
   [{:keys [monitor] :as props}]
   (let [history-ref (mf/use-memo (mf/deps (:id monitor)) #(history-ref (:id monitor)))
         history     (mf/deref history-ref)
-        load        #(st/emit! (ptk/event :load-more-status-history monitor))]
+        load        #(st/emit! (ptk/event :load-more-status-history monitor))
+
+        show-cause-info
+        (mf/use-callback
+         (mf/deps monitor)
+         (fn [item]
+           (when (= "down" (:status item))
+             (st/emit! (modal/show {:type :monitor-cause-info
+                                    :cause (:cause item)})))))]
 
     (mf/use-effect
-     (mf/deps (:id monitor))
+     (mf/deps monitor)
      (fn []
        (st/emit! (ptk/event :initialize-monitor-status-history monitor))
        (st/emitf (ptk/event :finalize-monitor-status-history monitor))))
@@ -150,14 +158,17 @@
                                        :status-up (= (:status item) "up")
                                        :status-down (= (:status item) "down"))}
           [:li.icon (case (:status item)
-                      "warn" i/info-circle
-                      "up" i/chevron-circle-up
-                      "down" i/chevron-circle-down
-                      "paused" i/chevron-circle-down
+                      "warn"    i/info-circle
+                      "up"      i/chevron-circle-up
+                      "down"    i/chevron-circle-down
+                      "paused"  i/chevron-circle-down
                       "started" i/chevron-circle-up
                       "created" i/circle
                       nil)]
-          [:li.status (str/upper (:status item))]
+          [:li.status {:on-click #(show-cause-info item)
+                       :style (if (= "down" (:status item))
+                                #js {"cursor" "pointer"})}
+           (str/upper (:status item))]
           [:li.created-at (dt/format (:created-at item) :datetime-med)]
           [:li.duration (dt/format-time-distance (:created-at item)
                                                  (:finished-at item (dt/now)))]])
@@ -165,6 +176,45 @@
         (when (:load-more history)
           [:a {:on-click load} "Load more"])]]]]))
 
+(mf/defc down-cause-modal
+  {::mf/wrap [mf/memo]
+   ::mf/register modal/components
+   ::mf/register-as :monitor-cause-info}
+  [{:keys [cause]}]
+  (let [cancel-fn  (st/emitf (modal/hide))]
+    (prn cause)
+    [:div.modal-overlay
+     [:div.modal.monitor-cause-info
+      [:div.modal-header
+       [:div.modal-header-title
+        [:h2 "Downtime Cause"]]
+       [:div.modal-close-button
+        {:on-click cancel-fn}
+        i/times]]
 
+      [:div.modal-content
+       [:div.info-row.as-column
+        [:span.label "Code: "]
+        [:span.content (name (:code cause))]]
+
+       [:div.info-row.as-column
+        [:span.label "Hint: "]
+        [:span.content (str (:hint cause))]]
+
+       [:div.info-row.as-column
+        [:span.label "Exception Message: "]
+        [:span.content (:ex-message cause)]]
+
+       [:div.info-row.as-column {:title (:ex-class cause)}
+        [:span.label "Exception Class: "]
+        [:span.content.ellipsis (:ex-class cause)]]
+
+       [:div.info-row.as-column
+        [:span.label "Exception Data: "]
+        [:span.content (pr-str (:ex-data cause))]]
+
+       [:div.info-row.as-column {:title (:ex-class cause)}
+        [:span.label "Stack Trace: "]
+        [:span.content.code-block (:ex-stack cause)]]]]]))
 
 

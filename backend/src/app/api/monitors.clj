@@ -411,8 +411,8 @@
 
 ;; --- Query: Retrieve Monitor Latency Summary
 
-(declare sql:monitor-summary-buckets)
-(declare sql:monitor-summary)
+(declare sql:monitor-chart-buckets)
+(declare sql:monitor-latencies)
 (declare sql:monitor-uptime)
 
 (def bucket-size
@@ -422,6 +422,7 @@
    "30days"   (db/interval "12 hours")})
 
 (s/def ::period #(contains? bucket-size %))
+
 (s/def ::retrieve-monitor-summary
   (s/keys :req-un [::id ::period]))
 
@@ -434,14 +435,12 @@
         (ex/raise :type :not-found
                   :hint "monitor does not exists"))
 
-      (let [buckets (db/exec! conn [sql:monitor-summary-buckets partition id period])
-            data    (db/exec-one! conn [sql:monitor-summary id period])
-            uptime  (db/exec-one! conn [sql:monitor-uptime period period id period])]
-        {:buckets buckets
-         :data (merge data uptime)}))))
+      (let [buckets   (db/exec! conn [sql:monitor-chart-buckets partition id period])
+            latencies (db/exec-one! conn [sql:monitor-latencies id period])
+            uptime    (db/exec-one! conn [sql:monitor-uptime period period id period])]
+        (d/merge latencies uptime {:buckets buckets})))))
 
-
-(def sql:monitor-summary
+(def sql:monitor-latencies
   "select percentile_cont(0.90) within group (order by latency) as latency_p90,
           avg(latency)::float8 as latency_avg
      from monitor_entry as me
@@ -464,7 +463,7 @@
           (select extract(epoch from sum(duration)) from entries where status = 'down')::float8 as down_seconds,
           (select extract(epoch from sum(duration)) from entries where status = 'up' or status = 'warn')::float8 as up_seconds")
 
-(def sql:monitor-summary-buckets
+(def sql:monitor-chart-buckets
    "select time_bucket(?::interval, created_at) as ts,
            round(avg(latency)::numeric, 2)::float8 as avg
      from monitor_entry
