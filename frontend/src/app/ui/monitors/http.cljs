@@ -134,7 +134,7 @@
          (let [dom  (mf/ref-val chart-ref)
                data (clj->js buckets)]
            (ilc/render dom #js {:width 1160
-                                :height (.-clientHeight ^js dom)
+                                :height 90 #_(.-clientHeight ^js dom)
                                 :onMouseOver on-mouse-over
                                 :onMouseOut on-mouse-out
                                 :data data})
@@ -147,13 +147,15 @@
 
      [:div.topside-options
       (let [data (deref bucket)]
-        [:ul.period-info {:class (dom/classnames :invisible (not data))}
+        [:ul.period-info #_{:class (dom/classnames :invisible (not data))}
          [:li
           [:span.label "Latency: "]
-          [:span.value (str (:avg data) "ms")]]
+          [:span.value  (if data (str (:avg data) "ms") "")]]
          [:li
           [:span.label "Period: "]
-          [:span.value (dt/format (:ts data) :date-med-with-weekday)]]])]
+          [:span.value (if data
+                         (dt/format (:ts data) :date-med-with-weekday)
+                         "")]]])]
 
      [:div.latency-chart
       [:div.chart {:ref chart-ref}]]

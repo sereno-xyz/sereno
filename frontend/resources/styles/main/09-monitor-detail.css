@@ -130,22 +130,30 @@
 
   .period-info {
     border: 1px dashed var(--color-primary);
-
     margin: 0px;
     padding: 0px 10px;
 
     width: 100%;
-    max-width: 450px;
+    max-width: 420px;
     max-height: 38px;
     margin-right: 15px;
     list-style: none;
 
     display: flex;
     align-items: center;
-    justify-content: center;
+
+    > li {
+      min-width: 170px;
+    }
 
     .label {
+      font-weight: 200;
+      width: 30px;
+    }
+    .value {
+      width: 30px;
       font-weight: 500;
+      /* font-family: "JetBrains Mono"; */
     }
 
     li:not(:last-child) {
@@ -167,12 +175,13 @@
     margin: 10px;
 
     .chart {
-      padding: 10px;
+      display: flex;
+      justify-content: center;
       display: flex;
       position: relative;
       max-width: 1200px;
-      min-height: 150px;
       max-height: 150px;
+      height: 90px;
     }
   }
 

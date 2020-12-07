@@ -20,7 +20,7 @@ export function render(node, params) {
                .attr("height", height));
 
   const barWidth = 10;
-  const bottomMargin = 30;
+  const bottomMargin = 0;
 
   let endDate, startDate;
 
@@ -33,7 +33,7 @@ export function render(node, params) {
              .rangeRound([0, width]));
 
   const y = (d3.scaleLinear()
-             .domain([d3.max([500, d3.max(data, d => d["avg"])]), 0])
+             .domain([d3.max([300, d3.max(data, d => d["avg"])]), 0])
              .rangeRound([0, height-bottomMargin]));
 
   const xAxis = (g) => {
@@ -42,8 +42,8 @@ export function render(node, params) {
             .call(d3.axisBottom(x).ticks(width / 50).tickSizeOuter(0)));
   };
 
-  svg.append("g")
-    .call(xAxis);
+  // svg.append("g")
+  //   .call(xAxis);
 
   svg.append("g")
     .attr("fill", "var(--color-primary-light)")
@@ -65,7 +65,7 @@ export function render(node, params) {
     });
 
   svg.append("g")
-    .attr("fill", "var(--color-gray-5)")
+    .attr("fill", "var(--color-gray-20)")
     .attr("opacity", "0.1")
     .style("cursor", "pointer")
     .selectAll("rect")
@@ -86,14 +86,14 @@ export function render(node, params) {
     })
     .on("mouseover", function(d) {
       const target = d3.select(this);
-      target.attr("fill", "var(--color-gray-30)");
+      target.attr("fill", "var(--color-gray-40)");
 
       const index = parseInt(target.attr("data-index"), 10);
       onMouseOver(index);
     })
     .on("mouseout", function() {
       const target = d3.select(this);
-      target.attr("fill", "var(--color-gray-5)");
+      target.attr("fill", "var(--color-gray-20)");
 
       onMouseOut();
     });
