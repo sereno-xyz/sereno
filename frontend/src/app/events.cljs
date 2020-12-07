@@ -687,6 +687,7 @@
               (rx/map #(ptk/event :fetch-monitor params))
               (rx/take-until stoper)))))))
 
+
 (defmethod ptk/resolve :initialize-monitor-summary
   [_ {:keys [id period] :or {period default-period} :as params}]
   (ptk/reify ::initialize-monitor-summary

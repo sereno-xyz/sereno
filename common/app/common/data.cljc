@@ -9,7 +9,7 @@
 
 (ns app.common.data
   "Data manipulation and query helper functions."
-  (:refer-clojure :exclude [concat read-string])
+  (:refer-clojure :exclude [concat read-string merge])
   (:require [clojure.set :as set]
             [lambdaisland.uri :as u]
             #?(:cljs [cljs.reader :as r]

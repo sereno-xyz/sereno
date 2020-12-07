@@ -9,14 +9,15 @@
 
 (ns app.api.monitors
   (:require
+   [app.api.profile :refer [get-profile]]
+   [app.common.data :as d]
    [app.common.exceptions :as ex]
    [app.common.spec :as us]
    [app.common.uuid :as uuid]
    [app.db :as db]
-   [app.api.profile :refer [get-profile]]
    [app.tasks.monitor :refer [run-monitor!]]
-   [app.util.time :as dt]
    [app.util.services :as sv]
+   [app.util.time :as dt]
    [clojure.spec.alpha :as s])
   (:import
    org.postgresql.jdbc.PgArray))

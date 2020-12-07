@@ -110,12 +110,20 @@
                 :code :email-already-exists))
     params))
 
+(defn- derive-password
+  [password]
+  (bh/derive password
+             {:alg :argon2id
+              :memory 16384
+              :iterations 20
+              :parallelism 2}))
+
 (defn create-profile
   "Create the profile entry on the database with limited input
   filling all the other fields with defaults."
   [conn {:keys [fullname email password] :as params}]
   (let [id       (uuid/next)
-        password (bh/derive password {:alg :bcrypt+sha512})]
+        password (derive-password password)]
     (db/insert! conn :profile
                 {:id id
                  :type (:default-profile-type cfg/config "default")
@@ -198,7 +206,7 @@
             (ex/raise :type :validation
                       :code :old-password-not-match))))
       (db/update! conn :profile
-                  {:password (bh/derive password {:alg :bcrypt+sha512})}
+                  {:password (derive-password password)}
                   {:id profile-id})
       nil)))
 
@@ -266,7 +274,7 @@
               (:profile-id claims)))
 
           (update-password [conn profile-id]
-            (let [pwd (bh/derive password)]
+            (let [pwd (derive-password password)]
               (db/update! conn :profile {:password pwd} {:id profile-id})))]
 
     (db/with-atomic [conn pool]
