@@ -1,7 +1,7 @@
 # Changelog #
 
 
-## v1.2 (unreleased)
+## v1.2.0
 
 - Add SSL Certificate monitoring.
 - Add discord webhooks integration.
@@ -20,7 +20,7 @@
   visualization.
 
 
-## v1.1
+## v1.1.0
 
 - Properly ignore unhandled events from awssns (webhook).
 - Add rate limit default config to devenv nginx.
@@ -37,7 +37,7 @@
 - Fix missing delete token on email notification email.
 
 
-## v1.0
+## v1.0.0
 
 - Add contact verification process.
 - Add single contact unsubscribe link to notification emails.
@@ -49,6 +49,6 @@
 - Fix some issues on profile limits and quota section.
 
 
-## v0.0
+## v0.0.0
 
 - Initial release
