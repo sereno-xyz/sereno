@@ -182,7 +182,6 @@
    ::mf/register-as :monitor-cause-info}
   [{:keys [cause]}]
   (let [cancel-fn  (st/emitf (modal/hide))]
-    (prn cause)
     [:div.modal-overlay
      [:div.modal.monitor-cause-info
       [:div.modal-header
@@ -201,20 +200,24 @@
         [:span.label "Hint: "]
         [:span.content (str (:hint cause))]]
 
-       [:div.info-row.as-column
-        [:span.label "Exception Message: "]
-        [:span.content (:ex-message cause)]]
+       (when-let [msg (:ex-message cause)]
+         [:div.info-row.as-column
+          [:span.label "Exception Message: "]
+          [:span.content msg]])
 
-       [:div.info-row.as-column {:title (:ex-class cause)}
-        [:span.label "Exception Class: "]
-        [:span.content.ellipsis (:ex-class cause)]]
+       (when-let [class (:ex-class cause)]
+         [:div.info-row.as-column {:title class}
+          [:span.label "Exception Class: "]
+          [:span.content.ellipsis class]])
 
-       [:div.info-row.as-column
-        [:span.label "Exception Data: "]
-        [:span.content (pr-str (:ex-data cause))]]
+       (when-let [data (:ex-data cause)]
+         [:div.info-row.as-column
+          [:span.label "Exception Data: "]
+          [:span.content (pr-str data)]])
 
-       [:div.info-row.as-column {:title (:ex-class cause)}
-        [:span.label "Stack Trace: "]
-        [:span.content.code-block (:ex-stack cause)]]]]]))
+       (when-let [trace (:ex-stack cause)]
+         [:div.info-row.as-column {:title trace}
+          [:span.label "Stack Trace: "]
+          [:span.content.code-block trace]])]]]))
 
 
