@@ -114,3 +114,15 @@ input[type=number] {
     animation-timing-function: linear;
   }
 }
+
+.version-overlay {
+  position: absolute;
+  bottom: 2px;
+  right: 6px;
+  font-size: 11px;
+  font-family: "JetBrains Mono", monospace;
+  a {
+    font-size: 11px;
+    font-weight: 700;
+  }
+}

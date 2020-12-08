@@ -9,6 +9,7 @@
 
 (ns app.ui
   (:require
+   [app.config :as cfg]
    [app.common.data :as d]
    [app.common.exceptions :as ex]
    [app.common.uuid :as uuid]
@@ -85,6 +86,12 @@
           " Accounts with not verified emails will be deleted after 48 hours."]]])
      children]))
 
+(mf/defc version-overlay
+  []
+  [:div.version-overlay
+   [:span "Version: " (:full cfg/version) " | source at "
+    [:a {:href "https://github.com/sereno-xyz/sereno" :target "_blank"} "github"]]])
+
 (mf/defc app
   {::mf/wrap [#(mf/catch % {:fallback app-error})]}
   []
@@ -92,6 +99,7 @@
         section (get-in route [:data :name])]
     [:*
      [:& notifications]
+     [:& version-overlay]
      (when section
        (case section
          :auth-register

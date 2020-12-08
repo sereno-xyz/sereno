@@ -8,9 +8,13 @@
 ;; Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
 
 (ns app.config
-  (:require [app.util.object :as obj]))
+  (:require
+   [app.common.version :as v]
+   [app.util.object :as obj]))
 
 (this-as global
   (def default-language "en")
   (def public-uri (or (obj/get global "appPublicURI")
-                      (.-origin ^js js/location))))
+                      (.-origin ^js js/location)))
+  (def version    (v/parse (obj/get global "appVersion"))))
+
