@@ -90,6 +90,7 @@
        [:div.modal-header
         [:div.modal-header-title
          [:h2 "Change password"]]
+
         [:div.modal-close-button
          {:on-click on-close} i/times]]
 
@@ -112,14 +113,12 @@
          [:& fm/input
           {:name :password
            :type "password"
-           :disabled (boolean (:external-id profile))
            :label "New password"}]]
 
         [:div.form-row
          [:& fm/input
           {:name :password-2
            :type "password"
-           :disabled (boolean (:external-id profile))
            :label "Repeat new password"}]]]
 
       [:div.modal-footer
