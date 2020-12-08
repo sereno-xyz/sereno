@@ -23,7 +23,7 @@ export function render(node, params) {
   const bottomMargin = 0;
 
   const oneDay = dt.Duration.fromObject({days: 1});
-  const endDate = dt.DateTime.local().plus(dt.Duration.fromObject({hours: 12}));
+  const endDate = dt.DateTime.utc().plus(dt.Duration.fromObject({hours: 12}));
   const startDate = endDate.minus(dt.Duration.fromObject({days: 90}));
 
   const x = (d3.scaleUtc()
@@ -36,10 +36,10 @@ export function render(node, params) {
 
   const totalBars = 90;
   let ghostData = [];
-  let lastDateTime = dt.DateTime.local();
+  let lastDateTime = dt.DateTime.utc();
 
   if (data.length > 0) {
-    lastDateTime = data[0].ts;
+    lastDateTime = data[0].ts.toUTC();
   }
 
   if (data.length < totalBars) {
@@ -63,7 +63,8 @@ export function render(node, params) {
     .join("rect")
     .attr("data-index", (d, index) => index)
     .attr("x", (d, index) => {
-      return x(d["ts"]);
+      // console.log(d["ts"].toUTC().toString());
+      return x(d["ts"].toUTC());
     })
     .attr("y", (d) => {
       return y(d["avg"]);
