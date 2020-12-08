@@ -22,11 +22,9 @@ export function render(node, params) {
   const barWidth = 10;
   const bottomMargin = 0;
 
-  let endDate, startDate;
-
-  endDate = data[data.length-1].ts;
-  endDate = endDate.plus(dt.Duration.fromObject({days: 1}));
-  startDate = endDate.minus(dt.Duration.fromObject({days: 90}));
+  const oneDay = dt.Duration.fromObject({days: 1});
+  const endDate = dt.DateTime.local().plus(dt.Duration.fromObject({hours: 12}));
+  const startDate = endDate.minus(dt.Duration.fromObject({days: 90}));
 
   const x = (d3.scaleUtc()
              .domain([startDate, endDate])
@@ -36,14 +34,27 @@ export function render(node, params) {
              .domain([d3.max([300, d3.max(data, d => d["avg"])]), 0])
              .rangeRound([0, height-bottomMargin]));
 
-  const xAxis = (g) => {
-    return (g
-            .attr("transform", `translate(0,${height-bottomMargin})`)
-            .call(d3.axisBottom(x).ticks(width / 50).tickSizeOuter(0)));
-  };
+  const totalBars = 90;
+  let ghostData = [];
+  let lastDateTime = dt.DateTime.local();
 
-  // svg.append("g")
-  //   .call(xAxis);
+  if (data.length > 0) {
+    lastDateTime = data[0].ts;
+  }
+
+  if (data.length < totalBars) {
+    const missing = totalBars -  data.length;
+    let prefixData = [];
+
+    for (let i=0; i<missing; i++) {
+      let newTs = lastDateTime.minus(oneDay);
+      lastDateTime = newTs;
+      prefixData.push({ts: newTs});
+    }
+
+    prefixData.reverse();
+    ghostData = prefixData;
+  }
 
   svg.append("g")
     .attr("fill", "var(--color-primary-light)")
@@ -62,6 +73,25 @@ export function render(node, params) {
     })
     .attr("height", (d) => {
       return y(0) - y(d["avg"]);
+    });
+
+  svg.append("g")
+    .attr("fill", "var(--color-gray-20)")
+    .attr("opacity", "0.1")
+    .selectAll("rect")
+    .data(ghostData)
+    .join("rect")
+    .attr("x", (d, index) => {
+      return x(d["ts"]);
+    })
+    .attr("y", (d) => {
+      return 0;
+    })
+    .attr("width", (d) => {
+      return barWidth;
+    })
+    .attr("height", (d) => {
+      return height;
     });
 
   svg.append("g")
@@ -86,7 +116,7 @@ export function render(node, params) {
     })
     .on("mouseover", function(d) {
       const target = d3.select(this);
-      target.attr("fill", "var(--color-gray-40)");
+      target.attr("fill", "var(--color-gray-50)");
 
       const index = parseInt(target.attr("data-index"), 10);
       onMouseOver(index);
