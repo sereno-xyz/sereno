@@ -56,7 +56,7 @@
         result  ((get impl type default-handler) data)
         mdata   (meta result)]
 
-    (cond->> {:status (if (nil? (seq result)) 204 200) :body result}
+    (cond->> {:status 200 :body result}
       (fn? (:transform-response mdata)) ((:transform-response mdata) request))))
 
 (defn- router
