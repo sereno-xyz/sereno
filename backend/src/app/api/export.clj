@@ -13,6 +13,7 @@
    [app.common.uuid :as uuid]
    [app.db :as db]
    [app.api.monitors :refer [decode-monitor-row
+                             decode-status-row
                              change-monitor-status!]]
    [app.util.time :as dt]
    [app.util.transit :as t]
@@ -29,6 +30,7 @@
 ;; Exports & Imports
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
 (defn- generate-export!
   [{:keys [pool]} {:keys [monitors days profile-id out]
                    :or {days 90}
@@ -40,7 +42,8 @@
             (let [sql "select ms.* from monitor_status as ms
                          join monitor as m on (m.id = ms.monitor_id)
                         where m.owner_id = ?"]
-              (db/exec! conn [sql profile-id])))
+              (->> (db/exec! conn [sql profile-id])
+                   (map decode-status-row))))
 
           (retrieve-monitor-entries [conn {:keys [since limit]
                                            :or {since (dt/now)
@@ -116,6 +119,7 @@
             (let [monitor-id (get-in state [:monitors (:monitor-id mstatus)])]
               (db/insert! conn :monitor-status
                           (assoc mstatus
+                                 :cause (db/tjson (:cause mstatus))
                                  :monitor-id monitor-id
                                  :id (uuid/next)))
               state))

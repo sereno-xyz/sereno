@@ -492,7 +492,7 @@
     (->> (db/exec! pool [sql:monitor-status-history id since limit])
          (mapv decode-status-row))))
 
-(defn- decode-status-row
+(defn decode-status-row
   [{:keys [cause] :as row}]
   (cond-> row
     (db/pgobject? cause)
