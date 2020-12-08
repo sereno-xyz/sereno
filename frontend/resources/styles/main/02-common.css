@@ -116,13 +116,25 @@ input[type=number] {
 }
 
 .version-overlay {
+  color: var(--color-gray-30);
   position: absolute;
   bottom: 2px;
   right: 6px;
   font-size: 11px;
   font-family: "JetBrains Mono", monospace;
+
+  span {
+    user-select: text;
+  }
+
   a {
+    user-select: auto;
+    color: inherit;
     font-size: 11px;
     font-weight: 700;
+
+    &:hover {
+      color: inherit;
+    }
   }
 }

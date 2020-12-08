@@ -27,7 +27,8 @@
   (let [msg "Recovery email sent."]
     (reset! form {})
     (st/emit! (ev/show-message {:content msg
-                                :type :success}))))
+                                :type :success
+                                :timeout 2000}))))
 
 (defn- on-submit
   [form event]

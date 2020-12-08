@@ -49,7 +49,9 @@
   (let [msg "Password changed successfully!"]
     (reset! form {})
     (st/emit! (r/nav :auth-login)
-              (ev/show-message {:content msg :type :success}))))
+              (ev/show-message {:content msg
+                                :timeout 2000
+                                :type :success}))))
 
 (defn- on-error
   [form error]
