@@ -106,7 +106,6 @@
            [:& fm/input
             {:name :old-password
              :type "password"
-             :disabled (boolean (:external-id profile))
              :label "Current password"}]])
 
         [:div.form-row
