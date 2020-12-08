@@ -1,7 +1,7 @@
 # Changelog #
 
 
-## v1-2020-SNAPSHOT
+## v1.2 (unreleased)
 
 - Add SSL Certificate monitoring.
 - Add discord webhooks integration.
@@ -16,10 +16,11 @@
 - Add tooling for easy create multiplatform docker images.
 - Normalize primary contacts (now they are permantent, not editable
   and the email address is used from profile).
+- Refactor internal monitor downtime cause reporting and
+  visualization.
 
 
-
-## v1-2020.10.16-0
+## v1.1
 
 - Properly ignore unhandled events from awssns (webhook).
 - Add rate limit default config to devenv nginx.
@@ -36,7 +37,7 @@
 - Fix missing delete token on email notification email.
 
 
-## v1-2020.10.11-0
+## v1.0
 
 - Add contact verification process.
 - Add single contact unsubscribe link to notification emails.
@@ -48,6 +49,6 @@
 - Fix some issues on profile limits and quota section.
 
 
-## v1-2020.10.07-0
+## v0.0
 
 - Initial release
