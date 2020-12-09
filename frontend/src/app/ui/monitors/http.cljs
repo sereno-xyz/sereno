@@ -150,12 +150,13 @@
         [:ul.period-info
          [:li
           [:span.label "Latency: "]
-          [:span.value  (if data (str (:avg data) "ms") "")]]
+          [:span.value.latency  (if data (str (:avg data) "ms") "---")]]
          [:li
           [:span.label "Period: "]
-          [:span.value (if data
-                         (dt/format (:ts data) :date-med-with-weekday)
-                         "")]]])]
+          [:span.value.period
+           (if data
+             (dt/format (:ts data) :date-med-with-weekday)
+             "---")]]])]
 
      [:div.latency-chart
       [:div.chart {:ref chart-ref}]]

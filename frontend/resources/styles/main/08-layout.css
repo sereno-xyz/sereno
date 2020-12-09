@@ -8,6 +8,7 @@
   --title-icon-size: 20px;
 
   @media (max-width: 600px) {
+    --default-line-height: 16px;
     --default-font-size: 14px;
     --default-h3-font-size: 16px;
     --default-h2-font-size: 18px;

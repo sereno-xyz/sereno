@@ -136,7 +136,8 @@
 
     [:div.options-bar
      [:& header-filters {:filters filters}]
-     [:a.add-button {:on-click show-dropdown} i/plus
+     [:a.add-button {:title "Add monitor"
+                     :on-click show-dropdown} i/plus
       [:& dropdown {:show @show-dropdown?
                     :on-close hide-dropdown}
        [:ul.dropdown
@@ -201,14 +202,12 @@
          nil)]
 
       [:div.monitor-title
-       [:span (:name item)]]
+       [:span (:name item)]
 
-      (let [tags (apply str (interpose " " (:tags item)))]
-        [:div.monitor-tags {:title tags}
-         #_[:div.tags tags]
-         [:div.tags
-          (for [t (:tags item)]
-            [:span t])]])
+       (let [tags (apply str (interpose ", " (:tags item)))]
+         [:div.tags {:title tags} tags])]
+
+
 
       [:div.monitor-updated
        {:on-mouse-enter on-hover
@@ -258,7 +257,7 @@
          [:div.row
           [:div.monitor-status ""]
           [:div.monitor-title "Title"]
-          [:div.monitor-tags "Tags"]
+          ;; [:div.monitor-tags "Tags"]
           [:div.monitor-updated "Monitored at"]
           [:div.monitor-options ""]
           ]]
