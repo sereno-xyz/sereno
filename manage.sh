@@ -8,7 +8,8 @@ export DEVENV_PNAME="serenodev";
 
 export CURRENT_USER_ID=$(id -u);
 export CURRENT_VERSION=$(git describe --tags);
-export CURRENT_GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD);
+export CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD);
+export CURRENT_HASH=$(git rev-parse --short HEAD);
 
 function build-devenv {
     echo "Building development image."
@@ -60,7 +61,6 @@ function run-devenv {
 }
 
 function build {
-
     pull-devenv-if-not-exists;
     docker volume create ${DEVENV_PNAME}_user_data;
 
@@ -83,22 +83,30 @@ function build-backend {
 }
 
 function build-bundle {
-    build "frontend";
-    build "backend";
+    # build "frontend";
+    # build "backend";
+    set -x
 
     rm -rf ./bundle;
     mkdir -p ./bundle/resources;
 
-    rsync -av ./backend/target/dist/ ./bundle/;
-    rsync -av ./frontend/target/dist/ ./bundle/resources/public/;
+    rsync -aq ./backend/target/dist/ ./bundle/;
+    rsync -aq ./frontend/target/dist/ ./bundle/resources/public/;
 
     find ./bundle/resources -iname '*.map' |xargs rm;
     rm -rf ./bundle/resources/public/fonts;
     rm -rf ./bundle/resources/public/fa
 
+    local version="$CURRENT_VERSION";
     local name="sereno-$CURRENT_VERSION";
 
-    echo $CURRENT_VERSION > ./bundle/version.txt
+    if [ $CURRENT_BRANCH != "main" ]; then
+        local ncommits=$(git rev-list --count HEAD);
+        version="$CURRENT_BRANCH-$ncommits-$CURRENT_HASH";
+        name="sereno-$CURRENT_BRANCH";
+    fi;
+
+    echo $version > ./bundle/version.txt
 
     sed -i -re "s/\%version\%/$CURRENT_VERSION/g" ./bundle/main/app/config.clj
     sed -i -re "s/\%version\%/$CURRENT_VERSION/g" ./bundle/resources/public/index.html;
@@ -106,7 +114,7 @@ function build-bundle {
     local generate_tar=${SERENO_BUILD_GENERATE_TAR:-"true"};
     if [ $generate_tar == "true" ]; then
         pushd bundle/
-        tar -cvf ../$name.tar *;
+        tar -cf ../$name.tar *;
         popd
 
         xz -vez1f -T4 $name.tar
@@ -118,7 +126,13 @@ function build-bundle {
 }
 
 function build-image {
-    local bundle_file="sereno-$CURRENT_VERSION.tar.xz";
+    local version="$CURRENT_VERSION";
+    local bundle_file="sereno-$CURRENT_VERSION";
+
+    if [ $CURRENT_BRANCH != "main" ]; then
+        version="$CURRENT_BRANCH";
+        bundle_file="sereno-$CURRENT_BRANCH.tar.xz";
+    fi;
 
     if [ ! -f $bundle_file ]; then
         echo "File '$bundle_file' does not exists.";
@@ -135,12 +149,11 @@ function build-image {
     tar xvf $bundle_file_path;
     popd
 
-
     pushd ./docker/image;
 
     set -x
-    docker buildx build --platform linux/amd64 -t $DOCKER_IMAGE:$CURRENT_VERSION-amd64 .;
-    docker buildx build --platform linux/arm64 -t $DOCKER_IMAGE:$CURRENT_VERSION-arm64 .;
+    docker buildx build --platform linux/amd64 -t $DOCKER_IMAGE:$version-amd64 .;
+    docker buildx build --platform linux/arm64 -t $DOCKER_IMAGE:$version-arm64 .;
 
     popd
 }
@@ -165,22 +178,18 @@ function publish-latest-image {
 }
 
 function publish-snapshot-image {
+    local version="$CURRENT_BRANCH";
+
     set -x;
-    docker push $DOCKER_IMAGE:$CURRENT_VERSION-amd64;
-    docker push $DOCKER_IMAGE:$CURRENT_VERSION-arm64;
+    docker push $DOCKER_IMAGE:$version-amd64;
+    docker push $DOCKER_IMAGE:$version-arm64;
 
     docker manifest create \
-           $DOCKER_IMAGE:$CURRENT_VERSION \
-           $DOCKER_IMAGE:$CURRENT_VERSION-amd64 \
-           $DOCKER_IMAGE:$CURRENT_VERSION-arm64;
+           $DOCKER_IMAGE:$version \
+           $DOCKER_IMAGE:$version-amd64 \
+           $DOCKER_IMAGE:$version-arm64;
 
-    docker manifest create \
-           $DOCKER_IMAGE:latest \
-           $DOCKER_IMAGE:$CURRENT_VERSION-amd64 \
-           $DOCKER_IMAGE:$CURRENT_VERSION-arm64;
-
-    docker manifest push $DOCKER_IMAGE:$CURRENT_VERSION;
-    docker manifest push $DOCKER_IMAGE:latest;
+    docker manifest push $DOCKER_IMAGE:$version;
 }
 
 function usage {
@@ -195,7 +204,8 @@ function usage {
     echo "                  based on tmux (frontend at localhost:3449, backend at localhost:6060)."
     echo "- build-bundle    [NO DOC]"
     echo "- build-image     [NO DOC]"
-    echo "- publish-image   [NO DOC]"
+    echo "- publish-latest-image   [NO DOC]"
+    echo "- publish-snapshot-image   [NO DOC]"
     echo ""
 }
 
