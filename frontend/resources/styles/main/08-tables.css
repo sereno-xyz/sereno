@@ -15,6 +15,10 @@
     font-weight: 500;
     height: 55px;
     cursor: auto;
+
+    @media (max-width: 600px) {
+      height: 45px;
+    }
   }
 
   .table-body .row {
@@ -28,6 +32,10 @@
 
     &:hover {
       background-color: var(--color-inactive-lighter);
+    }
+
+    @media (max-width: 600px) {
+      height: 45px;
     }
   }
 

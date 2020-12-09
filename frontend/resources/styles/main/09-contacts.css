@@ -53,8 +53,21 @@
         display: flex;
         justify-content: flex-start;
         flex-grow: 1;
-        padding-left: 10px;
         align-items: center;
+
+        span {
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          overflow: hidden;
+          width: 100%;
+          line-height: 16px;
+
+          @media (max-width: 500px) {
+            max-width: 180px;
+          }
+        }
+
+
       }
 
       .options {

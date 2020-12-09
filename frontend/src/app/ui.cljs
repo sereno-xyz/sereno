@@ -99,7 +99,7 @@
         section (get-in route [:data :name])]
     [:*
      [:& notifications]
-     [:& version-overlay]
+     ;; [:& version-overlay]
      (when section
        (case section
          :auth-register

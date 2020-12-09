@@ -16,6 +16,7 @@ export function render(node, params) {
 
   const svg = (d3.select(node).append("svg")
                .attr("viewBox", [0, 0, width, height])
+               .attr("preserveAspectRatio", "none")
                .attr("width", width)
                .attr("height", height));
 
