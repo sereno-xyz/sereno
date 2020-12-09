@@ -115,19 +115,15 @@
     }
 
     .monitor-title {
-      display: flex;
-      align-items: center;
-      flex-grow: 1;
       margin-right: 20px;
-
-      span {
-        display: block;
-        font-size: var(--default-font-size);
-
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        overflow: hidden;
-      }
+      width: 100%;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
+      line-height: 17px;
+      margin: auto;
+      font-size: var(--default-font-size);
+      margin-right: 10px;
     }
 
     .monitor-options {
@@ -159,22 +155,13 @@
           margin-right: 3px;
           border-radius: var(--default-border-radius);
           background-color: var(--color-gray-5-05);
-          /* background-color: var(--color-primary-1); */
-          /* color: var(--color-white); */
           font-weight: 400;
         }
       }
-
-      /* span { */
-      /*   display: inline-block; */
-      /*   text-overflow: ellipsis; */
-      /*   white-space: nowrap; */
-      /*   overflow: hidden; */
-      /* } */
     }
 
     .monitor-updated {
-      min-width:200px;
+      min-width: 195px;
       display: flex;
       align-items: center;
     }
@@ -187,16 +174,12 @@
     }
 
     @media (max-width: 500px) {
-      .row {
-        height: 45px;
-      }
-
       .monitor-name {
         padding-left: 0px;
       }
 
       .monitor-updated {
-        display: none;
+        min-width: 170px;
       }
     }
 
