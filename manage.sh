@@ -118,7 +118,7 @@ function build-bundle {
 }
 
 function build-image {
-    local bundle_file="penpot-$CURRENT_VERSION.tar.xz";
+    local bundle_file="sereno-$CURRENT_VERSION.tar.xz";
 
     if [ ! -f $bundle_file ]; then
         echo "File '$bundle_file' does not exists.";
@@ -145,8 +145,8 @@ function build-image {
     popd
 }
 
-function publish-image {
-    set +x;
+function publish-latest-image {
+    set -x;
     docker push $DOCKER_IMAGE:$CURRENT_VERSION-amd64;
     docker push $DOCKER_IMAGE:$CURRENT_VERSION-arm64;
 
@@ -155,9 +155,32 @@ function publish-image {
            $DOCKER_IMAGE:$CURRENT_VERSION-amd64 \
            $DOCKER_IMAGE:$CURRENT_VERSION-arm64;
 
+    docker manifest create \
+           $DOCKER_IMAGE:latest \
+           $DOCKER_IMAGE:$CURRENT_VERSION-amd64 \
+           $DOCKER_IMAGE:$CURRENT_VERSION-arm64;
+
     docker manifest push $DOCKER_IMAGE:$CURRENT_VERSION;
-    docker tag -t $DOCKER_IMAGE:$CURRENT_VERSION $DOCKER_IMAGE:latest;
-    docker push $DOCKER_IMAGE:latest;
+    docker manifest push $DOCKER_IMAGE:latest;
+}
+
+function publish-snapshot-image {
+    set -x;
+    docker push $DOCKER_IMAGE:$CURRENT_VERSION-amd64;
+    docker push $DOCKER_IMAGE:$CURRENT_VERSION-arm64;
+
+    docker manifest create \
+           $DOCKER_IMAGE:$CURRENT_VERSION \
+           $DOCKER_IMAGE:$CURRENT_VERSION-amd64 \
+           $DOCKER_IMAGE:$CURRENT_VERSION-arm64;
+
+    docker manifest create \
+           $DOCKER_IMAGE:latest \
+           $DOCKER_IMAGE:$CURRENT_VERSION-amd64 \
+           $DOCKER_IMAGE:$CURRENT_VERSION-arm64;
+
+    docker manifest push $DOCKER_IMAGE:$CURRENT_VERSION;
+    docker manifest push $DOCKER_IMAGE:latest;
 }
 
 function usage {
@@ -218,8 +241,12 @@ case $1 in
         build-image ${@:2}
         ;;
 
-    publish-image)
-        publish-image ${@:2}
+    publish-latest-image)
+        publish-latest-image;
+        ;;
+
+    publish-snapshot-image)
+        publish-snapshot-image;
         ;;
 
     *)
