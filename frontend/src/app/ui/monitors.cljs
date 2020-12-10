@@ -204,8 +204,9 @@
       [:div.monitor-title
        [:span (:name item)]
 
-       (let [tags (apply str (interpose ", " (:tags item)))]
-         [:div.tags {:title tags} tags])]
+       (when (seq (:tags item))
+         (let [tags (apply str (interpose ", " (:tags item)))]
+           [:span.tags {:title tags} tags]))]
 
 
 
@@ -253,14 +254,6 @@
 
        (not (empty? monitors))
        [:div.table
-        [:div.table-header
-         [:div.row
-          [:div.monitor-status ""]
-          [:div.monitor-title "Title"]
-          ;; [:div.monitor-tags "Tags"]
-          [:div.monitor-updated "Monitored at"]
-          [:div.monitor-options ""]
-          ]]
         [:div.table-body
          (for [item monitors]
            [:& monitor-item {:key (:id item) :item item}])]])]))
