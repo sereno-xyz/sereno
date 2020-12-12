@@ -9,16 +9,17 @@
 
 (ns app.tasks.monitor-http
   (:require
-   [app.common.spec :as us]
    [app.common.exceptions :as ex]
+   [app.common.spec :as us]
    [app.config :as cfg]
    [app.db :as db]
-   [app.tasks :as tasks]
    [app.emails :as emails]
+   [app.tasks :as tasks]
    [app.util.time :as dt]
-   [cuerdas.core :as str]
+   [clojure.pprint :refer [pprint]]
    [clojure.spec.alpha :as s]
    [clojure.tools.logging :as log]
+   [cuerdas.core :as str]
    [integrant.core :as ig]))
 
 (s/def ::type #{"http"})
@@ -98,8 +99,13 @@
 
     :else
     (do
-      (log/errorf e "Unexpected exception on monitor '%s'\nparams: %s"
-                  (:name monitor) (pr-str (:params monitor)))
+      (log/errorf e
+                  (str "Unhandled exception.\n"
+                       "=> monitor: " (:name monitor) "\n"
+                       "=> type:    " (:type monitor) "\n"
+                       "=> params: \n"
+                       (with-out-str
+                         (pprint (:params monitor)))))
       {:status "down"
        :retry true
        :cause (assoc (ex/->map e)

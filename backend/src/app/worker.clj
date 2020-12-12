@@ -14,14 +14,15 @@
    [app.common.uuid :as uuid]
    [app.config :as cfg]
    [app.db :as db]
-   [app.util.time :as dt]
    [app.util.async :as aa]
+   [app.util.time :as dt]
    [clojure.core.async :as a]
+   [clojure.pprint :refer [pprint]]
    [clojure.spec.alpha :as s]
    [clojure.tools.logging :as log]
    [cuerdas.core :as str]
-   [promesa.exec :as px]
-   [integrant.core :as ig])
+   [integrant.core :as ig]
+   [promesa.exec :as px])
   (:import
    java.util.concurrent.ExecutorService
    java.time.Duration
@@ -85,24 +86,29 @@
     {:status :completed :task item}))
 
 (defn- handle-exception
-  [e item]
-  (let [error (ex-data e)]
+  [error item]
+  (let [edata (ex-data error)]
     (if (and (< (:retry-num item)
                 (:max-retries item))
-             (= ::retry (:type error)))
-      (cond-> {:status :retry :task item :error e}
-        (dt/duration? (:delay error))
-        (assoc :delay (:delay error))
+             (= ::retry (:type edata)))
+      (cond-> {:status :retry :task item :error error}
+        (dt/duration? (:delay edata))
+        (assoc :delay (:delay edata))
 
-        (= ::noop (:strategy error))
+        (= ::noop (:strategy edata))
         (assoc :inc-by 0))
 
       (do
-        (log/errorf e "Unhandled exception on task '%s' (retry: %s) (props: '%s')"
-                    (:name item) (:retry-num item) (pr-str (:props item)))
+        (log/errorf error
+                    (str "Unhandled exception.\n"
+                         "=> task:  " (:name item) "\n"
+                         "=> retry: " (:retry-num item) "\n"
+                         "=> props: \n"
+                         (with-out-str
+                           (pprint (:props item)))))
         (if (>= (:retry-num item) (:max-retries item))
-          {:status :failed :task item :error e}
-          {:status :retry :task item :error e})))))
+          {:status :failed :task item :error error}
+          {:status :retry :task item :error error})))))
 
 (defn- run-task
   [{:keys [tasks conn]} item]

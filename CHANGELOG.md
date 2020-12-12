@@ -1,5 +1,10 @@
 # Changelog #
 
+## Upcoming changes
+
+- Better error reporting
+- Improved charts.
+
 
 ## v1.2.0
 
