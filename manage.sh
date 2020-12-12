@@ -108,8 +108,8 @@ function build-bundle {
 
     echo $version > ./bundle/version.txt
 
-    sed -i -re "s/\%version\%/$CURRENT_VERSION/g" ./bundle/main/app/config.clj
-    sed -i -re "s/\%version\%/$CURRENT_VERSION/g" ./bundle/resources/public/index.html;
+    sed -i -re "s/\%version\%/$version/g" ./bundle/main/app/config.clj
+    sed -i -re "s/\%version\%/$version/g" ./bundle/resources/public/index.html;
 
     local generate_tar=${SERENO_BUILD_GENERATE_TAR:-"true"};
     if [ $generate_tar == "true" ]; then
