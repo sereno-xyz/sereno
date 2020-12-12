@@ -10,8 +10,10 @@
 (ns app.http.errors
   "A errors handling for the http server."
   (:require
+   [app.common.exceptions :as ex]
    [clojure.tools.logging :as log]
    [cuerdas.core :as str]
+   [expound.alpha :as expound]
    [io.aviso.exception :as e]))
 
 (defmulti handle-exception
@@ -19,19 +21,50 @@
     (:type (ex-data err))))
 
 (defmethod handle-exception :validation
-  [err req]
-  (let [header (get-in req [:headers "accept"])
-        response (ex-data err)]
+  [error request]
+  (let [header (get-in request [:headers "accept"])
+        edata  (ex-data error)]
     (cond
-      (and (str/starts-with? header "text/html")
-           (= :spec-validation (:code response)))
-      {:status 400
-       :headers {"content-type" "text/html"}
-       :body (str "<pre style='font-size:16px'>" (:explain response) "</pre>\n")}
+      (= :spec-validation (:code edata))
+      (if (str/starts-with? header "text/html")
+        {:status 400
+         :headers {"content-type" "text/html"}
+         :body (str "<pre style='font-size:14px'>"
+                    (with-out-str
+                      (expound/printer (:data edata)))
+                    "</pre>\n")}
+        ;; Dissoc the error data because it is not serializable.
+        {:status 400
+         :body (dissoc edata)})
 
       :else
       {:status 400
-       :body response})))
+       :body edata})))
+
+(defn get-context-string
+  [request edata]
+  (str "=| uri:          " (pr-str (:uri request)) "\n"
+       "=| method:       " (pr-str (:request-method request)) "\n"
+       "=| path-params:  " (pr-str (:path-params request)) "\n"
+       "=| query-params: " (pr-str (:query-params request)) "\n"
+
+       (when-let [bparams (:body-params request)]
+         (str "=| body-params:  " (pr-str bparams) "\n"))
+
+       (when (map? edata)
+         (str "=| ex-data:      " (pr-str edata) "\n"))
+
+       "\n"))
+
+(defmethod handle-exception :assertion
+  [error request]
+  (let [edata (ex-data error)]
+    (log/errorf error
+                (str "Assertion error\n"
+                     (get-context-string request edata)
+                     (with-out-str (expound/printer (:data edata)))))
+    {:status 500
+     :body edata}))
 
 (defmethod handle-exception :not-authenticated
   [err req]
@@ -39,30 +72,23 @@
    :body ""})
 
 (defmethod handle-exception :not-found
-  [err req]
-  (let [response (ex-data err)]
-    {:status 404
-     :body response}))
+  [error request]
+  {:status 404
+   :body (ex-data error)})
 
 (defmethod handle-exception :service-error
   [err req]
   (handle-exception (.getCause ^Throwable err) req))
 
-(defmethod handle-exception :parse
-  [err req]
-  {:status 400
-   :body {:type :parse
-          :message (ex-message err)}})
-
 (defmethod handle-exception :default
-  [err req]
-  (log/error "Unhandled exception on request:" (:path req) "\n"
-             (with-out-str
-                (.printStackTrace ^Throwable err (java.io.PrintWriter. *out*))))
-  {:status 500
-   :body {:type :exception
-          :message (ex-message err)
-          :data (ex-data err)}})
+  [error request]
+  (let [edata (ex-data error)]
+    (log/errorf error
+                (str "Internal Error\n"
+                     (get-context-string request edata)))
+
+    {:status 500
+     :body (dissoc edata :data)}))
 
 (defn handle
   [error req]

@@ -159,6 +159,11 @@ function build-image {
 }
 
 function publish-latest-image {
+    if [ $CURRENT_BRANCH != "main" ]; then
+        echo "Release can be published from master only."
+        exit 1;
+    fi;
+
     set -x;
     docker push $DOCKER_IMAGE:$CURRENT_VERSION-amd64;
     docker push $DOCKER_IMAGE:$CURRENT_VERSION-arm64;

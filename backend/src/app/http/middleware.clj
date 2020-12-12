@@ -24,32 +24,35 @@
 (defn- wrap-parse-request-body
   [handler]
   (letfn [(parse-transit [body]
-            (try
-              (let [reader (t/reader body)]
-                (t/read! reader))
-              (catch Exception e
-                (ex/raise :type :parse
-                          :message "Unable to parse transit from request body."
-                          :cause e))))
+            (let [reader (t/reader body)]
+              (t/read! reader)))
           (parse-json [body]
+            (let [reader (io/reader body)]
+              (json/read reader)))
+
+          (parse [type body]
             (try
-              (let [reader (io/reader body)]
-                (json/read reader))
+              (case type
+                :json (parse-json body)
+                :transit (parse-transit body))
               (catch Exception e
-                (ex/raise :type :parse
-                          :message "Unable to parse json from request body."
-                          :cause e))))]
-
+                (let [type (if (:debug cfg/config) :json-verbose :json)
+                      data {:type :parse
+                            :hint "Unable to parse request body"
+                            :message (ex-message e)}]
+                  {:status 400
+                   :body (t/encode-str data {:type type})}))))]
     (fn [{:keys [headers body request-method] :as request}]
-      (handler
-       (cond-> request
-         (and (= "application/transit+json" (get headers "content-type"))
-              (not= request-method :get))
-         (assoc :body-params (parse-transit body))
+      (let [ctype (get headers "content-type")]
+        (handler
+         (case ctype
+           "application/transit+json"
+           (assoc request :body-params (parse :transit body))
 
-         (and (= "application/json" (get headers "content-type"))
-              (not= request-method :get))
-         (assoc :body-params (parse-json body)))))))
+           "application/json"
+           (assoc request :body-params (parse :transit body))
+
+           request))))))
 
 (def parse-request-body
   {:name ::parse-request-body

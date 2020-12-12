@@ -48,6 +48,10 @@
   `(try* (^:once fn* [] ~@exprs) identity))
 
 
+(defn ex-info?
+  [v]
+  #?(:cljs (instance? cljs.core.ExceptionInfo v)
+     :clj (instance? clojure.lang.ExceptionInfo v)))
 
 #?(:clj
    (defn ->map
