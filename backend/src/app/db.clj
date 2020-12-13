@@ -76,23 +76,23 @@
        "SET idle_in_transaction_session_timeout = 30000;"))
 
 (defn- create-datasource-config
-  [opts]
-  (let [dburi    (:uri opts)
-        username (:username opts)
-        password (:password opts)
+  [{:keys [metrics] :as cfg}]
+  (let [dburi    (:uri cfg)
+        username (:username cfg)
+        password (:password cfg)
         config   (HikariConfig.)
-        mtf      (PrometheusMetricsTrackerFactory. (:metrics-registry opts))]
+        mtf      (PrometheusMetricsTrackerFactory. (:registry metrics))]
     (doto config
       (.setJdbcUrl (str "jdbc:" dburi))
-      (.setPoolName (:name opts "default"))
+      (.setPoolName (:name cfg "default"))
       (.setAutoCommit true)
       (.setReadOnly false)
       (.setConnectionTimeout 8000)  ;; 8seg
       (.setValidationTimeout 8000)  ;; 8seg
       (.setIdleTimeout 120000)      ;; 2min
       (.setMaxLifetime 1800000)     ;; 30min
-      (.setMinimumIdle (:min-pool-size opts 0))
-      (.setMaximumPoolSize (:max-pool-size opts 30))
+      (.setMinimumIdle (:min-pool-size cfg 0))
+      (.setMaximumPoolSize (:max-pool-size cfg 30))
       (.setMetricsTrackerFactory mtf)
       (.setConnectionInitSql initsql)
       (.setInitializationFailTimeout -1))
@@ -153,8 +153,8 @@
   (.isClosed ^com.zaxxer.hikari.HikariDataSource pool))
 
 (defn- create-pool
-  [opts]
-  (let [dsc (create-datasource-config opts)]
+  [cfg]
+  (let [dsc (create-datasource-config cfg)]
     (jdbc-dt/read-as-instant)
     (HikariDataSource. dsc)))
 

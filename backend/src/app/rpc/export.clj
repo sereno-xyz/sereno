@@ -7,12 +7,12 @@
 ;;
 ;; Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
 
-(ns app.api.export
+(ns app.rpc.export
   (:require
    [app.common.spec :as us]
    [app.common.uuid :as uuid]
    [app.db :as db]
-   [app.api.monitors :refer [decode-monitor-row
+   [app.rpc.monitors :refer [decode-monitor-row
                              decode-status-row
                              change-monitor-status!]]
    [app.util.time :as dt]
@@ -73,12 +73,12 @@
                 (t/write! writer {:type :monitor-entries-chunk :payload entries})
                 (recur (:created-at (last entries)))))))))))
 
-(s/def :internal.api.request-export/days
+(s/def :internal.rpc.request-export/days
   (s/& ::us/integer #(>= 90 %)))
 
 (s/def ::request-export
   (s/keys :opt-un [::profile-id
-                   :internal.api.request-export/days]))
+                   :internal.rpc.request-export/days]))
 
 (defn- generate-export-body
   [cfg params]

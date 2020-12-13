@@ -7,14 +7,14 @@
 ;;
 ;; Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
 
-(ns app.api.contacts
+(ns app.rpc.contacts
   (:require
    [app.common.exceptions :as ex]
    [app.common.spec :as us]
    [app.common.uuid :as uuid]
    [app.db :as db]
    [app.emails :as emails]
-   [app.api.profile :refer [get-profile]]
+   [app.rpc.profile :refer [get-profile]]
    [app.telegram :as telegram]
    [app.util.time :as dt]
    [app.util.services :as sv]

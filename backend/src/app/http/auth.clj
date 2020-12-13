@@ -7,13 +7,16 @@
 ;;
 ;; Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
 
-(ns app.api.auth
+(ns app.http.auth
   (:require
    [app.common.exceptions :as ex]
+   [clojure.spec.alpha :as s]
+   [app.db :as db]
    [app.session :as session]
    [app.util.time :as dt]
    [clojure.data.json :as json]
    [clojure.tools.logging :as log]
+   [integrant.core :as ig]
    [lambdaisland.uri :as uri]))
 
 (def gauth-uri "https://accounts.google.com/o/oauth2/v2/auth")
@@ -97,26 +100,29 @@
 
 
 (defn gauth-callback-handler
-  [{:keys [pool impl tokens] :as cfg} request]
+  [{:keys [pool rpc tokens] :as cfg} request]
   (let [token  (get-in request [:params :state])
         _      ((:verify tokens) token {:iss :gauth})
         info   (some->> (get-in request [:params :code])
                         (get-access-token cfg)
-                        (get-user-info cfg))]
+                        (get-user-info cfg))
+
+        login-or-register
+        (get-in rpc [:methods :login-or-register])]
 
     (when-not info
       (ex/raise :type :authentication
                 :code :unable-to-authenticate-with-google))
 
-    (let [profile ((:login-or-register impl) {:email (:email info)
-                                              :fullname (:fullname info)
-                                              :external-id (:id info)})
-
+    (let [profile (login-or-register {:email (:email info)
+                                      :fullname (:fullname info)
+                                      :external-id (:id info)})
 
           uagent  (get-in request [:headers "user-agent"])
           claims  {:iss :gauth
                    :exp (dt/plus (dt/now) #app/duration "5m")
                    :profile-id (:id profile)}
+
           token   ((:create tokens) claims)
           uri     (-> (uri/uri (:public-uri cfg))
                       (assoc :path "/#/auth/verify-token")
@@ -128,22 +134,33 @@
        :cookies (session/cookies {:value sid})
        :body ""})))
 
-
 (defn login-handler
-  [{:keys [pool impl] :as cfg} request]
-  (let [data    (:body-params request)
-        uagent  (get-in request [:headers "user-agent"])
-        profile ((:login impl) data)
-        sid     (session/create! pool {:profile-id (:id profile)
-                                       :user-agent uagent})]
+  [{:keys [pool rpc] :as cfg} request]
+  (let [data     (:body-params request)
+        uagent   (get-in request [:headers "user-agent"])
+        login-fn (get-in rpc [:methods :login])
+        profile  (login-fn data)
+        sid      (session/create! pool {:profile-id (:id profile)
+                                        :user-agent uagent})]
     {:status 200
      :cookies (session/cookies {:value sid})
      :body profile}))
 
 (defn logout-handler
-  [{:keys [pool impl] :as cfg} request]
+  [{:keys [pool] :as cfg} request]
   (session/delete! pool request)
   {:status 200
    :cookies (session/cookies {:value "" :max-age -1})
    :body ""})
 
+(s/def ::http-client some?)
+
+(defmethod ig/pre-init-spec ::handlers [_]
+  (s/keys :req-un [::http-client ::db/pool]))
+
+(defmethod ig/init-key ::handlers
+  [_ cfg]
+  {:login (partial login-handler cfg)
+   :logout (partial logout-handler cfg)
+   :gauth (partial gauth-handler cfg)
+   :gauth-callback (partial gauth-callback-handler cfg)})

@@ -7,9 +7,9 @@
 ;;
 ;; Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
 
-(ns app.api.monitors
+(ns app.rpc.monitors
   (:require
-   [app.api.profile :refer [get-profile]]
+   [app.rpc.profile :refer [get-profile]]
    [app.common.data :as d]
    [app.common.exceptions :as ex]
    [app.common.spec :as us]

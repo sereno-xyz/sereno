@@ -58,7 +58,7 @@
     :username (:smtp-username cfg/config)
     :password (:smtp-password cfg/config)}
 
-   :app.metrics/registry
+   :app.metrics/metrics
    {}
 
    :app.migrations/migrations
@@ -68,7 +68,7 @@
    {:uri (:database-uri cfg/config)
     :username (:database-username cfg/config)
     :password (:database-password cfg/config)
-    :metrics-registry (ig/ref :app.metrics/registry)
+    :metrics (ig/ref :app.metrics/metrics)
     :migrations (ig/ref :app.migrations/migrations)
     :name "main"
     :min-pool-size 0
@@ -88,23 +88,27 @@
    {:msgbus (ig/ref :app.msgbus/instance)
     :pool   (ig/ref :app.db/pool)}
 
-   :app.api/impl
+   :app.rpc/rpc
    {:pool        (ig/ref :app.db/pool)
     :tokens      (ig/ref :app.tokens/instance)
-    :public-uri  (ig/ref :app.config/public-uri)
     :http-client (ig/ref :app.http/client)
-    :metrics-registry (ig/ref :app.metrics/registry)
+    :metrics     (ig/ref :app.metrics/metrics)
+
+    :public-uri  (ig/ref :app.config/public-uri)
     :default-profile-type (:default-profile-type cfg/config "default")}
 
-   :app.api/handler
-   {:impl        (ig/ref :app.api/impl)
-    :tokens      (ig/ref :app.tokens/instance)
-    :pool        (ig/ref :app.db/pool)
-    :http-client (ig/ref :app.http/client)
-    :public-uri  (ig/ref :app.config/public-uri)
-    :metrics-registry (ig/ref :app.metrics/registry)
-    :webhooks    (ig/ref :app.webhooks/handlers)
-    :google      (ig/ref :app.config/google)}
+   :app.http.auth/handlers
+   {:http-client (ig/ref :app.http/client)
+    :pool (ig/ref :app.db/pool)
+    :rpc  (ig/ref :app.rpc/rpc)}
+
+   :app.http/router
+   {:rpc      (ig/ref :app.rpc/rpc)
+    :auth     (ig/ref :app.http.auth/handlers)
+    ;; The database connection is used for the session management.
+    :pool     (ig/ref :app.db/pool)
+    :webhooks (ig/ref :app.webhooks/handlers)
+    :metrics  (ig/ref :app.metrics/metrics)}
 
    :app.error-reporter/instance
    {:uri (:error-reporter-webhook-uri cfg/config)
@@ -117,7 +121,7 @@
    :app.http/server
    {:port (:http-server-port cfg/config)
     :ws {"/ws/notifications" (ig/ref :app.ws/notifications-handler)}
-    :handler (ig/ref :app.api/handler)}
+    :router (ig/ref :app.http/router)}
 
    :app.repl/server
    {:name "default"

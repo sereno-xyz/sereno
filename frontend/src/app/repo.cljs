@@ -43,25 +43,25 @@
 
 (defmethod request :login
   [id params opts]
-  (let [uri (str cfg/public-uri "/api/login")]
+  (let [uri (str cfg/public-uri "/auth/login")]
     (->> (http/send! {:method :post :uri uri :body params})
          (rx/mapcat handle-response))))
 
 (defmethod request :logout
   [id params opts]
-  (let [uri (str cfg/public-uri "/api/logout")]
+  (let [uri (str cfg/public-uri "/auth/logout")]
     (->> (http/send! {:method :post :uri uri :body params})
          (rx/mapcat handle-response))))
 
 (defmethod request :gauth
   [id params opts]
-  (let [uri (str cfg/public-uri "/api/oauth/google")]
+  (let [uri (str cfg/public-uri "/auth/google")]
     (->> (http/send! {:method :post :uri uri :body params})
          (rx/mapcat handle-response))))
 
 (defmethod request :request-import
   [id params]
-  (let [uri  (str cfg/public-uri "/api/rpc/" (name id))
+  (let [uri  (str cfg/public-uri "/rpc/" (name id))
         form (js/FormData.)]
     (run! (fn [[key val]]
             (.append form (name key) val))
@@ -71,7 +71,7 @@
 
 (defmethod request :default
   [id params opts]
-  (let [uri (str cfg/public-uri "/api/rpc/" (name id))]
+  (let [uri (str cfg/public-uri "/rpc/" (name id))]
     (if (:query opts)
       (->> (http/send! {:method :get :uri uri :query params})
            (rx/mapcat handle-response))

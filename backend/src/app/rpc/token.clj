@@ -7,12 +7,12 @@
 ;;
 ;; Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
 
-(ns app.api.token
+(ns app.rpc.token
   (:require
    [app.common.exceptions :as ex]
    [app.db :as db]
    [app.util.time :as dt]
-   [app.api.profile :refer [check-profile-existence!]]
+   [app.rpc.profile :refer [check-profile-existence!]]
    [app.util.services :as sv]
    [clojure.spec.alpha :as s]))
 

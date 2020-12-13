@@ -7,7 +7,7 @@
 ;;
 ;; Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
 
-(ns app.api.profile
+(ns app.rpc.profile
   (:require
    [app.common.exceptions :as ex]
    [app.common.spec :as us]

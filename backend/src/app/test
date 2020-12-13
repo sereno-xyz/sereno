@@ -1,0 +1,290 @@
+# HELP rpc_recover_profile_response_millis Service 'recover-profile' response time in milliseconds.
+# TYPE rpc_recover_profile_response_millis summary
+rpc_recover_profile_response_millis{quantile="0.5",} NaN
+rpc_recover_profile_response_millis{quantile="0.9",} NaN
+rpc_recover_profile_response_millis{quantile="0.99",} NaN
+rpc_recover_profile_response_millis_count 0.0
+rpc_recover_profile_response_millis_sum 0.0
+# HELP rpc_delete_monitor_response_millis Service 'delete-monitor' response time in milliseconds.
+# TYPE rpc_delete_monitor_response_millis summary
+rpc_delete_monitor_response_millis{quantile="0.5",} NaN
+rpc_delete_monitor_response_millis{quantile="0.9",} NaN
+rpc_delete_monitor_response_millis{quantile="0.99",} NaN
+rpc_delete_monitor_response_millis_count 0.0
+rpc_delete_monitor_response_millis_sum 0.0
+# HELP rpc_request_email_change_response_millis Service 'request-email-change' response time in milliseconds.
+# TYPE rpc_request_email_change_response_millis summary
+rpc_request_email_change_response_millis{quantile="0.5",} NaN
+rpc_request_email_change_response_millis{quantile="0.9",} NaN
+rpc_request_email_change_response_millis{quantile="0.99",} NaN
+rpc_request_email_change_response_millis_count 0.0
+rpc_request_email_change_response_millis_sum 0.0
+# HELP rpc_register_profile_response_millis Service 'register-profile' response time in milliseconds.
+# TYPE rpc_register_profile_response_millis summary
+rpc_register_profile_response_millis{quantile="0.5",} NaN
+rpc_register_profile_response_millis{quantile="0.9",} NaN
+rpc_register_profile_response_millis{quantile="0.99",} NaN
+rpc_register_profile_response_millis_count 0.0
+rpc_register_profile_response_millis_sum 0.0
+# HELP rpc_update_contact_response_millis Service 'update-contact' response time in milliseconds.
+# TYPE rpc_update_contact_response_millis summary
+rpc_update_contact_response_millis{quantile="0.5",} NaN
+rpc_update_contact_response_millis{quantile="0.9",} NaN
+rpc_update_contact_response_millis{quantile="0.99",} NaN
+rpc_update_contact_response_millis_count 0.0
+rpc_update_contact_response_millis_sum 0.0
+# HELP rpc_create_discord_contact_response_millis Service 'create-discord-contact' response time in milliseconds.
+# TYPE rpc_create_discord_contact_response_millis summary
+rpc_create_discord_contact_response_millis{quantile="0.5",} NaN
+rpc_create_discord_contact_response_millis{quantile="0.9",} NaN
+rpc_create_discord_contact_response_millis{quantile="0.99",} NaN
+rpc_create_discord_contact_response_millis_count 0.0
+rpc_create_discord_contact_response_millis_sum 0.0
+# HELP rpc_create_http_monitor_response_millis Service 'create-http-monitor' response time in milliseconds.
+# TYPE rpc_create_http_monitor_response_millis summary
+rpc_create_http_monitor_response_millis{quantile="0.5",} NaN
+rpc_create_http_monitor_response_millis{quantile="0.9",} NaN
+rpc_create_http_monitor_response_millis{quantile="0.99",} NaN
+rpc_create_http_monitor_response_millis_count 0.0
+rpc_create_http_monitor_response_millis_sum 0.0
+# HELP hikaricp_connection_creation_millis Connection creation (ms)
+# TYPE hikaricp_connection_creation_millis summary
+hikaricp_connection_creation_millis{pool="main",quantile="0.5",} 8.0
+hikaricp_connection_creation_millis{pool="main",quantile="0.95",} 9.0
+hikaricp_connection_creation_millis{pool="main",quantile="0.99",} 9.0
+hikaricp_connection_creation_millis_count{pool="main",} 3.0
+hikaricp_connection_creation_millis_sum{pool="main",} 28.0
+# HELP rpc_create_ssl_monitor_response_millis Service 'create-ssl-monitor' response time in milliseconds.
+# TYPE rpc_create_ssl_monitor_response_millis summary
+rpc_create_ssl_monitor_response_millis{quantile="0.5",} NaN
+rpc_create_ssl_monitor_response_millis{quantile="0.9",} NaN
+rpc_create_ssl_monitor_response_millis{quantile="0.99",} NaN
+rpc_create_ssl_monitor_response_millis_count 0.0
+rpc_create_ssl_monitor_response_millis_sum 0.0
+# HELP rpc_update_ssl_monitor_response_millis Service 'update-ssl-monitor' response time in milliseconds.
+# TYPE rpc_update_ssl_monitor_response_millis summary
+rpc_update_ssl_monitor_response_millis{quantile="0.5",} NaN
+rpc_update_ssl_monitor_response_millis{quantile="0.9",} NaN
+rpc_update_ssl_monitor_response_millis{quantile="0.99",} NaN
+rpc_update_ssl_monitor_response_millis_count 0.0
+rpc_update_ssl_monitor_response_millis_sum 0.0
+# HELP rpc_delete_contact_response_millis Service 'delete-contact' response time in milliseconds.
+# TYPE rpc_delete_contact_response_millis summary
+rpc_delete_contact_response_millis{quantile="0.5",} NaN
+rpc_delete_contact_response_millis{quantile="0.9",} NaN
+rpc_delete_contact_response_millis{quantile="0.99",} NaN
+rpc_delete_contact_response_millis_count 0.0
+rpc_delete_contact_response_millis_sum 0.0
+# HELP rpc_update_profile_password_response_millis Service 'update-profile-password' response time in milliseconds.
+# TYPE rpc_update_profile_password_response_millis summary
+rpc_update_profile_password_response_millis{quantile="0.5",} NaN
+rpc_update_profile_password_response_millis{quantile="0.9",} NaN
+rpc_update_profile_password_response_millis{quantile="0.99",} NaN
+rpc_update_profile_password_response_millis_count 0.0
+rpc_update_profile_password_response_millis_sum 0.0
+# HELP rpc_test_http_monitor_response_millis Service 'test-http-monitor' response time in milliseconds.
+# TYPE rpc_test_http_monitor_response_millis summary
+rpc_test_http_monitor_response_millis{quantile="0.5",} NaN
+rpc_test_http_monitor_response_millis{quantile="0.9",} NaN
+rpc_test_http_monitor_response_millis{quantile="0.99",} NaN
+rpc_test_http_monitor_response_millis_count 0.0
+rpc_test_http_monitor_response_millis_sum 0.0
+# HELP rpc_create_mattermost_contact_response_millis Service 'create-mattermost-contact' response time in milliseconds.
+# TYPE rpc_create_mattermost_contact_response_millis summary
+rpc_create_mattermost_contact_response_millis{quantile="0.5",} NaN
+rpc_create_mattermost_contact_response_millis{quantile="0.9",} NaN
+rpc_create_mattermost_contact_response_millis{quantile="0.99",} NaN
+rpc_create_mattermost_contact_response_millis_count 0.0
+rpc_create_mattermost_contact_response_millis_sum 0.0
+# HELP rpc_login_response_millis Service 'login' response time in milliseconds.
+# TYPE rpc_login_response_millis summary
+rpc_login_response_millis{quantile="0.5",} NaN
+rpc_login_response_millis{quantile="0.9",} NaN
+rpc_login_response_millis{quantile="0.99",} NaN
+rpc_login_response_millis_count 0.0
+rpc_login_response_millis_sum 0.0
+# HELP rpc_retrieve_monitor_status_history_response_millis Service 'retrieve-monitor-status-history' response time in milliseconds.
+# TYPE rpc_retrieve_monitor_status_history_response_millis summary
+rpc_retrieve_monitor_status_history_response_millis{quantile="0.5",} NaN
+rpc_retrieve_monitor_status_history_response_millis{quantile="0.9",} NaN
+rpc_retrieve_monitor_status_history_response_millis{quantile="0.99",} NaN
+rpc_retrieve_monitor_status_history_response_millis_count 0.0
+rpc_retrieve_monitor_status_history_response_millis_sum 0.0
+# HELP rpc_retrieve_monitor_response_millis Service 'retrieve-monitor' response time in milliseconds.
+# TYPE rpc_retrieve_monitor_response_millis summary
+rpc_retrieve_monitor_response_millis{quantile="0.5",} NaN
+rpc_retrieve_monitor_response_millis{quantile="0.9",} NaN
+rpc_retrieve_monitor_response_millis{quantile="0.99",} NaN
+rpc_retrieve_monitor_response_millis_count 0.0
+rpc_retrieve_monitor_response_millis_sum 0.0
+# HELP hikaricp_active_connections Active connections
+# TYPE hikaricp_active_connections gauge
+hikaricp_active_connections{pool="main",} 1.0
+# HELP hikaricp_idle_connections Idle connections
+# TYPE hikaricp_idle_connections gauge
+hikaricp_idle_connections{pool="main",} 2.0
+# HELP hikaricp_pending_threads Pending threads
+# TYPE hikaricp_pending_threads gauge
+hikaricp_pending_threads{pool="main",} 0.0
+# HELP hikaricp_connections The number of current connections
+# TYPE hikaricp_connections gauge
+hikaricp_connections{pool="main",} 3.0
+# HELP hikaricp_max_connections Max connections
+# TYPE hikaricp_max_connections gauge
+hikaricp_max_connections{pool="main",} 10.0
+# HELP hikaricp_min_connections Min connections
+# TYPE hikaricp_min_connections gauge
+hikaricp_min_connections{pool="main",} 0.0
+# HELP hikaricp_connection_acquired_nanos Connection acquired time (ns)
+# TYPE hikaricp_connection_acquired_nanos summary
+hikaricp_connection_acquired_nanos{pool="main",quantile="0.5",} 396828.0
+hikaricp_connection_acquired_nanos{pool="main",quantile="0.95",} 9795081.0
+hikaricp_connection_acquired_nanos{pool="main",quantile="0.99",} 9795081.0
+hikaricp_connection_acquired_nanos_count{pool="main",} 5.0
+hikaricp_connection_acquired_nanos_sum{pool="main",} 2.8870059E7
+# HELP worker_task_checkout_millis Latency measured between scheduld_at and execution time.
+# TYPE worker_task_checkout_millis summary
+worker_task_checkout_millis{quantile="0.5",} NaN
+worker_task_checkout_millis{quantile="0.9",} NaN
+worker_task_checkout_millis{quantile="0.99",} NaN
+worker_task_checkout_millis_count 0.0
+worker_task_checkout_millis_sum 0.0
+# HELP rpc_delete_profile_response_millis Service 'delete-profile' response time in milliseconds.
+# TYPE rpc_delete_profile_response_millis summary
+rpc_delete_profile_response_millis{quantile="0.5",} NaN
+rpc_delete_profile_response_millis{quantile="0.9",} NaN
+rpc_delete_profile_response_millis{quantile="0.99",} NaN
+rpc_delete_profile_response_millis_count 0.0
+rpc_delete_profile_response_millis_sum 0.0
+# HELP rpc_retrieve_monitor_log_response_millis Service 'retrieve-monitor-log' response time in milliseconds.
+# TYPE rpc_retrieve_monitor_log_response_millis summary
+rpc_retrieve_monitor_log_response_millis{quantile="0.5",} NaN
+rpc_retrieve_monitor_log_response_millis{quantile="0.9",} NaN
+rpc_retrieve_monitor_log_response_millis{quantile="0.99",} NaN
+rpc_retrieve_monitor_log_response_millis_count 0.0
+rpc_retrieve_monitor_log_response_millis_sum 0.0
+# HELP rpc_pause_monitor_response_millis Service 'pause-monitor' response time in milliseconds.
+# TYPE rpc_pause_monitor_response_millis summary
+rpc_pause_monitor_response_millis{quantile="0.5",} NaN
+rpc_pause_monitor_response_millis{quantile="0.9",} NaN
+rpc_pause_monitor_response_millis{quantile="0.99",} NaN
+rpc_pause_monitor_response_millis_count 0.0
+rpc_pause_monitor_response_millis_sum 0.0
+# HELP rpc_request_profile_recovery_response_millis Service 'request-profile-recovery' response time in milliseconds.
+# TYPE rpc_request_profile_recovery_response_millis summary
+rpc_request_profile_recovery_response_millis{quantile="0.5",} NaN
+rpc_request_profile_recovery_response_millis{quantile="0.9",} NaN
+rpc_request_profile_recovery_response_millis{quantile="0.99",} NaN
+rpc_request_profile_recovery_response_millis_count 0.0
+rpc_request_profile_recovery_response_millis_sum 0.0
+# HELP rpc_update_http_monitor_response_millis Service 'update-http-monitor' response time in milliseconds.
+# TYPE rpc_update_http_monitor_response_millis summary
+rpc_update_http_monitor_response_millis{quantile="0.5",} NaN
+rpc_update_http_monitor_response_millis{quantile="0.9",} NaN
+rpc_update_http_monitor_response_millis{quantile="0.99",} NaN
+rpc_update_http_monitor_response_millis_count 0.0
+rpc_update_http_monitor_response_millis_sum 0.0
+# HELP rpc_verify_token_response_millis Service 'verify-token' response time in milliseconds.
+# TYPE rpc_verify_token_response_millis summary
+rpc_verify_token_response_millis{quantile="0.5",} NaN
+rpc_verify_token_response_millis{quantile="0.9",} NaN
+rpc_verify_token_response_millis{quantile="0.99",} NaN
+rpc_verify_token_response_millis_count 0.0
+rpc_verify_token_response_millis_sum 0.0
+# HELP rpc_login_or_register_response_millis Service 'login-or-register' response time in milliseconds.
+# TYPE rpc_login_or_register_response_millis summary
+rpc_login_or_register_response_millis{quantile="0.5",} NaN
+rpc_login_or_register_response_millis{quantile="0.9",} NaN
+rpc_login_or_register_response_millis{quantile="0.99",} NaN
+rpc_login_or_register_response_millis_count 0.0
+rpc_login_or_register_response_millis_sum 0.0
+# HELP rpc_create_email_contact_response_millis Service 'create-email-contact' response time in milliseconds.
+# TYPE rpc_create_email_contact_response_millis summary
+rpc_create_email_contact_response_millis{quantile="0.5",} NaN
+rpc_create_email_contact_response_millis{quantile="0.9",} NaN
+rpc_create_email_contact_response_millis{quantile="0.99",} NaN
+rpc_create_email_contact_response_millis_count 0.0
+rpc_create_email_contact_response_millis_sum 0.0
+# HELP rpc_create_telegram_contact_response_millis Service 'create-telegram-contact' response time in milliseconds.
+# TYPE rpc_create_telegram_contact_response_millis summary
+rpc_create_telegram_contact_response_millis{quantile="0.5",} NaN
+rpc_create_telegram_contact_response_millis{quantile="0.9",} NaN
+rpc_create_telegram_contact_response_millis{quantile="0.99",} NaN
+rpc_create_telegram_contact_response_millis_count 0.0
+rpc_create_telegram_contact_response_millis_sum 0.0
+# HELP rpc_resume_monitor_response_millis Service 'resume-monitor' response time in milliseconds.
+# TYPE rpc_resume_monitor_response_millis summary
+rpc_resume_monitor_response_millis{quantile="0.5",} NaN
+rpc_resume_monitor_response_millis{quantile="0.9",} NaN
+rpc_resume_monitor_response_millis{quantile="0.99",} NaN
+rpc_resume_monitor_response_millis_count 0.0
+rpc_resume_monitor_response_millis_sum 0.0
+# HELP rpc_request_export_response_millis Service 'request-export' response time in milliseconds.
+# TYPE rpc_request_export_response_millis summary
+rpc_request_export_response_millis{quantile="0.5",} NaN
+rpc_request_export_response_millis{quantile="0.9",} NaN
+rpc_request_export_response_millis{quantile="0.99",} NaN
+rpc_request_export_response_millis_count 0.0
+rpc_request_export_response_millis_sum 0.0
+# HELP rpc_retrieve_profile_response_millis Service 'retrieve-profile' response time in milliseconds.
+# TYPE rpc_retrieve_profile_response_millis summary
+rpc_retrieve_profile_response_millis{quantile="0.5",} NaN
+rpc_retrieve_profile_response_millis{quantile="0.9",} NaN
+rpc_retrieve_profile_response_millis{quantile="0.99",} NaN
+rpc_retrieve_profile_response_millis_count 0.0
+rpc_retrieve_profile_response_millis_sum 0.0
+# HELP rpc_request_import_response_millis Service 'request-import' response time in milliseconds.
+# TYPE rpc_request_import_response_millis summary
+rpc_request_import_response_millis{quantile="0.5",} NaN
+rpc_request_import_response_millis{quantile="0.9",} NaN
+rpc_request_import_response_millis{quantile="0.99",} NaN
+rpc_request_import_response_millis_count 0.0
+rpc_request_import_response_millis_sum 0.0
+# HELP hikaricp_connection_usage_millis Connection usage (ms)
+# TYPE hikaricp_connection_usage_millis summary
+hikaricp_connection_usage_millis{pool="main",quantile="0.5",} 3.0
+hikaricp_connection_usage_millis{pool="main",quantile="0.95",} 5.0
+hikaricp_connection_usage_millis{pool="main",quantile="0.99",} 5.0
+hikaricp_connection_usage_millis_count{pool="main",} 4.0
+hikaricp_connection_usage_millis_sum{pool="main",} 27.0
+# HELP hikaricp_connection_timeout_total Connection timeout total count
+# TYPE hikaricp_connection_timeout_total counter
+hikaricp_connection_timeout_total{pool="main",} 0.0
+# HELP rpc_retrieve_all_tags_response_millis Service 'retrieve-all-tags' response time in milliseconds.
+# TYPE rpc_retrieve_all_tags_response_millis summary
+rpc_retrieve_all_tags_response_millis{quantile="0.5",} NaN
+rpc_retrieve_all_tags_response_millis{quantile="0.9",} NaN
+rpc_retrieve_all_tags_response_millis{quantile="0.99",} NaN
+rpc_retrieve_all_tags_response_millis_count 0.0
+rpc_retrieve_all_tags_response_millis_sum 0.0
+# HELP database_query_counter An absolute counter of database queries.
+# TYPE database_query_counter counter
+database_query_counter 30.0
+# HELP rpc_update_profile_response_millis Service 'update-profile' response time in milliseconds.
+# TYPE rpc_update_profile_response_millis summary
+rpc_update_profile_response_millis{quantile="0.5",} NaN
+rpc_update_profile_response_millis{quantile="0.9",} NaN
+rpc_update_profile_response_millis{quantile="0.99",} NaN
+rpc_update_profile_response_millis_count 0.0
+rpc_update_profile_response_millis_sum 0.0
+# HELP rpc_retrieve_monitors_response_millis Service 'retrieve-monitors' response time in milliseconds.
+# TYPE rpc_retrieve_monitors_response_millis summary
+rpc_retrieve_monitors_response_millis{quantile="0.5",} NaN
+rpc_retrieve_monitors_response_millis{quantile="0.9",} NaN
+rpc_retrieve_monitors_response_millis{quantile="0.99",} NaN
+rpc_retrieve_monitors_response_millis_count 0.0
+rpc_retrieve_monitors_response_millis_sum 0.0
+# HELP rpc_retrieve_monitor_summary_response_millis Service 'retrieve-monitor-summary' response time in milliseconds.
+# TYPE rpc_retrieve_monitor_summary_response_millis summary
+rpc_retrieve_monitor_summary_response_millis{quantile="0.5",} NaN
+rpc_retrieve_monitor_summary_response_millis{quantile="0.9",} NaN
+rpc_retrieve_monitor_summary_response_millis{quantile="0.99",} NaN
+rpc_retrieve_monitor_summary_response_millis_count 0.0
+rpc_retrieve_monitor_summary_response_millis_sum 0.0
+# HELP rpc_retrieve_contacts_response_millis Service 'retrieve-contacts' response time in milliseconds.
+# TYPE rpc_retrieve_contacts_response_millis summary
+rpc_retrieve_contacts_response_millis{quantile="0.5",} NaN
+rpc_retrieve_contacts_response_millis{quantile="0.9",} NaN
+rpc_retrieve_contacts_response_millis{quantile="0.99",} NaN
+rpc_retrieve_contacts_response_millis_count 0.0
+rpc_retrieve_contacts_response_millis_sum 0.0

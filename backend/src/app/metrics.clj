@@ -62,22 +62,23 @@
                    (origf tasks item)))
                {::original origf})))))
 
-(defmethod ig/init-key ::registry
+
+(defn handler
+  [registry request]
+  (let [samples  (.metricFamilySamples ^CollectorRegistry registry)
+        writer   (StringWriter.)]
+    (TextFormat/write004 writer samples)
+    {:headers {"content-type" TextFormat/CONTENT_TYPE_004}
+     :body (.toString writer)}))
+
+(defmethod ig/init-key ::metrics
   [_ opts]
   (log/infof "Initializing prometheus registry and instrumentation.")
   (let [registry (create-registry)]
     (instrument-workers! registry)
     (instrument-jdbc! registry)
-    registry))
-
-(defn handler
-  [cfg request]
-  (let [registry (:metrics-registry cfg)
-        samples  (.metricFamilySamples ^CollectorRegistry registry)
-        writer   (StringWriter.)]
-    (TextFormat/write004 writer samples)
-    {:headers {"content-type" TextFormat/CONTENT_TYPE_004}
-     :body (.toString writer)}))
+    {:handler (partial handler registry)
+     :registry registry}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Implementation

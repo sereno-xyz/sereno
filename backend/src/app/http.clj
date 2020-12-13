@@ -9,12 +9,18 @@
 
 (ns app.http
   (:require
+   [app.http.auth :as auth]
+   [app.http.errors :as errors]
+   [app.http.middleware :as middleware]
+   [app.http.session :as session]
+   [app.util.async :as aa]
    [clojure.spec.alpha :as s]
    [clojure.tools.logging :as log]
-   [app.util.async :as aa]
    [integrant.core :as ig]
+   [reitit.ring :as rr]
+   [ring.adapter.jetty9 :as jetty]
    [ring.core.protocols :as rp]
-   [ring.adapter.jetty9 :as jetty])
+   [ring.util.response :refer [resource-response]])
   (:import
    java.util.concurrent.TimeUnit
    org.eclipse.jetty.client.HttpClient
@@ -27,7 +33,7 @@
    org.eclipse.jetty.util.ssl.SslContextFactory$Client))
 
 (defmethod ig/init-key ::server
-  [_ {:keys [handler ws port] :as opts}]
+  [_ {:keys [router ws port] :as opts}]
   (log/info "Starting http server.")
   (let [options {:port (or port 4460)
                  :h2c? true
@@ -35,7 +41,7 @@
                  :allow-null-path-info true
                  :websockets ws}
 
-        server  (jetty/run-jetty handler options)
+        server  (jetty/run-jetty router options)
         handler (doto (ErrorHandler.)
                   (.setShowStacks true)
                   (.setServer server))]
@@ -91,4 +97,58 @@
   [_ instance]
   (let [mdata (meta instance)]
     (.stop ^HttpClient (::instance mdata))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; --- Http Main Handler (Router)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(declare router)
+
+(s/def ::auth map?)
+(s/def ::rpc map?)
+
+(defmethod ig/pre-init-spec ::router [_]
+  (s/keys :req-un [::rpc ::auth]))
+
+(defmethod ig/init-key ::router
+  [_ cfg]
+  (rr/ring-handler
+   (router cfg)
+   (rr/routes
+    (rr/create-resource-handler {:path "/"})
+    (rr/create-default-handler))
+   {:middleware [[middleware/format-response-body]
+                 [middleware/errors errors/handle]
+                 [middleware/parse-request-body]
+                 [middleware/params]
+                 [middleware/multipart-params]
+                 [middleware/keyword-params]
+                 [middleware/cookies]
+                 [session/middleware cfg]]}))
+
+(defn- index-handler
+  [request]
+  (resource-response "index.html" {:root "public"}))
+
+
+(defn- router
+  [{:keys [auth rpc webhooks metrics] :as cfg}]
+  (rr/router
+   [["/metrics" {:get (:handler metrics)}]
+    ["/webhook"
+     ["/awssns" {:post (:awssns webhooks)}]
+     ["/telegram" {:post (:telegram webhooks)}]]
+
+    ["/auth"
+     ["/login" {:post (:login auth)}]
+     ["/logout" {:post (:logout auth)}]
+     ["/google" {:post (:gauth auth)}]
+     ["/google/callback" {:get (:gauth-callback auth)}]]
+
+    ["/rpc/:cmd" {:get (:handler rpc)
+                  :post (:handler rpc)}]
+
+    ["/" {:get index-handler}]]))
+
 
