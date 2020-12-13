@@ -26,7 +26,7 @@
    [promesa.exec :as px]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Email Error Reporting
+;; Error Reporting
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (declare send-notification!)
@@ -60,30 +60,27 @@
   (alter-var-root #'queue-fn (constantly identity))
   (a/close! out))
 
-;; (defn- exception->string
-;;   [^Throwable err]
-;;   (with-out-str
-;;     (.printStackTrace err (java.io.PrintWriter. *out*))))
-
 (defn send-notification!
   [cfg report]
   (try
-    (let [send! (:http-client cfg)
-          uri   (:uri cfg)
+    (let [send!  (:http-client cfg)
+          uri    (:uri cfg)
 
-          text  (str "@channel Unhandled exception."
-                     "\n```\n"
-                     report
-                     "\n```")
 
-          rsp   (send! {:uri uri
-                        :method :post
-                        :headers {"content-type" "application/json"}
-                        :body (json/write-str {:text text})})]
+          prefix (str/<< "Unhandled exception (@channel):\n"
+                         "- host: `~(:host cfg/config)`\n"
+                         "- version: `~(:full cfg/config)`")
+          text   (str prefix "\n```" report "\n```")
+
+          rsp    (send! {:uri uri
+                         :method :post
+                         :headers {"content-type" "application/json"}
+                         :body (json/write-str {:text text})})]
 
       (when (not= (:status rsp) 200)
         (log/warnf "Error reporting webhook replying with unexpected status: %s\n%s"
                    (:status rsp)
                    (pr-str rsp))))
+
     (catch Exception e
       (log/warnf e "Unexpected exception on error reporter."))))
