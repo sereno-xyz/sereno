@@ -83,8 +83,9 @@ function build-backend {
 }
 
 function build-bundle {
-    # build "frontend";
-    # build "backend";
+    build "frontend";
+    build "backend";
+
     set -x
 
     rm -rf ./bundle;

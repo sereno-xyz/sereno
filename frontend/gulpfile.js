@@ -2,7 +2,6 @@ const fs = require("fs");
 const path = require("path");
 const l = require("lodash");
 const gulp = require("gulp");
-const gzip = require("gulp-gzip");
 const mustache = require("gulp-mustache");
 const rename = require("gulp-rename");
 const svgSprite = require("gulp-svg-sprite");
@@ -203,11 +202,5 @@ gulp.task("dist:clean", function(next) {
 
 gulp.task("dist:copy", function() {
   return gulp.src(paths.output + "**/*")
-    .pipe(gulp.dest(paths.dist));
-});
-
-gulp.task("dist:gzip", function() {
-  return gulp.src(`${paths.dist}**/!(*.gz|*.br|*.jpg|*.png)`)
-    .pipe(gzip({gzipOptions: {level: 9}}))
     .pipe(gulp.dest(paths.dist));
 });
