@@ -22,56 +22,58 @@
    [environ.core :refer [env]]
    [integrant.core :as ig]))
 
-(s/def ::database-uri ::us/string)
 (s/def ::database-password (s/nilable ::us/string))
+(s/def ::database-uri ::us/string)
 (s/def ::database-username (s/nilable ::us/string))
+(s/def ::debug ::us/boolean)
 (s/def ::default-profile-type ::us/string)
 (s/def ::error-reporter-webhook-uri ::us/string)
 (s/def ::google-client-id ::us/string)
 (s/def ::google-client-secret ::us/string)
+(s/def ::host ::us/string)
 (s/def ::http-server-port ::us/integer)
+(s/def ::password-hashing-permits ::us/integer)
 (s/def ::public-uri ::us/string)
 (s/def ::secret-key ::us/string)
-(s/def ::smtp-enabled ::us/boolean)
 (s/def ::smtp-default-from ::us/email)
 (s/def ::smtp-default-reply-to ::us/email)
+(s/def ::smtp-enabled ::us/boolean)
 (s/def ::smtp-host ::us/string)
 (s/def ::smtp-password (s/nilable ::us/string))
-(s/def ::smtp-username (s/nilable ::us/string))
 (s/def ::smtp-port ::us/integer)
 (s/def ::smtp-ssl ::us/boolean)
 (s/def ::smtp-tls ::us/boolean)
-(s/def ::telegram-token ::us/string)
+(s/def ::smtp-username (s/nilable ::us/string))
 (s/def ::telegram-id ::us/integer)
-(s/def ::debug ::us/boolean)
-(s/def ::host ::us/string)
+(s/def ::telegram-token ::us/string)
 
 (s/def ::config
-  (s/keys :opt-un [::http-server-port
-                   ::database-username
-                   ::database-password
+  (s/keys :opt-un [::database-password
                    ::database-uri
-                   ::host
+                   ::database-username
                    ::debug
-                   ::secret-key
                    ::default-profile-type
                    ::error-reporter-webhook-uri
+                   ::google-client-id
+                   ::google-client-secret
+                   ::host
+                   ::http-server-port
+                   ::password-hashing-permits
+                   ::public-uri
+                   ::secret-key
                    ::sendmail-backend
-                   ::smtp-default-reply-to
                    ::smtp-default-from
-                   ::smtp-host
-                   ::smtp-port
+                   ::smtp-default-reply-to
                    ::smtp-from
-                   ::smtp-username
+                   ::smtp-host
                    ::smtp-password
+                   ::smtp-port
                    ::smtp-ssl
                    ::smtp-tls
-                   ::telegram-username
+                   ::smtp-username
                    ::telegram-id
                    ::telegram-token
-                   ::public-uri
-                   ::google-client-secret
-                   ::google-client-id]))
+                   ::telegram-username]))
 
 (defn- env->config
   [env]
@@ -93,6 +95,7 @@
    :smtp-default-reply-to "no-reply@example.com"
    :smtp-default-from "no-reply@example.com"
    :public-uri "http://localhost:4449"
+   :password-hashing-permits 3
    :database-uri "postgresql://postgres:5432/sereno"
    :database-username "sereno"
    :database-password "sereno"

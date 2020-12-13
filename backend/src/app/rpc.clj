@@ -50,7 +50,9 @@
                 :registry mreg
                 :type :summary
                 :help (str/format "Service '%s' response time in milliseconds." (::sv/name mdata))})
+
         f     (mtx/wrap-summary f mobj)
+
         spec  (or (::sv/spec mdata) (s/spec any?))]
 
     (log/debugf "Registering '%s' command to rpc service." (::sv/name mdata))
