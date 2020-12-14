@@ -53,12 +53,10 @@
            (if (:id contact)
              (st/emit! (em/show
                         {:content "Contact updated."
-                         :type :info
-                         :timeout 3000}))
+                         :type :info}))
              (st/emit! (em/show
                         {:content "Contact created succesfuly; a verification email sent."
-                         :type :success
-                         :timeout 5000})))))
+                         :type :success})))))
 
         on-error
         (mf/use-callback

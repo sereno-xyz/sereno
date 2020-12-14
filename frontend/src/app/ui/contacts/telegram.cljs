@@ -53,8 +53,7 @@
            (st/emit!
             (modal/hide)
             (em/show {:content "Contact created succesfully!"
-                      :type :success
-                      :timeout 5000})
+                      :type :success})
             (modal/show {:type :telegram-contact
                          :id (:id contact)}))))
 
@@ -65,8 +64,7 @@
            (st/emit!
             (modal/hide)
             (em/show {:content "Contact updated."
-                      :type :info
-                      :timeout 3000}))))
+                      :type :info}))))
 
         on-error
         (mf/use-callback
