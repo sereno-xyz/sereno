@@ -187,6 +187,57 @@
       nil)))
 
 
+;; --- Mutation: Create health check monitor
+
+(s/def ::grace-time ::us/integer)
+
+(s/def ::create-healthcheck-monitor
+  (s/keys :req-un [::name ::profile-id ::contacts ::cadence ::grace-time]
+          :opt-un [::tags]))
+
+(sv/defmethod ::create-healthcheck-monitor
+  [{:keys [pool]} {:keys [name contacts tags profile-id cadence grace-time]}]
+  (db/with-atomic [conn pool]
+    (let [id      (uuid/next)
+          profile (get-profile conn profile-id)
+          now-t   (dt/now)
+          params  {:schedule :simple
+                   :grace-time grace-time}]
+
+      (validate-monitor-limits! conn profile)
+      (validate-cadence-limits! profile cadence)
+
+      (db/insert! conn :monitor
+                  {:id id
+                   :owner-id profile-id
+                   :name name
+                   :cadence cadence
+                   :cron-expr "" ; Explicitly empty
+                   :created-at now-t
+                   :status "started"
+                   :type "healthcheck"
+                   :params (db/tjson params)
+                   :tags (into-array String tags)})
+
+      (db/insert! conn :monitor-status
+                  {:monitor-id id
+                   :status "created"
+                   :created-at now-t
+                   :finished-at now-t})
+
+      (db/insert! conn :monitor-status
+                  {:monitor-id id
+                   :status "started"
+                   :created-at now-t})
+
+      (doseq [cid contacts]
+        (db/insert! conn :monitor-contact-rel
+                    {:monitor-id id
+                     :contact-id cid}))
+      nil)))
+
+
+
 ;; --- Mutation: Update Http Monitor
 
 (s/def ::update-http-monitor
@@ -203,7 +254,7 @@
           cron    (parse-and-validate-cadence! cadence)
           offset  (dt/get-cron-offset cron (:created-at monitor))]
 
-      (validate-cadence-limits! profile-id cadence)
+      (validate-cadence-limits! profile cadence)
 
       (when-not monitor
         (ex/raise :type :not-found
@@ -271,6 +322,49 @@
                    :owner-id profile-id})
 
       (db/delete! conn :monitor-contact-rel {:monitor-id id})
+      (doseq [cid contacts]
+        (db/insert! conn :monitor-contact-rel
+                    {:monitor-id id
+                     :contact-id cid}))
+
+      nil)))
+
+
+;; --- Mutation: Update Health Check monitor
+
+(s/def ::update-healthcheck-monitor
+  (s/keys :req-un [::id ::name ::profile-id ::contacts ::cadence ::grace-time]
+          :opt-un [::tags]))
+
+(sv/defmethod ::update-healthcheck-mnitor
+  [{:keys [pool]} {:keys [id name profile-id cadence grace-time contacts tags]}]
+  (db/with-atomic [conn pool]
+    (let [params  {:schedule :simple
+                   :grace-time grace-time}
+          monitor (db/get-by-params conn :monitor
+                                    {:id id :owner-id profile-id}
+                                    {:for-update true})]
+
+      (validate-cadence-limits! profile cadence)
+
+      (when-not monitor
+        (ex/raise :type :not-found
+                  :code :object-does-not-found))
+
+      (when (not= "healthcheck" (:type monitor))
+        (ex/raise :type :validation
+                  :code :wront-monitor-type))
+
+      (db/update! conn :monitor
+                  {:name name
+                   :cadence cadence
+                   :params (db/tjson params)
+                   :tags (into-array String tags)}
+                  {:id id
+                   :owner-id profile-id})
+
+      (db/delete! conn :monitor-contact-rel {:monitor-id id})
+
       (doseq [cid contacts]
         (db/insert! conn :monitor-contact-rel
                     {:monitor-id id

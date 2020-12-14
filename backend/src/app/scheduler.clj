@@ -31,20 +31,30 @@
         offset (dt/get-cron-offset cron (:created-at item))]
     (dt/get-next-inst cron offset)))
 
+
+;; NOTE: maybe implement as multimethod?
+
 (defn schedule-item
-  [{:keys [conn]} item]
-  (let [ninst (get-next-inst item)]
-    (tasks/submit! conn {:name "monitor"
-                         :props {:id (:id item)}
-                         :max-retries 2
-                         :delay 0})
-    (db/update! conn :monitor-schedule
-                {:modified-at (dt/now)
-                 :scheduled-at ninst}
-                {:monitor-id (:id item)})))
+  "A function responsible to send the monitor task to the worker and add
+  reschedule a next execution time for the monitor."
+  [{:keys [conn]} {:keys [id type] :as item}]
+  (tasks/submit! conn {:name "monitor"
+                       :props {:id id}
+                       :max-retries 2
+                       :delay 0})
+
+  ;; Scheduling next task is handled by other subsystem for health
+  ;; check monitors.
+  (when (not= "healthcheck" type)
+    (let [ninst (get-next-inst item)]
+      (db/update! conn :monitor-schedule
+                  {:modified-at (dt/now)
+                   :scheduled-at ninst}
+                  {:monitor-id id}))))
+
 
 (def sql:retrieve-scheduled-monitors
-  "select m.id, m.created_at, m.status, m.cron_expr
+  "select m.id, m.type, m.created_at, m.status, m.cron_expr
      from monitor_schedule as ms
      join monitor as m on (m.id = ms.monitor_id)
     where ms.scheduled_at <= now()
