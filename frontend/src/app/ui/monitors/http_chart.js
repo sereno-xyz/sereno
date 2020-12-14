@@ -5,6 +5,10 @@ export function clear(node) {
   d3.select(node).selectAll("svg").remove();
 }
 
+function truncateToDay(dtime) {
+  return dt.DateTime.utc(dtime.year, dtime.month, dtime.day);
+}
+
 export function render(node, params) {
   const width = params["width"];
   const height = params["height"];
@@ -24,8 +28,10 @@ export function render(node, params) {
   const bottomMargin = 0;
 
   const oneDay = dt.Duration.fromObject({days: 1});
-  const endDate = dt.DateTime.utc().plus(dt.Duration.fromObject({hours: 12}));
+  const endDate = truncateToDay(dt.DateTime.utc()); //.plus(dt.Duration.fromObject({hours: 12}));
   const startDate = endDate.minus(dt.Duration.fromObject({days: 90}));
+  // console.log(endDate.toString())
+  // console.log(startDate.toString())
 
   const x = (d3.scaleUtc()
              .domain([startDate, endDate])
@@ -35,51 +41,24 @@ export function render(node, params) {
              .domain([d3.max([300, d3.max(data, d => d["avg"])]), 0])
              .rangeRound([0, height-bottomMargin]));
 
-  const totalBars = 90;
-  let ghostData = [];
-  let lastDateTime = dt.DateTime.utc();
+  const ghostData = (() => {
+    const totalBars = 90;
+    let data = [];
+    let lastDateTime = endDate;
 
-  if (data.length > 0) {
-    lastDateTime = data[0].ts.toUTC();
-  }
-
-  if (data.length < totalBars) {
-    const missing = totalBars -  data.length;
-    let prefixData = [];
-
-    for (let i=0; i<missing; i++) {
+    for (let i=0; i<totalBars; i++) {
       let newTs = lastDateTime.minus(oneDay);
       lastDateTime = newTs;
-      prefixData.push({ts: newTs});
+      data.push({ts: newTs});
     }
-
-    prefixData.reverse();
-    ghostData = prefixData;
-  }
-
-  svg.append("g")
-    .attr("fill", "var(--color-primary-light)")
-    .selectAll("rect")
-    .data(data)
-    .join("rect")
-    .attr("data-index", (d, index) => index)
-    .attr("x", (d, index) => {
-      // console.log(d["ts"].toUTC().toString());
-      return x(d["ts"].toUTC());
-    })
-    .attr("y", (d) => {
-      return y(d["avg"]);
-    })
-    .attr("width", (d) => {
-      return barWidth;
-    })
-    .attr("height", (d) => {
-      return y(0) - y(d["avg"]);
-    });
+    data.reverse();
+    return data;
+  })();
 
   svg.append("g")
     .attr("fill", "var(--color-gray-20)")
-    .attr("opacity", "0.1")
+    .attr("opacity", "0.15")
+    .attr("style", "pointer-events:none")
     .selectAll("rect")
     .data(ghostData)
     .join("rect")
@@ -97,12 +76,30 @@ export function render(node, params) {
     });
 
   svg.append("g")
-    .attr("fill", "var(--color-gray-20)")
-    .attr("opacity", "0.1")
+    .attr("fill", "var(--color-primary-light)")
+    .selectAll("rect")
+    .data(data)
+    .join("rect")
+    .attr("data-index", (d, index) => index)
+    .attr("x", (d, index) => {
+      return x(d["ts"].toUTC());
+    })
+    .attr("y", (d) => {
+      return y(d["avg"]);
+    })
+    .attr("width", (d) => {
+      return barWidth;
+    })
+    .attr("height", (d) => {
+      return y(0) - y(d["avg"]);
+    });
+
+  svg.append("g")
     .style("cursor", "pointer")
     .selectAll("rect")
     .data(data)
     .join("rect")
+    .attr("opacity", "0")
     .attr("data-index", (d, index) => index)
     .attr("x", (d, index) => {
       return x(d["ts"]);
@@ -118,17 +115,24 @@ export function render(node, params) {
     })
     .on("mouseover", function(d) {
       const target = d3.select(this);
-      target.attr("fill", "var(--color-gray-50)");
+      console.log("mouseover", target);
+
+      target
+        .attr("fill", "var(--color-gray-50)")
+        .attr("opacity", "0.2");
 
       const index = parseInt(target.attr("data-index"), 10);
       onMouseOver(index);
     })
     .on("mouseout", function() {
       const target = d3.select(this);
-      target.attr("fill", "var(--color-gray-20)");
+      target
+        .attr("opacity", "0");
+
 
       onMouseOut();
     });
+
 
   return svg.node();
 }
