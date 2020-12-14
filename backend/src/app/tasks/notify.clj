@@ -18,6 +18,7 @@
    [app.emails :as emails]
    [app.util.time :as dt]
    [cuerdas.core :as str]
+   [clojure.string]
    [clojure.data.json :as json]
    [clojure.spec.alpha :as s]
    [clojure.tools.logging :as log]
@@ -299,6 +300,8 @@
 ;; Telegram Notification
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(declare escape-html)
+
 (s/def :internal.contacts.telegram/subscription-id ::us/uuid)
 (s/def :internal.contacts.telegram/chat-id ::us/integer)
 (s/def :internal.contacts.telegram/id ::us/uuid)
@@ -323,11 +326,11 @@
   (let [cause (:cause result)
         content
         (if (= "up" (:status result))
-          (str/fmt "<b>%s</b> monitor is not <u><b>UP</b></u>" (:name monitor))
+          (str/fmt "<b>%s</b> monitor is <u><b>UP</b></u>" (escape-html (:name monitor)))
           (str
-           (str/fmt "<b>%s</b> monitor is not <u><b>UP</b></u><br/>" (:name monitor))
-           (str/fmt "<b>Cause code:</b> <code>%s</code><br/>" (:code cause))
-           (str/fmt "<b>Cause hint:</b> <code>%s</code><br/>" (:hint cause))))]
+           (str/fmt "<b>%s</b> monitor is <u><b>DOWN</b></u>\n" (escape-html (:name monitor)))
+           (str/fmt "<b>Cause code:</b> <code>%s</code>\n" (:code cause))
+           (str/fmt "<b>Cause hint:</b> <code>%s</code>\n" (:hint cause))))]
     (send-to-teleram! cfg content)))
 
 (defmethod notify! ["telegram" "ssl"]
@@ -336,15 +339,20 @@
         content
         (cond
           (= (:status result) "warn")
-          (str/format "<b>%s</b> is near to expiration." (:name monitor))
+          (str/format "<b>%s</b> is near to expiration." (escape-html (:name monitor)))
 
           (= (:status result) "down")
           (str
-           (str/fmt "<b>%s</b> monitor is now expired or has invalid ssl certificate.<br>" (:name monitor))
-           (str/fmt "<b>Cause code:</b> <code>%s</code><br/>" (:code cause))
-           (str/fmt "<b>Cause hint:</b> <code>%s</code><br/>" (:hint cause)))
+           (str/fmt "<b>%s</b> monitor is now expired or has invalid ssl certificate.\n" (escape-html (:name monitor)))
+           (str/fmt "<b>Cause code:</b> <code>%s</code>\n" (:code cause))
+           (str/fmt "<b>Cause hint:</b> <code>%s</code>\n" (:hint cause)))
 
           :else
           (str/format "<b>%s</b> is live." (:name monitor)))]
 
     (send-to-teleram! cfg content)))
+
+
+(defn escape-html
+  [s]
+  (clojure.string/escape s {\< "&lt;", \> "&gt;", \& "&amp;"}))
