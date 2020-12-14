@@ -197,9 +197,9 @@
   (let [cause (:cause result)
         content
         (if (= "up" (:status result))
-          (str/fmt "@channel **%s** monitor is now **UP**" (:name monitor))
+          (str/fmt "@channel\nMonitor **%s** is now **UP**" (:name monitor))
           (str
-           (str/fmt "@channel **%s** monitor is now **DOWN**\n" (:name monitor))
+           (str/fmt "@channel\nMonitor **%s** is now **DOWN**\n" (:name monitor))
            (str/fmt "**Cause code:** %s\n" (name (:code cause)))
            (str/fmt "**Cause hint:** %s\n" (:hint cause))))]
 
@@ -211,10 +211,10 @@
         content
         (cond
           (= (:status result) "warn")
-          (str/format "@channel **%s** is near to expiration." (:name monitor))
+          (str/format "@channel\nMonitor **%s** is near to expiration." (:name monitor))
 
           (= (:status result) "down")
-          (str (str/fmt "@channel **%s** is now expired or has invalid ssl certificate.\n" (:name monitor))
+          (str (str/fmt "@channel\nMonitor **%s** is now expired or has invalid ssl certificate.\n" (:name monitor))
                (str/fmt "**Cause code:** %s\n" (name (:code cause)))
                (str/fmt "**Cause hint:** %s\n" (:hint cause)))
 
@@ -329,7 +329,7 @@
           (str/fmt "<b>%s</b> monitor is <u><b>UP</b></u>" (escape-html (:name monitor)))
           (str
            (str/fmt "<b>%s</b> monitor is <u><b>DOWN</b></u>\n" (escape-html (:name monitor)))
-           (str/fmt "<b>Cause code:</b> <code>%s</code>\n" (:code cause))
+           (str/fmt "<b>Cause code:</b> <code>%s</code>\n" (name (:code cause)))
            (str/fmt "<b>Cause hint:</b> <code>%s</code>\n" (:hint cause))))]
     (send-to-teleram! cfg content)))
 
@@ -344,7 +344,7 @@
           (= (:status result) "down")
           (str
            (str/fmt "<b>%s</b> monitor is now expired or has invalid ssl certificate.\n" (escape-html (:name monitor)))
-           (str/fmt "<b>Cause code:</b> <code>%s</code>\n" (:code cause))
+           (str/fmt "<b>Cause code:</b> <code>%s</code>\n" (name (:code cause)))
            (str/fmt "<b>Cause hint:</b> <code>%s</code>\n" (:hint cause)))
 
           :else
