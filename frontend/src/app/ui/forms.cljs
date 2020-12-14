@@ -18,6 +18,7 @@
    [app.util.i18n :as i18n :refer [t]]
    [app.util.object :as obj]
    [app.util.timers :as tm]
+   [app.util.time :as dt]
    [cuerdas.core :as str]
    [rumext.alpha :as mf]))
 
@@ -50,9 +51,9 @@
                :disabled  disabled
                :empty     (str/empty? value))
 
-        on-focus  #(reset! focus? true)
         on-change (fm/on-input-change form name trim)
 
+        on-focus  #(reset! focus? true)
         on-blur
         (fn [event]
           (reset! focus? false)
@@ -83,6 +84,70 @@
         (string? hint)
         [:span.hint hint])
       children]]))
+
+(defn- generate-time-ranges
+  []
+  (d/concat []
+            (map (partial * 60 1) (range 1 61))
+            (map (partial * 60 60) (range 1 25))
+            (map (partial * 60 60 24) (range 1 31))))
+
+(mf/defc time-range
+  [{:keys [label name form default disabled] :or {default (* 60 5)}}]
+  (let [form   (or form (mf/use-ctx form-ctx))
+        values (mf/use-memo #(generate-time-ranges))
+        value  (or (get-in @form [:data name]) default)
+        index  (mf/use-memo (mf/deps value values) #(d/index-of values value))
+
+        focus?     (mf/use-state false)
+        touched?   (get-in @form [:touched name])
+        error      (get-in @form [:errors name])
+
+        on-focus  #(reset! focus? true)
+        on-blur
+        (fn [event]
+          (reset! focus? false)
+          (when-not (get-in @form [:touched name])
+            (swap! form assoc-in [:touched name] true)))
+
+        on-change
+        (fn [event]
+          (let [val (-> (dom/get-target event)
+                        (dom/get-value)
+                        (d/parse-integer))]
+            (swap! form (fn [state]
+                          (-> state
+                              (assoc-in [:data name] (nth values val))
+                              (update :errors dissoc name))))))
+
+        klass (dom/classnames
+               :focus     @focus?
+               :valid     (and touched? (not error))
+               :invalid   (and touched? error)
+               :disabled  disabled
+               :empty     (str/empty? value))]
+
+    [:div.form-field.time-range
+     [:label label]
+     [:div.container
+      [:input {:type "range"
+               :on-change on-change
+               :on-focus on-focus
+               :on-blur on-blur
+               :value index
+               :min 0
+               :max (dec (count values))}]
+
+      [:div.info
+       (dt/humanize-duration (* value 1000)
+                             {:largest 3
+                              :units ["d" "h" "m"]})]]]))
+
+
+
+
+
+
 
 (mf/defc submit-button
   [{:keys [label form] :as props}]

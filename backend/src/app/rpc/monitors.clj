@@ -251,6 +251,7 @@
           monitor (db/get-by-params conn :monitor
                                     {:id id :owner-id profile-id}
                                     {:for-update true})
+          profile (get-profile conn profile-id)
           cron    (parse-and-validate-cadence! cadence)
           offset  (dt/get-cron-offset cron (:created-at monitor))]
 
@@ -336,11 +337,12 @@
   (s/keys :req-un [::id ::name ::profile-id ::contacts ::cadence ::grace-time]
           :opt-un [::tags]))
 
-(sv/defmethod ::update-healthcheck-mnitor
+(sv/defmethod ::update-healthcheck-monitor
   [{:keys [pool]} {:keys [id name profile-id cadence grace-time contacts tags]}]
   (db/with-atomic [conn pool]
     (let [params  {:schedule :simple
                    :grace-time grace-time}
+          profile (get-profile conn profile-id)
           monitor (db/get-by-params conn :monitor
                                     {:id id :owner-id profile-id}
                                     {:for-update true})]

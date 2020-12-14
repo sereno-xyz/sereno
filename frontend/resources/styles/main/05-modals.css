@@ -176,7 +176,7 @@
 
 .monitor-form-modal {
   width: 900px;
-  min-height: 557px;
+  /* min-height: 557px; */
 
   &.ssl-monitor {
     min-height: unset;

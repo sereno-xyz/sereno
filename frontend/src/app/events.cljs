@@ -472,6 +472,25 @@
              (rx/catch on-error))))))
 
 
+(s/def ::grace-time ::us/integer)
+(s/def ::create-healthcheck-monitor
+  (s/keys :req-un [::name ::cadence ::contacts ::grace-time]
+          :opt-un [::tags]))
+
+(defmethod ptk/resolve :create-healthcheck-monitor
+  [_ params]
+  (us/assert ::create-healthcheck-monitor params)
+  (ptk/reify ::create-healthcheck-monitor
+    ptk/WatchEvent
+    (watch [_ state stream]
+      (let [{:keys [on-success on-error]
+             :or {on-success identity
+                  on-error identity}} (meta params)]
+        (->> (rp/req! :create-healthcheck-monitor params)
+             (rx/tap on-success)
+             (rx/map #(ptk/event :fetch-monitors))
+             (rx/catch on-error))))))
+
 (s/def ::update-http-monitor
   (s/keys :req-un [::id ::name ::cadence ::contacts ::method ::uri]
           :opt-un [::tags ::should-include ::headers]))
@@ -512,6 +531,26 @@
              (rx/catch (fn [error]
                          (or (on-error error)
                              (rx/empty)))))))))
+
+
+(s/def ::update-healthcheck-monitor
+  (s/keys :req-un [::id ::name ::cadence ::contacts ::grace-time]
+          :opt-un [::tags]))
+
+(defmethod ptk/resolve :update-healthcheck-monitor
+  [_ {:keys [id] :as params}]
+  (us/assert ::update-healthcheck-monitor params)
+  (ptk/reify ::update-healthcheck-monitor
+    ptk/WatchEvent
+    (watch [_ state stream]
+      (let [{:keys [on-success on-error]
+             :or {on-error identity
+                  on-success identity}} (meta params)]
+        (->> (rp/req! :update-healthcheck-monitor params)
+             (rx/tap on-success)
+             (rx/map #(ptk/event :fetch-monitors))
+             (rx/catch on-error))))))
+
 
 (defn delete-monitor
   [{:keys [id] :as params}]

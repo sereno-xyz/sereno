@@ -21,9 +21,11 @@
    [app.ui.modal :as modal]
    [app.ui.monitors.http-form]
    [app.ui.monitors.ssl-form]
+   [app.ui.monitors.healthcheck-form]
    [app.ui.monitors.common :refer [monitor-options]]
    [app.ui.monitors.http :refer [http-monitor-detail]]
    [app.ui.monitors.ssl :refer [ssl-monitor-detail]]
+   [app.ui.monitors.healthcheck :refer [healthcheck-monitor-detail]]
    [app.util.dom :as dom]
    [app.util.router :as r]
    [app.util.time :as dt]
@@ -130,6 +132,10 @@
         (mf/use-callback
          (st/emitf (modal/show {:type :ssl-monitor-form})))
 
+        create-hc-monitor
+        (mf/use-callback
+         (st/emitf (modal/show {:type :healthcheck-monitor-form})))
+
         show-dropdown? (mf/use-state false)
         show-dropdown  (mf/use-callback #(reset! show-dropdown? true))
         hide-dropdown  (mf/use-callback #(reset! show-dropdown? false))]
@@ -152,7 +158,8 @@
         [:li.disabled {:title "DNS registry monitor (not implemented yet)."}
          [:div.icon i/globe]
          [:div.text "DNS"]]
-        [:li.disabled {:title "Heartbeat / Keepalive monitor (not implemented yet)."}
+        [:li {:title "Heartbeat / Keepalive monitor (not implemented yet)."
+              :on-click create-hc-monitor}
          [:div.icon i/heartbeat]
          [:div.text "Keepalive"]]]]]]))
 
@@ -197,8 +204,9 @@
                       "Waiting data"))}
 
        (case (:type item)
-         "http" i/cloud
-         "ssl"  i/shield-alt
+         "http"        i/cloud
+         "ssl"         i/shield-alt
+         "healthcheck" i/heartbeat
          nil)]
 
       [:div.monitor-title
@@ -207,8 +215,6 @@
        (when (seq (:tags item))
          (let [tags (apply str (interpose ", " (:tags item)))]
            [:span.tags {:title tags} tags]))]
-
-
 
       [:div.monitor-updated
        {:on-mouse-enter on-hover
@@ -291,8 +297,9 @@
 
     (when monitor
       (case (:type monitor)
-        "http" [:& http-monitor-detail {:monitor monitor}]
-        "ssl"  [:& ssl-monitor-detail {:monitor monitor}]
+        "http"        [:& http-monitor-detail {:monitor monitor}]
+        "ssl"         [:& ssl-monitor-detail {:monitor monitor}]
+        "healthcheck" [:& healthcheck-monitor-detail {:monitor monitor}]
         nil))))
 
 

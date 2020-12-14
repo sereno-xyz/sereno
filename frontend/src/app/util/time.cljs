@@ -74,10 +74,11 @@
 
 (defn humanize-duration
   ([ms] (js-humanize ms))
-  ([ms {:keys [locale largest round]
+  ([ms {:keys [locale largest round units]
         :or {largest 2 round true}}]
    (js-humanize ms #js {:language "shortEn"
                         :largest largest
+                        :units (clj->js units)
                         :round round})))
 
 (defn format-time-distance

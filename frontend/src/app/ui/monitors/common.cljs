@@ -71,7 +71,8 @@
            (dom/stop-propagation event)
            (case (:type monitor)
              "http" (st/emit! (modal/show {:type :http-monitor-form :item monitor}))
-             "ssl"  (st/emit! (modal/show {:type :ssl-monitor-form :item monitor})))))]
+             "ssl"  (st/emit! (modal/show {:type :ssl-monitor-form :item monitor}))
+             "healthcheck" (st/emit! (modal/show {:type :healthcheck-monitor-form :item monitor})))))]
 
     [:ul.dropdown
      (if (= "paused" (:status monitor))
