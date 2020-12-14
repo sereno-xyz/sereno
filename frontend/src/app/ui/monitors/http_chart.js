@@ -115,8 +115,6 @@ export function render(node, params) {
     })
     .on("mouseover", function(d) {
       const target = d3.select(this);
-      console.log("mouseover", target);
-
       target
         .attr("fill", "var(--color-gray-50)")
         .attr("opacity", "0.2");
@@ -126,8 +124,7 @@ export function render(node, params) {
     })
     .on("mouseout", function() {
       const target = d3.select(this);
-      target
-        .attr("opacity", "0");
+      target.attr("opacity", "0");
 
 
       onMouseOut();
