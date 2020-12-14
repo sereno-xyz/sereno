@@ -62,6 +62,7 @@
                    ::public-uri
                    ::secret-key
                    ::sendmail-backend
+                   ::smtp-enabled
                    ::smtp-default-from
                    ::smtp-default-reply-to
                    ::smtp-from
