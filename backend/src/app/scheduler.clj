@@ -31,27 +31,33 @@
         offset (dt/get-cron-offset cron (:created-at item))]
     (dt/get-next-inst cron offset)))
 
+(defmulti schedule-monitor-task
+  (fn [cfg monitor] (:type monitor)))
 
-;; NOTE: maybe implement as multimethod?
+(defmethod schedule-monitor-task "healthcheck"
+  [{:keys [conn]} {:keys [id] :as item}]
+  ;; For healthcheck monitors we only need to run the
+  ;; "check-monitor" task. Rescheduling is handled by the http
+  ;; handler.
+  (tasks/submit! conn {:name "check-monitor"
+                       :props {:id id}
+                       :max-retries 2
+                       :delay 0}))
 
-(defn schedule-item
-  "A function responsible to send the monitor task to the worker and add
-  reschedule a next execution time for the monitor."
-  [{:keys [conn]} {:keys [id type] :as item}]
+(defmethod schedule-monitor-task :default
+  [{:keys [conn]} {:keys [id] :as item}]
+  ;; Submit the task to be executed
   (tasks/submit! conn {:name "monitor"
                        :props {:id id}
                        :max-retries 2
                        :delay 0})
 
-  ;; Scheduling next task is handled by other subsystem for health
-  ;; check monitors.
-  (when (not= "healthcheck" type)
-    (let [ninst (get-next-inst item)]
-      (db/update! conn :monitor-schedule
-                  {:modified-at (dt/now)
-                   :scheduled-at ninst}
-                  {:monitor-id id}))))
-
+  ;; Schedule the next task execution.
+  (let [ninst (get-next-inst item)]
+    (db/update! conn :monitor-schedule
+                {:modified-at (dt/now)
+                 :scheduled-at ninst}
+                {:monitor-id id})))
 
 (def sql:retrieve-scheduled-monitors
   "select m.id, m.type, m.created_at, m.status, m.cron_expr
@@ -68,7 +74,7 @@
   (db/with-atomic [conn pool]
     (let [items (db/exec! conn [sql:retrieve-scheduled-monitors batch-size])
           opts  (assoc opts :conn conn)]
-      (run! (partial schedule-item opts) items)
+      (run! (partial schedule-monitor-task opts) items)
       (count items))))
 
 (defn- event-loop-fn

@@ -29,7 +29,8 @@
     "http" (mhttp/run cfg monitor)
     "ssl"  (mssl/run cfg monitor)
     (ex/raise :type :internal
-              :code :not-implemented)))
+              :code :not-implemented
+              :hint (str/fmt "moitor type %s not implemented" (:type monitor)))))
 
 
 (s/def ::type ::us/string)
@@ -58,25 +59,32 @@
     (db/pgarray? tags)
     (assoc :tags (set (db/pgarray->array tags)))))
 
-(defn- retrieve-monitor
+(def sql:retrieve-monitor
+  "select m.*, extract(epoch from age(now(), m.monitored_at))::bigint as age
+     from monitor as m
+    where m.id = ?
+      for update")
+
+(defn retrieve-monitor
   [conn id]
-  (-> (db/get-by-id conn :monitor id)
+  (-> (db/exec-one! conn [sql:retrieve-monitor id])
       (decode-row)))
 
-(defn- update-monitor-status!
+(defn update-monitor-status!
   [conn id result]
   (db/exec! conn ["update monitor set monitored_at=now(), status=? where id=?" (:status result) id]))
 
-(defn- insert-monitor-entry!
+(defn insert-monitor-entry!
   [conn id result]
   (db/exec! conn ["insert into monitor_entry (monitor_id, latency, status, created_at, cause)
                    values (?, ?, ?, now(), ?)"
                   id
                   (:latency result)
                   (:status result)
-                  (db/tjson (:cause result))]))
+                  (when-let [cause (:cause result)]
+                    (db/tjson cause))]))
 
-(defn- insert-monitor-status-change!
+(defn insert-monitor-status-change!
   [conn id result]
   (db/exec! conn ["update monitor_status set finished_at=now()
                     where id=(select id from monitor_status
@@ -101,7 +109,7 @@
       and c.is_paused is false
       and c.is_disabled is false")
 
-(defn- notify-contacts!
+(defn notify-contacts!
   [conn monitor result]
   (let [contacts (->> (db/exec! conn [sql:monitor-contacts (:id monitor)])
                       (map decode-row)
@@ -152,4 +160,5 @@
                       (notify-contacts! conn monitor result)))
 
                   (update-monitor-status! conn id result)
-                  (insert-monitor-entry! conn id result))))))))))
+                  (when (not= "healthcheck" (:type monitor))
+                    (insert-monitor-entry! conn id result)))))))))))

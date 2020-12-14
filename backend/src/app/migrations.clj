@@ -75,6 +75,9 @@
     {:name "0020-mod-contact-table"
      :fn (mg/resource "app/migrations/sql/0020-mod-contact-table.sql")}
 
+    {:name "0021-mod-monitor-entry-table"
+     :fn (mg/resource "app/migrations/sql/0021-mod-monitor-entry-table.sql")}
+
     ]})
 
 (defmethod ig/init-key ::migrations

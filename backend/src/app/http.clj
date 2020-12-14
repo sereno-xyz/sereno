@@ -140,6 +140,8 @@
      ["/awssns" {:post (:awssns webhooks)}]
      ["/telegram" {:post (:telegram webhooks)}]]
 
+    ["/hc/:id" {:get (:healthcheck webhooks)}]
+
     ["/auth"
      ["/login" {:post (:login auth)}]
      ["/logout" {:post (:logout auth)}]

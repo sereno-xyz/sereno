@@ -39,13 +39,14 @@
 
 ;; TODO: update scheduled_at
 ;; TODO: add migration for: add context to monitor_entru
-;; TODO: add migration for: make latency nullable
-
 
 (defn process-healthcheck!
   [{:keys [pool monitor-id] :as cfg}]
   (db/with-atomic [conn pool]
-    (let [monitor (tsk/retrieve-monitor conn monitor-id)]
+    (let [monitor (tsk/retrieve-monitor conn monitor-id)
+          schd-at (-> (dt/now)
+                      (dt/plus (dt/duration (get monitor :cadence)))
+                      (dt/plus (dt/duration (get-in monitor [:params :grace-time]))))]
       (cond
         (= "started" (:status monitor))
         (do
@@ -54,14 +55,14 @@
           (tsk/insert-monitor-entry! conn monitor-id {:latency 0 :status "up"})
           (db/insert! conn :monitor-schedule
                       {:monitor-id monitor-id
-                       :scheduled-at (dt/plus (dt/now) (dt/duration (:cadence monitor)))}))
+                       :scheduled-at schd-at}))
 
         (= "up" (:status monitor))
         (do
           (tsk/update-monitor-status! conn monitor-id {:status "up"})
           (tsk/insert-monitor-entry! conn monitor-id {:latency 0 :status "up"})
           (db/update! conn :monitor-schedule
-                      {:scheduled-at (dt/plus (dt/now) (dt/duration (:cadence monitor)))}
+                      {:scheduled-at schd-at}
                       {:monitor-id monitor-id}))
 
 
@@ -73,5 +74,5 @@
           (tsk/notify-contacts! conn monitor {:status "up"})
           (db/insert! conn :monitor-schedule
                       {:monitor-id monitor-id
-                       :scheduled-at (dt/plus (dt/now) (dt/duration (:cadence monitor)))}))))))
+                       :scheduled-at schd-at}))))))
 

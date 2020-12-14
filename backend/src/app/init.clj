@@ -157,15 +157,19 @@
     :batch-size 8}
 
    :app.tasks/all
-   {"monitor"  (ig/ref :app.tasks.monitor/handler)
-    "sendmail" (ig/ref :app.tasks.sendmail/handler)
-    "notify"   (ig/ref :app.tasks.notify/handler)
+   {"monitor"          (ig/ref :app.tasks.monitor/handler)
+    "check-monitor"    (ig/ref :app.tasks.check-monitor/handler)
+    "sendmail"         (ig/ref :app.tasks.sendmail/handler)
+    "notify"           (ig/ref :app.tasks.notify/handler)
     "clean-old-tasks"  (ig/ref :app.tasks.maintenance/clean-old-tasks)
     "vacuum-tables"    (ig/ref :app.tasks.maintenance/vacuum-tables)}
 
    :app.tasks.monitor/handler
    {:pool (ig/ref :app.db/pool)
     :http-client (ig/ref :app.http/client)}
+
+   :app.tasks.check-monitor/handler
+   {:pool (ig/ref :app.db/pool)}
 
    :app.tasks.maintenance/clean-old-tasks
    {:pool (ig/ref :app.db/pool)
@@ -184,10 +188,6 @@
    :app.tasks.sendmail/handler
    {:smtp (ig/ref :app.config/smtp)}
 
-   :app.tasks.mailjet-webhook/handler
-   {:pool (ig/ref :app.db/pool)
-    :http-client (ig/ref :app.http/client)}
-
    :app.telegram/service
    {:id (:telegram-id cfg/config)
     :token (:telegram-token cfg/config)
@@ -200,14 +200,20 @@
     :shared-key (:webhook-shared-key cfg/config "sample-key")}
 
    :app.webhooks/handlers
-   {:awssns (ig/ref :app.webhooks.awssns/handler)
-    :telegram (ig/ref :app.telegram/webhook)}
+   {:awssns      (ig/ref :app.webhooks.awssns/handler)
+    :telegram    (ig/ref :app.telegram/webhook)
+    :healthcheck (ig/ref :app.webhooks.healthcheck/handler)}
 
    ;; TODO: maybe move to a specific AWS SNS service?
    :app.webhooks.awssns/handler
    {:pool (ig/ref :app.db/pool)
     :http-client (ig/ref :app.http/client)
     :shared-key (:webhook-shared-key cfg/config "sample-key")}
+
+   :app.webhooks.healthcheck/handler
+   {:pool (ig/ref :app.db/pool)
+    :executor (ig/ref :app.worker/executor)}
+
 
    })
 
