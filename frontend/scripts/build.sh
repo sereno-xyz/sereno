@@ -12,7 +12,8 @@ export NODE_ENV=production;
 # Clean the output directory
 npx gulp clean || exit 1;
 
-npx shadow-cljs release main --config-merge "{:release-version \"${TAG}\"}" $SHADOWCLJS_EXTRA_PARAMS
+npx shadow-cljs compile main;
+npx shadow-cljs release main --config-merge "{:release-version \"${TAG}\"}" --source-maps $SHADOWCLJS_EXTRA_PARAMS;
 npx gulp build || exit 1;
 npx gulp dist:clean || exit 1;
 npx gulp dist:copy || exit 1;
