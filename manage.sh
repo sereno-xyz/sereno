@@ -94,7 +94,7 @@ function build-bundle {
     rsync -aq ./backend/target/dist/ ./bundle/;
     rsync -aq ./frontend/target/dist/ ./bundle/resources/public/;
 
-    find ./bundle/resources -iname '*.map' |xargs rm;
+    # find ./bundle/resources -iname '*.map' |xargs rm;
     rm -rf ./bundle/resources/public/fonts;
     rm -rf ./bundle/resources/public/fa
 
