@@ -49,8 +49,7 @@
          (st/emitf
           (modal/hide)
           (em/show {:content "Contact created succesfully!"
-                    :type :success
-                    :timeout 5000})))
+                    :type :success})))
 
         on-error
         (mf/use-callback
