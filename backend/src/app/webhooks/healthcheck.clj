@@ -11,6 +11,7 @@
   (:require
    [app.common.exceptions :as ex]
    [app.common.spec :as us]
+   [app.common.data :as d]
    [app.db :as db]
    [app.tasks :as tasks]
    [app.util.time :as dt]
@@ -18,6 +19,7 @@
    [clojure.data.json :as json]
    [clojure.pprint]
    [clojure.spec.alpha :as s]
+   [clojure.java.io :as io]
    [clojure.tools.logging :as log]
    [app.tasks.monitor :as tsk]
    [promesa.exec :as px]
@@ -29,7 +31,8 @@
 (declare process-healthcheck)
 (declare wrap-ex-handling)
 (declare wrap-metrics)
-(declare collect-metadata)
+(declare parse-request)
+(declare build-result)
 
 (defmethod ig/pre-init-spec ::handler [_]
   (s/keys :req-un [::db/pool]))
@@ -40,11 +43,8 @@
               (wrap-ex-handling)
               (wrap-metrics cfg))]
     (fn [request]
-      (clojure.pprint/pprint request)
-      (let [mid (get-in request [:path-params :id])
-            mid (us/conform ::us/uuid mid)
-            mdt (collect-metadata request)
-            cfg (assoc cfg :monitor-id mid :mdata mdt)]
+      (let [prm (parse-request request)
+            cfg (assoc cfg :params prm)]
         (px/run! executor (partial f cfg))
         {:status 200
          :body "OK"}))))
@@ -68,34 +68,48 @@
     (mtx/wrap-summary f mobj)))
 
 (defn- process-healthcheck
-  [{:keys [pool monitor-id mdata] :as cfg}]
+  [{:keys [pool params] :as cfg}]
   (db/with-atomic [conn pool]
-    (let [monitor (tsk/retrieve-monitor conn monitor-id)
-          delta   (dt/plus (dt/duration {:seconds (get monitor :cadence)})
-                           (dt/duration {:seconds (get-in monitor [:params :grace-time])}))]
+    (let [monitor-id (:monitor-id params)
+          monitor    (tsk/retrieve-monitor conn monitor-id)
+          delta      (dt/plus (dt/duration {:seconds (get monitor :cadence)})
+                              (dt/duration {:seconds (get-in monitor [:params :grace-time])}))]
+
       (cond
         (= "started" (:status monitor))
-        (do
-          (tsk/update-monitor-status! conn monitor-id {:status "up"})
-          (tsk/insert-monitor-status-change! conn monitor-id {:status "up"})
-          (tsk/insert-monitor-entry! conn monitor-id {:latency 0 :status "up" :metadata mdata})
+        (let [result (build-result params)]
+          (tsk/update-monitor-status! conn monitor-id result)
+          (tsk/insert-monitor-status-change! conn monitor-id result)
+          (tsk/insert-monitor-entry! conn monitor-id result)
           (insert-monitor-schedule! conn monitor-id delta))
 
         (= "up" (:status monitor))
-        (do
-          (tsk/update-monitor-status! conn monitor-id {:status "up"})
-          (tsk/insert-monitor-entry! conn monitor-id {:latency 0 :status "up" :metadata mdata})
-          (if (some? (:scheduled-at monitor))
+        (let [result (build-result params)]
+          (tsk/update-monitor-status! conn monitor-id result)
+          (tsk/insert-monitor-entry! conn monitor-id result)
+
+          (cond
+            (not= (:status result) (:status monitor))
+            (do
+              (tsk/insert-monitor-status-change! conn monitor-id result)
+              (db/delete! conn :monitor-schedule {:monitor-id monitor-id})
+              (tsk/notify-contacts! conn monitor result))
+
+            (some? (:scheduled-at monitor))
             (update-monitor-schedule! conn monitor-id delta)
+
+            :else
             (insert-monitor-schedule! conn monitor-id delta)))
 
         (= "down" (:status monitor))
-        (do
-          (tsk/update-monitor-status! conn monitor-id {:status "up"})
-          (tsk/insert-monitor-status-change! conn monitor-id {:status "up"})
-          (tsk/insert-monitor-entry! conn monitor-id {:latency 0 :status "up" :metadata mdata})
-          (tsk/notify-contacts! conn monitor {:status "up"})
-          (insert-monitor-schedule! conn monitor-id delta))))))
+        (let [result (build-result params)]
+          (tsk/update-monitor-status! conn monitor-id result)
+          (tsk/insert-monitor-entry! conn monitor-id result)
+
+          (when (not= (:status result) (:status monitor))
+            (tsk/insert-monitor-status-change! conn monitor-id result)
+            (insert-monitor-schedule! conn monitor-id delta)
+            (tsk/notify-contacts! conn monitor result)))))))
 
 ;; No helpers from db/ namespace are used for this function because we
 ;; want to be cosnsitent with the transaction time retuned by the
@@ -119,10 +133,55 @@
                         interval
                         monitor-id])))
 
-(defn- collect-metadata
-  [{:keys [headers] :as request}]
-  (let [host   (or (get headers "x-forwarded-for")
-                   (get headers "host"))
-        uagent (get headers "user-agent")]
-    {:host host
-     :user-agent uagent}))
+
+(s/def ::monitor-id ::us/uuid)
+(s/def ::label ::us/string)
+(s/def ::exit ::us/integer)
+
+(s/def ::path-params
+  (s/keys :req-un [::monitor-id]
+          :opt-un [::label]))
+
+(s/def ::query-params
+  (s/keys :opt-un [::exit]))
+
+(defn- parse-request
+  [{:keys [headers body path-params query-params] :as request}]
+  (let [pparams (us/conform ::path-params path-params)
+        qparams (us/conform ::query-params query-params)
+        host    (or (get headers "x-forwarded-for")
+                    (get headers "host"))
+        uagent  (get headers "user-agent")]
+    (d/merge pparams qparams
+             {:host host
+              :content (slurp body)
+              :user-agent uagent})))
+
+(defn- build-result
+  [{:keys [exit content user-agent label host] :as params}]
+  (let [metadata (d/remove-nil-vals
+                  {:content content
+                   :host host
+                   :user-agent user-agent
+                   :label label
+                   :exit exit})]
+
+    (cond
+      (and (some? exit) (not (zero? exit)))
+      {:status "down"
+       :cause {:code :exit-code
+               :exit exit
+               :hint "exit code different of 0 (zero)"}
+       :metadata metadata}
+
+      (or (= label "fail") (= label "error"))
+      {:status "down"
+       :cause {:code :fail-label
+               :hint "reported explicit fail state"
+               :label label}
+       :metadata metadata}
+
+      :else
+      {:status "up"
+       :cause nil
+       :metadata metadata})))

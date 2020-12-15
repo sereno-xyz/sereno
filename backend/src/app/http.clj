@@ -121,16 +121,14 @@
    {:middleware [[middleware/format-response-body]
                  [middleware/errors errors/handle]
                  [middleware/parse-request-body]
-                 [middleware/params]
-                 [middleware/multipart-params]
-                 [middleware/keyword-params]
                  [middleware/cookies]
+                 [middleware/query-params]
+                 [middleware/multipart-params]
                  [session/middleware cfg]]}))
 
 (defn- index-handler
   [request]
   (resource-response "index.html" {:root "public"}))
-
 
 (defn- router
   [{:keys [auth rpc webhooks metrics] :as cfg}]
@@ -140,7 +138,13 @@
      ["/awssns" {:post (:awssns webhooks)}]
      ["/telegram" {:post (:telegram webhooks)}]]
 
-    ["/hc/:id" {:get (:healthcheck webhooks)}]
+    ["/hc/:monitor-id"
+     {:get (:healthcheck webhooks)
+      :post (:healthcheck webhooks)}]
+
+    ["/hc/:monitor-id/:label"
+     {:get (:healthcheck webhooks)
+      :post (:healthcheck webhooks)}]
 
     ["/auth"
      ["/login" {:post (:login auth)}]
@@ -148,8 +152,9 @@
      ["/google" {:post (:gauth auth)}]
      ["/google/callback" {:get (:gauth-callback auth)}]]
 
-    ["/rpc/:cmd" {:get (:handler rpc)
-                  :post (:handler rpc)}]
+    ["/rpc/:cmd"
+     {:get (:handler rpc)
+      :post (:handler rpc)}]
 
     ["/" {:get index-handler}]]))
 

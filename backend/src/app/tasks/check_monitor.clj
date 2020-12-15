@@ -36,9 +36,13 @@
           ;; This means that the task is clearly not received any
           ;; healthcheck ping, so we proceed to setting it to down
           ;; state.
-          (let [result {:status "down"}]
+          (let [result {:status "down"
+                        :cause {:code :missing-keepalive
+                                :hint "the ping request is not received on time"}}]
             (tsk/update-monitor-status! conn id result)
-            (tsk/insert-monitor-status-change! conn id result))
+            (tsk/insert-monitor-status-change! conn id result)
+            (tsk/notify-contacts! conn monitor result))
+
 
           ;; In all other cases, this can be a false positive and
           ;; keepalive ping is received in the last moment, between

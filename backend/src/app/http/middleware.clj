@@ -10,13 +10,14 @@
 (ns app.http.middleware
   (:require
    [app.common.exceptions :as ex]
+   [app.common.data :as d]
    [app.config :as cfg]
    [app.util.transit :as t]
    [clojure.data.json :as json]
    [clojure.java.io :as io]
    [clojure.tools.logging :as log]
+   [ring.util.codec :as codec]
    [ring.middleware.cookies :refer [wrap-cookies]]
-   [ring.middleware.keyword-params :refer [wrap-keyword-params]]
    [ring.middleware.multipart-params :refer [wrap-multipart-params]]
    [ring.middleware.params :refer [wrap-params]]
    [ring.middleware.resource :refer [wrap-resource]]))
@@ -109,14 +110,19 @@
   {:name ::cookies
    :compile (constantly wrap-cookies)})
 
-(def params
+(defn- wrap-query-params
+  [handler]
+  (fn [{:keys [query-string] :as request}]
+    (let [params (some-> query-string
+                         (codec/form-decode "UTF-8")
+                         (d/keywordize))
+          params (if (map? params) params {})]
+      (handler (assoc request :query-params params)))))
+
+(def query-params
   {:name ::params
-   :compile (constantly wrap-params)})
+   :compile (constantly wrap-query-params)})
 
 (def multipart-params
   {:name ::multipart-params
    :compile (constantly wrap-multipart-params)})
-
-(def keyword-params
-  {:name ::keyword-params
-   :compile (constantly wrap-keyword-params)})

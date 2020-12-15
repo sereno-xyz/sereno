@@ -14,7 +14,6 @@
   (:require
    #?(:clj [clojure.spec.alpha :as s]
       :cljs [cljs.spec.alpha :as s])
-   [expound.alpha :as expound]
    [app.common.uuid :as uuid]
    [app.common.exceptions :as ex]
    [cuerdas.core :as str]))
