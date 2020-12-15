@@ -1,0 +1,19 @@
+This is a generic notification about state change of one of your monitors.
+
+{% if status = "down" %}
+Monitor '{{monitor-name}}' has gone DOWN.
+
+{% if cause %}
+Cause code: {{ cause.code }}
+Cause hint: {{ cause.hint }}
+{% endif %}
+
+{% else %}
+Monitor '{{monitor-name}}' has gone UP.
+{% endif %}
+
+----
+
+If you don't want receive anymore notifications about this monitor in this email, follow this url: {{public-uri}}/#/auth/verify-token?token={{unsubscribe-token}}
+
+If you don't want receive anymore notifications to this email, follow this url: {{public-uri}}/#/auth/verify-token?token={{delete-token}}

@@ -1,0 +1,5 @@
+{% if status = "down" %}
+Monitor '{{monitor-name}}' has gone down.
+{% else %}
+Monitor '{{monitor-name}}' has gone up
+{% endif %}

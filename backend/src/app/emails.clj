@@ -43,6 +43,9 @@
 (def ssl-monitor-notification
   (emails/template-factory ::ssl-monitor-notification))
 
+(def healthcheck-monitor-notification
+  (emails/template-factory ::healthcheck-monitor-notification))
+
 (def change-email
   (emails/template-factory ::change-email))
 

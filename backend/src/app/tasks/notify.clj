@@ -140,6 +140,25 @@
                    :delete-token (:delete tkn)
                    :custom-data (:cdata tkn)}))))
 
+
+(defmethod notify! ["email" "healthcheck"]
+  [{:keys [pool monitor result contact] :as cfg}]
+  (db/with-atomic [conn pool]
+    (let [cfg (assoc cfg :conn conn)
+          tkn (generate-tokens cfg)]
+      (annotate-and-check-email-send-limits! cfg (:owner-id monitor))
+      (emails/send! conn emails/healthcheck-monitor-notification
+                  {:status (:status result)
+                   :expired-at (str (:expired-at monitor))
+                   :cause (:cause result)
+                   :to (get-in contact [:params :email])
+                   :monitor-name (:name monitor)
+                   :monitor-params (:params monitor)
+                   :public-uri (:public-uri cfg)
+                   :unsubscribe-token (:unsub tkn)
+                   :delete-token (:delete tkn)
+                   :custom-data (:cdata tkn)}))))
+
 (defn annotate-and-check-email-send-limits!
   [cfg profile-id]
   (let [pquotes (retrieve-profile-type cfg profile-id)
@@ -197,9 +216,9 @@
   (let [cause (:cause result)
         content
         (if (= "up" (:status result))
-          (str/fmt "@channel\nMonitor **%s** is now **UP**" (:name monitor))
+          (str/fmt "@channel\nMonitor **%s** has gone **UP**" (:name monitor))
           (str
-           (str/fmt "@channel\nMonitor **%s** is now **DOWN**\n" (:name monitor))
+           (str/fmt "@channel\nMonitor **%s** has gone **DOWN**\n" (:name monitor))
            (str/fmt "**Cause code:** %s\n" (name (:code cause)))
            (str/fmt "**Cause hint:** %s\n" (:hint cause))))]
 
@@ -220,6 +239,20 @@
 
           :else
           (str/format "@channel **%s** is live." (:name monitor)))]
+
+    (send-to-mattermost! cfg content)))
+
+(defmethod notify! ["mattermost" "healthcheck"]
+  [{:keys [monitor result] :as cfg}]
+  (let [cause (:cause result)
+        content
+        (if (= "up" (:status result))
+          (str/fmt "@channel\nMonitor **%s** has gone **UP**" (:name monitor))
+          (str
+           (str/fmt "@channel\nMonitor **%s** has gone **DOWN**\n" (:name monitor))
+           (when cause
+             (str/fmt "**Cause code:** %s\n" (name (:code cause)))
+             (str/fmt "**Cause hint:** %s\n" (:hint cause)))))]
 
     (send-to-mattermost! cfg content)))
 
@@ -254,9 +287,9 @@
   (let [cause (:cause result)
         description
         (if (= "up" (:status result))
-          (str/fmt "**%s** monitor is now **UP**" (:name monitor))
+          (str/fmt "**%s** monitor has gone **UP**" (:name monitor))
           (str
-           (str/fmt "**%s** monitor is now **DOWN**\n" (:name monitor))
+           (str/fmt "**%s** monitor has gone **DOWN**\n" (:name monitor))
            (str/fmt "**Cause code:** %s\n" (name (:code cause)))
            (str/fmt "**Cause hint:** %s\n" (:hint cause))))
 
@@ -295,6 +328,27 @@
                  :embeds [embedd]}]
     (send-to-discord! cfg content)))
 
+(defmethod notify! ["discord" "healthcheck"]
+  [{:keys [monitor result] :as cfg}]
+  (let [cause (:cause result)
+        description
+        (if (= "up" (:status result))
+          (str/fmt "**%s** monitor has gone **UP**" (:name monitor))
+          (str
+           (str/fmt "**%s** monitor has gone **DOWN**\n" (:name monitor))
+           (when cause
+             (str/fmt "**Cause code:** %s\n" (name (:code cause)))
+             (str/fmt "**Cause hint:** %s\n" (:hint cause)))))
+
+        embedd  {:title "Monitor status change notification"
+                 :description description}
+
+        content {:username "sereno.xyz"
+                 :content "@everyone"
+                 :avatar_url "https://sereno.xyz/images/logo.png"
+                 :embeds [embedd]}]
+    (send-to-discord! cfg content)))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Telegram Notification
@@ -326,9 +380,9 @@
   (let [cause (:cause result)
         content
         (if (= "up" (:status result))
-          (str/fmt "<b>%s</b> monitor is <u><b>UP</b></u>" (escape-html (:name monitor)))
+          (str/fmt "<b>%s</b> monitor has gone <u><b>UP</b></u>" (escape-html (:name monitor)))
           (str
-           (str/fmt "<b>%s</b> monitor is <u><b>DOWN</b></u>\n" (escape-html (:name monitor)))
+           (str/fmt "<b>%s</b> monitor has gone <u><b>DOWN</b></u>\n" (escape-html (:name monitor)))
            (str/fmt "<b>Cause code:</b> <code>%s</code>\n" (name (:code cause)))
            (str/fmt "<b>Cause hint:</b> <code>%s</code>\n" (:hint cause))))]
     (send-to-teleram! cfg content)))
@@ -351,6 +405,20 @@
           (str/format "<b>%s</b> is live." (:name monitor)))]
 
     (send-to-teleram! cfg content)))
+
+(defmethod notify! ["telegram" "healthcheck"]
+  [{:keys [monitor result] :as cfg}]
+  (let [cause (:cause result)
+        content
+        (if (= "up" (:status result))
+          (str/fmt "<b>%s</b> monitor has gone <u><b>UP</b></u>" (escape-html (:name monitor)))
+          (str
+           (str/fmt "<b>%s</b> monitor has gone <u><b>DOWN</b></u>\n" (escape-html (:name monitor)))
+           (when cause
+             (str/fmt "<b>Cause code:</b> <code>%s</code>\n" (name (:code cause)))
+             (str/fmt "<b>Cause hint:</b> <code>%s</code>\n" (:hint cause)))))]
+    (send-to-teleram! cfg content)))
+
 
 
 (defn escape-html
