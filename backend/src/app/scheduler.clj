@@ -42,7 +42,14 @@
   (tasks/submit! conn {:name "check-monitor"
                        :props {:id id}
                        :max-retries 2
-                       :delay 0}))
+                       :delay 0})
+
+  ;; We need to delete the monitor schedule entry for avoid
+  ;; infinite loop of scheduling because without removing it, the monitor
+  ;; becomes always ellegible for schedule.
+  (db/delete! conn :monitor-schedule
+              {:monitor-id id}))
+
 
 (defmethod schedule-monitor-task :default
   [{:keys [conn]} {:keys [id] :as item}]
@@ -65,9 +72,10 @@
      join monitor as m on (m.id = ms.monitor_id)
     where ms.scheduled_at <= now()
       and m.status in ('started', 'up', 'down', 'warn')
-    order by ms.scheduled_at, ms.modified_at
+    order by ms.scheduled_at
     limit ?
-      for update of ms skip locked")
+      for update of ms
+     skip locked")
 
 (defn- event-loop-fn*
   [{:keys [pool batch-size] :as opts}]

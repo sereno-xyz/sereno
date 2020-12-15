@@ -10,6 +10,7 @@
 (ns app.util.time
   (:require
    [clojure.spec.alpha :as s]
+   [cuerdas.core :as str]
    [app.common.exceptions :as ex])
   (:import
    java.time.Clock
@@ -101,6 +102,10 @@
 (defn parse-duration
   [s]
   (Duration/parse s))
+
+(defn duration->str
+  [d]
+  (str/lower (subs (str d) 2)))
 
 (extend-protocol clojure.core/Inst
   java.time.Duration

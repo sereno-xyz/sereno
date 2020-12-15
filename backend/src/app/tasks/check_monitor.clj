@@ -31,15 +31,24 @@
   [_ {:keys [pool] :as cfg}]
   (fn [{:keys [props] :as task}]
     (db/with-atomic [conn pool]
-      (when-let [{:keys [id status age] :as monitor} (tsk/retrieve-monitor conn (:id props))]
-        (when (= "up" status)
-          (let [current-age  (dt/duration {:seconds age})
-                max-age      (dt/plus (dt/duration {:seconds (get monitor :cadence)})
-                                      (dt/duration {:seconds (get-in monitor [:props :grace-time])}))]
+      (when-let [{:keys [id status age scheduled-at] :as monitor} (tsk/retrieve-monitor conn (:id props))]
+        (if (and (= "up" status) (nil? scheduled-at))
+          ;; This means that the task is clearly not received any
+          ;; healthcheck ping, so we proceed to setting it to down
+          ;; state.
+          (let [result {:status "down"}]
+            (tsk/update-monitor-status! conn id result)
+            (tsk/insert-monitor-status-change! conn id result))
 
-            (log/infof "checking monitor %s with age %s where max-age is %s" (:name monitor) current-age max-age)
-            (when (> (inst-ms current-age)
-                     (inst-ms max-age))
-              (tsk/update-monitor-status! conn id {:status "down"})
-              (db/delete! conn :monitor-schedule {:monitor-id id}))))))))
-
+          ;; In all other cases, this can be a false positive and
+          ;; keepalive ping is received in the last moment, between
+          ;; task scheduling and task execution; or the monitor is
+          ;; already in down state for some other reason.
+          (let [maxage (dt/plus (dt/duration {:seconds (get monitor :cadence)})
+                                (dt/duration {:seconds (get-in monitor [:params :grace-time])}))
+                age    (dt/duration {:seconds age})]
+            (log/warnf "monitor %s does not match the criteria for marking it as down (status=%s, age=%s, max-age=%s, scheduled-at=%s)"
+                       id status
+                       (dt/duration->str age)
+                       (dt/duration->str maxage)
+                       scheduled-at)))))))

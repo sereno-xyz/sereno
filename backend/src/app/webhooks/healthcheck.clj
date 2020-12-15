@@ -14,6 +14,7 @@
    [app.db :as db]
    [app.tasks :as tasks]
    [app.util.time :as dt]
+   [app.metrics :as mtx]
    [clojure.data.json :as json]
    [clojure.pprint]
    [clojure.spec.alpha :as s]
@@ -23,56 +24,105 @@
    [cuerdas.core :as str]
    [integrant.core :as ig]))
 
-(declare process-healthcheck!)
+(declare insert-monitor-schedule!)
+(declare update-monitor-schedule!)
+(declare process-healthcheck)
+(declare wrap-ex-handling)
+(declare wrap-metrics)
+(declare collect-metadata)
 
 (defmethod ig/pre-init-spec ::handler [_]
   (s/keys :req-un [::db/pool]))
 
 (defmethod ig/init-key ::handler
-  [_ {:keys [executor] :as cfg}]
-  (fn [request]
-    (let [mid (get-in request [:path-params :id])
-          mid (us/conform ::us/uuid mid)]
-      (px/run! executor (partial process-healthcheck! (assoc cfg :monitor-id mid)))
-      {:status 200
-       :body "OK"})))
+  [_ {:keys [executor metrics] :as cfg}]
+  (let [f (-> process-healthcheck
+              (wrap-ex-handling)
+              (wrap-metrics cfg))]
+    (fn [request]
+      (clojure.pprint/pprint request)
+      (let [mid (get-in request [:path-params :id])
+            mid (us/conform ::us/uuid mid)
+            mdt (collect-metadata request)
+            cfg (assoc cfg :monitor-id mid :mdata mdt)]
+        (px/run! executor (partial f cfg))
+        {:status 200
+         :body "OK"}))))
 
-;; TODO: update scheduled_at
-;; TODO: add migration for: add context to monitor_entru
+(defn- wrap-ex-handling
+  [f]
+  (fn [cfg]
+    (try
+      (f cfg)
+      (catch Exception e
+        (log/errorf e "Unhandled error")))))
 
-(defn process-healthcheck!
-  [{:keys [pool monitor-id] :as cfg}]
+(defn- wrap-metrics
+  [f {:keys [metrics] :as cfg}]
+  (let [mreg (:registry metrics)
+        mobj (mtx/create
+              {:name "webhook_healthcheck_process_millis"
+               :registry mreg
+               :type :summary
+               :help "Healthcheck webhook process timming."})]
+    (mtx/wrap-summary f mobj)))
+
+(defn- process-healthcheck
+  [{:keys [pool monitor-id mdata] :as cfg}]
   (db/with-atomic [conn pool]
     (let [monitor (tsk/retrieve-monitor conn monitor-id)
-          schd-at (-> (dt/now)
-                      (dt/plus (dt/duration (get monitor :cadence)))
-                      (dt/plus (dt/duration (get-in monitor [:params :grace-time]))))]
+          delta   (dt/plus (dt/duration {:seconds (get monitor :cadence)})
+                           (dt/duration {:seconds (get-in monitor [:params :grace-time])}))]
       (cond
         (= "started" (:status monitor))
         (do
           (tsk/update-monitor-status! conn monitor-id {:status "up"})
           (tsk/insert-monitor-status-change! conn monitor-id {:status "up"})
-          (tsk/insert-monitor-entry! conn monitor-id {:latency 0 :status "up"})
-          (db/insert! conn :monitor-schedule
-                      {:monitor-id monitor-id
-                       :scheduled-at schd-at}))
+          (tsk/insert-monitor-entry! conn monitor-id {:latency 0 :status "up" :metadata mdata})
+          (insert-monitor-schedule! conn monitor-id delta))
 
         (= "up" (:status monitor))
         (do
           (tsk/update-monitor-status! conn monitor-id {:status "up"})
-          (tsk/insert-monitor-entry! conn monitor-id {:latency 0 :status "up"})
-          (db/update! conn :monitor-schedule
-                      {:scheduled-at schd-at}
-                      {:monitor-id monitor-id}))
-
+          (tsk/insert-monitor-entry! conn monitor-id {:latency 0 :status "up" :metadata mdata})
+          (if (some? (:scheduled-at monitor))
+            (update-monitor-schedule! conn monitor-id delta)
+            (insert-monitor-schedule! conn monitor-id delta)))
 
         (= "down" (:status monitor))
         (do
           (tsk/update-monitor-status! conn monitor-id {:status "up"})
           (tsk/insert-monitor-status-change! conn monitor-id {:status "up"})
-          (tsk/insert-monitor-entry! conn monitor-id {:latency 0 :status "up"})
+          (tsk/insert-monitor-entry! conn monitor-id {:latency 0 :status "up" :metadata mdata})
           (tsk/notify-contacts! conn monitor {:status "up"})
-          (db/insert! conn :monitor-schedule
-                      {:monitor-id monitor-id
-                       :scheduled-at schd-at}))))))
+          (insert-monitor-schedule! conn monitor-id delta))))))
 
+;; No helpers from db/ namespace are used for this function because we
+;; want to be cosnsitent with the transaction time retuned by the
+;; `now()` function.
+
+(defn- insert-monitor-schedule!
+  [conn monitor-id delta]
+  (let [interval (db/interval delta)]
+    (db/exec-one! conn ["insert into monitor_schedule (monitor_id, modified_at, scheduled_at)
+                         values (?, now(), now() + ?::interval)"
+                        monitor-id
+                        interval])))
+
+(defn- update-monitor-schedule!
+  [conn monitor-id delta]
+  (let [interval (db/interval delta)]
+    (db/exec-one! conn ["update monitor_schedule
+                            set modified_at=now(),
+                                scheduled_at=now() + ?::interval
+                          where monitor_id = ?"
+                        interval
+                        monitor-id])))
+
+(defn- collect-metadata
+  [{:keys [headers] :as request}]
+  (let [host   (or (get headers "x-forwarded-for")
+                   (get headers "host"))
+        uagent (get headers "user-agent")]
+    {:host host
+     :user-agent uagent}))

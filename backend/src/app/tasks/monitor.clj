@@ -59,11 +59,18 @@
     (db/pgarray? tags)
     (assoc :tags (set (db/pgarray->array tags)))))
 
+
+;; NOTE: The left join is necessary because we want lock for update
+;; the both tables (or one in case no row exists on the joined table).
+
 (def sql:retrieve-monitor
-  "select m.*, extract(epoch from age(now(), m.monitored_at))::bigint as age
+  "select m.*,
+          extract(epoch from age(now(), m.monitored_at))::bigint as age,
+          ms.scheduled_at
      from monitor as m
+     left join monitor_schedule as ms on (ms.monitor_id = m.id)
     where m.id = ?
-      for update")
+      for update of m")
 
 (defn retrieve-monitor
   [conn id]
@@ -76,13 +83,15 @@
 
 (defn insert-monitor-entry!
   [conn id result]
-  (db/exec! conn ["insert into monitor_entry (monitor_id, latency, status, created_at, cause)
-                   values (?, ?, ?, now(), ?)"
+  (db/exec! conn ["insert into monitor_entry (monitor_id, latency, status, created_at, cause, metadata)
+                   values (?, ?, ?, now(), ?, ?)"
                   id
                   (:latency result)
                   (:status result)
                   (when-let [cause (:cause result)]
-                    (db/tjson cause))]))
+                    (db/tjson cause))
+                  (when-let [metadata (:metadata result)]
+                    (db/tjson metadata))]))
 
 (defn insert-monitor-status-change!
   [conn id result]

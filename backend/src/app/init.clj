@@ -195,9 +195,9 @@
     :pool (ig/ref :app.db/pool)}
 
    :app.telegram/webhook
-   {:telegram (ig/ref :app.telegram/service)
-    :pool (ig/ref :app.db/pool)
-    :shared-key (:webhook-shared-key cfg/config "sample-key")}
+   {:telegram    (ig/ref :app.telegram/service)
+    :pool        (ig/ref :app.db/pool)
+    :shared-key  (:webhook-shared-key cfg/config "sample-key")}
 
    :app.webhooks/handlers
    {:awssns      (ig/ref :app.webhooks.awssns/handler)
@@ -206,14 +206,14 @@
 
    ;; TODO: maybe move to a specific AWS SNS service?
    :app.webhooks.awssns/handler
-   {:pool (ig/ref :app.db/pool)
+   {:pool        (ig/ref :app.db/pool)
     :http-client (ig/ref :app.http/client)
-    :shared-key (:webhook-shared-key cfg/config "sample-key")}
+    :shared-key  (:webhook-shared-key cfg/config "sample-key")}
 
    :app.webhooks.healthcheck/handler
-   {:pool (ig/ref :app.db/pool)
-    :executor (ig/ref :app.worker/executor)}
-
+   {:pool        (ig/ref :app.db/pool)
+    :executor    (ig/ref :app.worker/executor)
+    :metrics     (ig/ref :app.metrics/metrics)}
 
    })
 
