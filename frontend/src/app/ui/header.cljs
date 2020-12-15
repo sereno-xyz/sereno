@@ -24,7 +24,7 @@
 (mf/defc logo
   {::mf/wrap [mf/memo]}
   []
-  [:div.logo {:on-click #(st/emit! (r/nav :monitor-list))}
+  [:div.logo {:on-click #(st/emit! (r/nav :monitors))}
    [:div.logo-image i/logo]
    [:div.logo-text "sereno"]])
 
@@ -37,9 +37,9 @@
       [:section.left-menu
        [:& logo]
        [:ul.menu
-        [:li {:class (dom/classnames :current (or (= section :monitor-list)
-                                                  (= section :monitor-detail)))
-              :on-click #(st/emit! (r/nav :monitor-list))}
+        [:li {:class (dom/classnames :current (or (= section :monitors)
+                                                  (= section :monitor)))
+              :on-click #(st/emit! (r/nav :monitors))}
          [:span "Monitors"]]
         [:li {:class (dom/classnames :current (= section :contacts))
               :on-click #(st/emit! (r/nav :contacts))}

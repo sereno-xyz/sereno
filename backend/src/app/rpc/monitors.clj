@@ -499,32 +499,46 @@
 
 (sv/defmethod ::retrieve-monitor
   [{:keys [pool]} {:keys [profile-id id] :as params}]
-  (let [row (db/exec-one! pool [sql:retrieve-monitor profile-id id])]
-    (when-not row
+  (let [monitor (some-> (db/exec-one! pool [sql:retrieve-monitor profile-id id])
+                        (decode-monitor-row))]
+    (when-not monitor
       (ex/raise :type :not-found))
-    (decode-monitor-row row)))
+    monitor))
 
 
-;; --- Query: Retrieve Monitor Latency Summary
+;; --- Query: Retrieve Monitor Summary
+;;
+;; NOTE: only works for not healthcheck monitors
 
-(declare sql:monitor-chart-buckets)
+(declare retrieve-generic-detail)
+(declare retrieve-healthcheck-detail)
+
 (declare sql:monitor-latencies)
 (declare sql:monitor-uptime)
 
-(s/def ::retrieve-monitor-summary
+(s/def ::retrieve-monitor-detail
   (s/keys :req-un [::id]))
 
-(sv/defmethod ::retrieve-monitor-summary
+(sv/defmethod ::retrieve-monitor-detail
   [{:keys [pool]} {:keys [id profile-id]}]
   (db/with-atomic [conn pool]
-    (let [monitor (db/exec-one! conn [sql:retrieve-monitor profile-id id])]
+    (let [monitor (db/get-by-params conn :monitor {:owner-id profile-id :id id})]
       (when-not monitor
         (ex/raise :type :not-found
                   :hint "monitor does not exists"))
-      (let [buckets   (db/exec! conn [sql:monitor-chart-buckets id])
-            latencies (db/exec-one! conn [sql:monitor-latencies id ])
-            uptime    (db/exec-one! conn [sql:monitor-uptime id ])]
-        (d/merge latencies uptime {:buckets buckets})))))
+      (if (= "healthcheck" (:type monitor))
+        (retrieve-healthcheck-detail conn monitor)
+        (retrieve-generic-detail conn monitor)))))
+
+(defn- retrieve-generic-detail
+  [conn {:keys [id] :as monitor}]
+  (let [latencies (db/exec-one! conn [sql:monitor-latencies id ])
+        uptime    (db/exec-one! conn [sql:monitor-uptime id ])]
+    (d/merge latencies uptime)))
+
+(defn- retrieve-healthcheck-detail
+  [conn {:keys [id] :as monitor}]
+  {})
 
 (def sql:monitor-latencies
   "select percentile_cont(0.90) within group (order by latency) as latency_p90,
@@ -549,8 +563,25 @@
           (select extract(epoch from sum(duration)) from entries where status = 'down')::float8 as down_seconds,
           (select extract(epoch from sum(duration)) from entries where status = 'up' or status = 'warn')::float8 as up_seconds")
 
-;; TODO: seems like the where condition is not very efficient
-(def sql:monitor-chart-buckets
+;; --- Query: Monitor Log Buckets
+;;
+;; Used for draw chart of http and ssl monitors.
+
+(declare sql:monitor-log-buckets)
+
+(s/def ::retrieve-monitor-log-buckets
+  (s/keys :req-un [::id]))
+
+(sv/defmethod ::retrieve-monitor-log-buckets
+  [{:keys [pool]} {:keys [id profile-id]}]
+  (db/with-atomic [conn pool]
+    (let [monitor (db/get-by-params conn :monitor {:owner-id profile-id :id id})]
+      (when-not monitor
+        (ex/raise :type :not-found
+                  :hint "monitor does not exists"))
+      (db/exec! conn [sql:monitor-log-buckets id]))))
+
+(def sql:monitor-log-buckets
    "select time_bucket('1 day'::interval, created_at) as ts,
            round(avg(latency)::numeric, 2)::float8 as avg
      from monitor_entry
@@ -581,7 +612,7 @@
   [{:keys [pool]} {:keys [id profile-id since limit]}]
   (let [since   (or since (dt/now))
         limit   (min limit 50)
-        monitor (db/exec-one! pool [sql:retrieve-monitor profile-id id])]
+        monitor (db/get-by-params pool :monitor {:owner-id profile-id :id id})]
     (when-not monitor
       (ex/raise :type :not-found
                 :hint "monitor does not exists"))

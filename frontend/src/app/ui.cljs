@@ -24,7 +24,7 @@
    [app.ui.auth.verify-token :refer [verify-token-page]]
    [app.ui.contacts :refer [contacts-page]]
    [app.ui.header :refer [header]]
-   [app.ui.monitors :refer [monitor-list-page monitor-detail-page]]
+   [app.ui.monitors :refer [monitors-page monitor-page]]
    [app.ui.notifications :refer [notifications]]
    [app.ui.profile :refer [profile-page]]
    [app.ui.static :refer [not-found-page not-authorized-page goodbye-page]]
@@ -51,9 +51,9 @@
 
    ["/profile" :profile]
    ["/contacts" :contacts]
-   ["/monitors" :monitor-list]
+   ["/monitors" :monitors]
    ["/monitors/:id"
-    ["/detail" :monitor-detail]
+    ["/detail" :monitor]
     ["/log" :monitor-log]]])
 
 (mf/defc app-error
@@ -128,7 +128,7 @@
 
          [:& main-layout {:route route}
           (case section
-            :monitor-list
+            :monitors
             (let [params (:query-params route)
                   params (update params :tags
                                  (fn [tags]
@@ -138,12 +138,11 @@
                                      (array? tags) (into #{} tags)
                                      (set? tags) tags
                                      :else #{})))]
-              [:& monitor-list-page {:params params}])
+              [:& monitors-page {:params params}])
 
-            (:monitor-detail
-             :monitor-log)
+            :monitor
             (let [id (uuid (get-in route [:path-params :id]))]
-              [:& monitor-detail-page {:id id :section section}])
+              [:& monitor-page {:id id :section section}])
 
             :contacts
             [:& contacts-page]

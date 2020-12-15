@@ -111,9 +111,8 @@
          (fn []
            (reset! bucket nil)))
 
-        go-back   (mf/use-callback #(st/emit! (r/nav :monitor-list)))
-        go-detail #(st/emit! (r/nav :monitor-detail {:id (:id monitor)}))
-        ;; go-log    #(st/emit! (r/nav :monitor-log {:id (:id monitor)}))
+        go-back   (mf/use-callback #(st/emit! (r/nav :monitors)))
+        go-detail #(st/emit! (r/nav :monitor {:id (:id monitor)}))
         pause     #(st/emit! (ev/pause-monitor monitor))
         resume    #(st/emit! (ev/resume-monitor monitor))
         edit      #(modal/show! {::modal/type :monitor-form

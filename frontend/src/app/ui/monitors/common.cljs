@@ -114,14 +114,14 @@
 
 (defn history-ref
   [id]
-  (l/derived (l/in [:monitor-status-history id]) st/state))
+  #(l/derived (l/in [:monitor-status-history id]) st/state))
 
 (mf/defc monitor-history
   {::mf/wrap [mf/memo]}
-  [{:keys [monitor] :as props}]
-  (let [history-ref (mf/use-memo (mf/deps (:id monitor)) #(history-ref (:id monitor)))
+  [{:keys [monitor history] :as props}]
+  (let [history-ref (mf/use-memo (mf/deps (:id monitor)) (history-ref (:id monitor)))
         history     (mf/deref history-ref)
-        load        #(st/emit! (ptk/event :load-more-status-history monitor))
+        load        (st/emitf (ptk/event :load-more-status-history monitor))
 
         show-cause-info
         (mf/use-callback
@@ -152,12 +152,14 @@
        (for [item (->> (vals (:items history))
                        (sort-by :created-at)
                        (reverse))]
-         [:ul.table-body-item {:key (:id item)
-                               :title (get-in item [:cause :hint])
-                               :class (dom/classnames
-                                       :status-warn (= (:status item) "warn")
-                                       :status-up (= (:status item) "up")
-                                       :status-down (= (:status item) "down"))}
+         [:ul.table-body-item
+          {:key (:id item)
+           :title (get-in item [:cause :hint])
+           :class (dom/classnames
+                   :status-warn (= (:status item) "warn")
+                   :status-up (= (:status item) "up")
+                   :status-down (= (:status item) "down"))}
+
           [:li.icon (case (:status item)
                       "warn"    i/info-circle
                       "up"      i/chevron-circle-up
@@ -176,6 +178,7 @@
        [:div.load-more-button
         (when (:load-more history)
           [:a {:on-click load} "Load more"])]]]]))
+
 
 (mf/defc down-cause-modal
   {::mf/wrap [mf/memo]

@@ -71,7 +71,7 @@
 (defmethod handle-token :gauth
   [token]
   (st/emit! (ptk/event :retrieve-profile)
-            (r/nav :monitor-list)))
+            (r/nav :monitors)))
 
 
 (defmethod handle-token :default

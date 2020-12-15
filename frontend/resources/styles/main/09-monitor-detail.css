@@ -29,10 +29,6 @@
     display: flex;
     position: relative;
 
-    &.secondary {
-      margin-top: 50px;
-    }
-
     h2 {
       flex-grow: 1;
       padding-left: 10px;
@@ -89,6 +85,10 @@
     flex-direction: column;
     max-width: 1200px;
     width: 100%;
+
+    &:not(:first-child) {
+      margin-top: 20px;
+    }
   }
 
   hr {

@@ -30,22 +30,36 @@
    [potok.core :as ptk]
    [rumext.alpha :as mf]))
 
-(mf/defc monitor-info
-  [{:keys [summary monitor]}]
-  (let [ttsecs  (mth/round (:total-seconds summary))
-        usecs   (mth/round (:up-seconds summary))
-        dsecs   (mth/round (:down-seconds summary))
-        psecs   (mth/round (- ttsecs dsecs usecs))
-        uptime  (/ (* (+ usecs psecs) 100) ttsecs)
-        uptime  (if (mth/nan? uptime) nil uptime)
+(defn detail-ref
+  [{:keys [id] :as monitor}]
+  #(l/derived (l/in [:monitor-detail id]) st/state))
 
+(mf/defc monitor-detail
+  [{:keys [monitor]}]
+  (let [detail-ref  (mf/use-memo (mf/deps monitor) (detail-ref monitor))
+        detail      (mf/deref detail-ref)
+
+        go-back     (mf/use-callback #(st/emit! (r/nav :monitors)))
+        go-detail   (st/emitf (r/nav :monitor {:id (:id monitor)}))
+
+        pause       (st/emitf (ev/pause-monitor monitor))
+        resume      (st/emitf (ev/resume-monitor monitor))
+        edit        #(modal/show! {::modal/type :monitor-form
+                                   :item monitor})
 
         on-hover
         (mf/use-callback
-         (mf/deps (:id monitor))
+         (mf/deps monitor)
          (fn [event]
-           (let [target (dom/get-target event)]
-             (.setAttribute target "title" (dt/timeago (:modified-at monitor))))))]
+           (-> (dom/get-target event)
+               (dom/set-attr! "title" (dt/timeago (:modified-at monitor))))))]
+
+    ;; Fetch Summary Data
+    (mf/use-effect
+     (mf/deps monitor)
+     (fn []
+       (st/emit! (ptk/event :init-monitor-detail-section monitor))
+       (st/emitf (ptk/event :stop-monitor-detail-section monitor))))
 
     [:div.details-table
      [:div.details-column
@@ -60,72 +74,25 @@
        [:div.details-field (str/upper (:type monitor))]]
       [:div.details-row
        [:div.details-field "Cadence"]
-       [:div.details-field (dt/humanize-duration (* 1000 (:cadence monitor)))]]
-      [:div.details-row
-       [:div.details-field "Tags"]
-       [:div.details-field (apply str (interpose ", " (:tags monitor)))]]]
+       [:div.details-field (dt/humanize-duration (* 1000 (:cadence monitor)))]]]
 
      [:div.details-column
+      [:div.details-row
+       [:div.details-field "Tags"]
+       [:div.details-field (apply str (interpose ", " (:tags monitor)))]]
+
       [:div.details-row
        [:div.details-field "Last ping"]
        [:div.details-field
         {:on-mouse-enter on-hover}
-        (dt/format (:monitored-at monitor) :datetime-med)]]
-      [:div.details-row
-       [:div.details-field "Uptime (%)"]
-       [:div.details-field (when uptime
-                             (str (mth/precision uptime 2) "%"))]]
-      [:div.details-row
-       [:div.details-field "Downtime"]
-       [:div.details-field (dt/humanize-duration (* 1000 dsecs))]]
-      [:div.details-row
-       [:div.details-field "Log"]
-       [:div.details-field [:a {} "Show"]]]
-]]))
+        (dt/format (:monitored-at monitor) :datetime-med)]]]]))
 
-(defn summary-ref
-  [{:keys [id] :as monitor}]
-  #(l/derived (l/in [:monitor-summary id]) st/state))
-
-(mf/defc monitor-summary
-  [{:keys [monitor]}]
-  (let [chart-ref    (mf/use-ref)
-
-        summary-ref  (mf/use-memo (mf/deps monitor) (summary-ref monitor))
-        summary      (mf/deref summary-ref)
-
-        buckets      (:buckets summary)
-
-        bucket       (mf/use-state nil)
-        on-mouse-over
-        (mf/use-callback
-         (mf/deps buckets)
-         (fn [index]
-           (reset! bucket (nth buckets index))))
-
-        on-mouse-out
-        (mf/use-callback
-         (mf/deps buckets)
-         (fn []
-           (reset! bucket nil)))
-
-        go-back   (mf/use-callback #(st/emit! (r/nav :monitor-list)))
-        go-detail #(st/emit! (r/nav :monitor-detail {:id (:id monitor)}))
-        ;; go-log    #(st/emit! (r/nav :monitor-log {:id (:id monitor)}))
-        pause     #(st/emit! (ev/pause-monitor monitor))
-        resume    #(st/emit! (ev/resume-monitor monitor))
-        edit      #(modal/show! {::modal/type :monitor-form
-                                 :item monitor})]
-
-    ;; Fetch Summary Data
-    (mf/use-effect
-     (mf/deps monitor)
-     (fn []
-       (st/emit! (ptk/event :initialize-monitor-summary {:id (:id monitor)}))
-       (st/emitf (ptk/event :finalize-monitor-summary {:id (:id monitor)}))))
+(mf/defc monitor-chart
+  [{:keys [monitor] :as props}]
+  (let [ref (mf/use-ref)]
 
     ;; Render Chart
-    (mf/use-layout-effect
+    #_(mf/use-layout-effect
      (mf/deps buckets)
      (fn []
        (when buckets
@@ -139,21 +106,21 @@
            (fn []
              (ilc/clear dom))))))
 
-    [:div.main-content
-     [:& monitor-title {:monitor monitor}]
-     [:hr]
+    [:div.latency-chart
+     [:div.chart {:ref ref}]]))
 
-     [:div.latency-chart
-      [:div.chart {:ref chart-ref}]]
 
-     [:& monitor-info {:summary summary
-                       :monitor monitor}]]))
-
-(mf/defc healthcheck-monitor-detail
+(mf/defc healthcheck-monitor
   {::mf/wrap [mf/memo]}
   [{:keys [monitor] :as props}]
   [:main.monitor-detail-section
    [:section
-    [:& monitor-summary {:monitor monitor}]
+
+    [:div.main-content
+     [:& monitor-title {:monitor monitor}]
+     [:hr]
+     #_[:& monitor-chart {:monitor monitor}]
+     [:& monitor-detail {:monitor monitor}]]
+
     [:& monitor-history {:monitor monitor}]]])
 

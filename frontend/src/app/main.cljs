@@ -39,7 +39,7 @@
       (st/emit! (rt/nav :auth-login))
 
       (and (nil? match) authed?)
-      (st/emit! (rt/nav :monitor-list))
+      (st/emit! (rt/nav :monitors))
 
       (nil? match)
       (st/emit! (rt/nav :not-found))

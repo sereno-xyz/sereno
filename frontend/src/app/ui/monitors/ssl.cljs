@@ -127,7 +127,7 @@
          (fn []
            (reset! bucket nil)))
 
-        go-back   (mf/use-callback (st/emitf (r/nav :monitor-list)))
+        go-back   (mf/use-callback (st/emitf (r/nav :monitors)))
         pause     (st/emitf (ev/pause-monitor monitor))
         resume    (st/emitf (ev/resume-monitor monitor))
         edit      (st/emitf (modal/show {:type :ssl-monitor-form :item monitor}))]

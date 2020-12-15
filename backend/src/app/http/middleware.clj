@@ -100,12 +100,6 @@
   {:name ::errors
    :compile (constantly wrap-errors)})
 
-;; (def metrics
-;;   {:name ::metrics
-;;    :wrap (fn [handler]
-;;            (mtx/wrap-counter handler {:id "http__requests_counter"
-;;                                       :help "Absolute http requests counter."}))})
-
 (def cookies
   {:name ::cookies
    :compile (constantly wrap-cookies)})

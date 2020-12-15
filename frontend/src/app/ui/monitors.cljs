@@ -25,7 +25,7 @@
    [app.ui.monitors.common :refer [monitor-options]]
    [app.ui.monitors.http :refer [http-monitor-detail]]
    [app.ui.monitors.ssl :refer [ssl-monitor-detail]]
-   [app.ui.monitors.healthcheck :refer [healthcheck-monitor-detail]]
+   [app.ui.monitors.healthcheck :refer [healthcheck-monitor]]
    [app.util.dom :as dom]
    [app.util.router :as r]
    [app.util.time :as dt]
@@ -86,14 +86,14 @@
                                      (= lval val) "all"
                                      (not= lval val) val
                                      :else lval)))]
-             (st/emit! (r/nav' :monitor-list {} filters)))))
+             (st/emit! (r/nav' :monitors {} filters)))))
 
         update-tags
         (mf/use-callback
          (mf/deps filters)
          (fn [tags]
            (let [filters (assoc filters :tags tags)]
-             (st/emit! (r/nav' :monitor-list {} filters)))))]
+             (st/emit! (r/nav' :monitors {} filters)))))]
 
     (mf/use-effect
      #(->> (rp/qry! :retrieve-all-tags {})
@@ -167,7 +167,7 @@
   [{:keys [item] :as props}]
   (let [status (:status item)
         router (mf/deref st/router-ref)
-        uri    (str "#" (r/resolve router :monitor-detail {:id (:id item)}))
+        uri    (str "#" (r/resolve router :monitor {:id (:id item)}))
 
         on-hover
         (mf/use-callback
@@ -264,10 +264,7 @@
          (for [item monitors]
            [:& monitor-item {:key (:id item) :item item}])]])]))
 
-(def monitor-list-filters-ref
-  (l/derived :monitor-list-filters st/state))
-
-(mf/defc monitor-list-page
+(mf/defc monitors-page
   {::mf/wrap [mf/memo]}
   [{:keys [params] :as props}]
   (mf/use-effect
@@ -282,24 +279,26 @@
 
 (defn monitor-ref
   [id]
-  (l/derived (l/in [:monitors id]) st/state))
+  #(l/derived (l/in [:monitors id]) st/state))
 
-(mf/defc monitor-detail-page
+(mf/defc monitor-page
   {::mf/wrap [mf/memo]}
   [{:keys [id section] :as props}]
-  (let [monitor-ref (mf/use-memo (mf/deps id) #(monitor-ref id))
+
+  (mf/use-effect
+   (mf/deps id)
+   (fn []
+     (st/emit! (ptk/event :init-monitor-page {:id id}))
+     (st/emitf (ptk/event :stop-monitor-page {:id id}))))
+
+  (let [monitor-ref (mf/use-memo (mf/deps id) (monitor-ref id))
         monitor     (mf/deref monitor-ref)]
-
-    (mf/use-effect
-     (fn []
-       (st/emit! (ptk/event :initialize-monitor-detail {:id id}))
-       (st/emitf (ptk/event :finalize-monitor-detail {:id id}))))
-
+    (prn "monitor-page" monitor)
     (when monitor
       (case (:type monitor)
         "http"        [:& http-monitor-detail {:monitor monitor}]
         "ssl"         [:& ssl-monitor-detail {:monitor monitor}]
-        "healthcheck" [:& healthcheck-monitor-detail {:monitor monitor}]
+        "healthcheck" [:& healthcheck-monitor {:monitor monitor}]
         nil))))
 
 
