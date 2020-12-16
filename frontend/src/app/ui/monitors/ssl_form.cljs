@@ -10,21 +10,16 @@
 (ns app.ui.monitors.ssl-form
   (:require
    [app.common.data :as d]
-   [app.common.exceptions :as ex]
    [app.common.spec :as us]
    [app.events :as ev]
    [app.events.messages :as em]
-   [app.repo :as rp]
    [app.store :as st]
    [app.ui.forms :as fm]
    [app.ui.icons :as i]
    [app.ui.modal :as modal]
    [app.ui.monitors.http-form :refer [tags-input contacts-input monitor-test]]
-   [app.util.dom :as dom]
-   [app.util.i18n :refer [tr]]
    [beicon.core :as rx]
    [cljs.spec.alpha :as s]
-   [cuerdas.core :as str]
    [potok.core :as ptk]
    [rumext.alpha :as mf]))
 
@@ -37,7 +32,7 @@
            :params (d/remove-nil-vals mparams))))
 
 (mf/defc left-column
-  [{:keys [profile] :as props}]
+  []
   [:div.column
    [:div.form-row
     [:& fm/input
@@ -67,7 +62,7 @@
       :name :alert-before}]]])
 
 (defn- on-error
-  [form err]
+  [_form err]
   (cond
     (and (= :validation (:type err))
          (= :monitor-limits-reached (:code err)))
@@ -110,7 +105,7 @@
           :opt-un [::id ::tags]))
 
 (mf/defc monitor-form
-  [{:keys [item on-error] :as props}]
+  [{:keys [item] :as props}]
   (let [profile    (mf/deref st/profile-ref)
         cancel-fn  (st/emitf (modal/hide))
         params     (:params item)

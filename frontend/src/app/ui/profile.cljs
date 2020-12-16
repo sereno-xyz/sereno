@@ -239,7 +239,7 @@
   [props]
   (let [profile (mf/deref st/profile-ref)]
     (mf/use-effect (st/emitf (ptk/event :retrieve-profile)))
-    [:section.profile
+    [:section.main-content.profile-page
      [:div.single-column-1200
       [:& page-title {:title "Profile"}
        [:& options {:profile profile}]]

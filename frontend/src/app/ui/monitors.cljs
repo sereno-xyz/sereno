@@ -9,34 +9,26 @@
 
 (ns app.ui.monitors
   (:require
-   [app.common.data :as d]
    [app.common.spec :as us]
-   [app.events :as ev]
    [app.repo :as rp]
    [app.store :as st]
-   [app.ui.confirm]
    [app.ui.dropdown :refer [dropdown]]
    [app.ui.forms :as fm]
    [app.ui.icons :as i]
    [app.ui.modal :as modal]
-   [app.ui.monitors.http-form]
-   [app.ui.monitors.ssl-form]
    [app.ui.monitors.healthcheck-form]
-   [app.ui.monitors.common :refer [monitor-title]]
+   [app.ui.monitors.http-form]
    [app.ui.monitors.monitor :refer [monitor-options]]
-   [app.ui.monitors.http :refer [http-monitor]]
-   [app.ui.monitors.ssl :refer [ssl-monitor]]
-   [app.ui.monitors.healthcheck :refer [healthcheck-monitor]]
+   [app.ui.monitors.ssl-form]
    [app.util.dom :as dom]
+   [app.util.object :as obj]
    [app.util.router :as r]
    [app.util.time :as dt]
-   [app.util.object :as obj]
+   [app.util.timers :as tm]
    [beicon.core :as rx]
    [cljs.spec.alpha :as s]
    [clojure.set :as set]
    [cuerdas.core :as str]
-   [okulary.core :as l]
-   [app.util.timers :as tm]
    [potok.core :as ptk]
    [rumext.alpha :as mf]))
 
@@ -178,7 +170,6 @@
              (.setAttribute target "title" (dt/timeago (:modified-at item))))))
 
         show-dropdown? (mf/use-state false)
-        show-dropdown  (mf/use-callback #(reset! show-dropdown? true))
 
         show-dropdown
         (mf/use-callback
@@ -235,7 +226,7 @@
   [filters monitors]
   (when monitors
     (cond->> (vals monitors)
-      (not (empty? (:tags filters)))
+      (seq (:tags filters))
       (filter (fn [item]
                 (seq (set/intersection (:tags item) (:tags filters)))))
 
@@ -259,7 +250,7 @@
        [:div.monitors-empty
         [:h3 "No monitors found."]]
 
-       (not (empty? monitors))
+       (seq monitors)
        [:div.table
         [:div.table-body
          (for [item monitors]
@@ -277,3 +268,4 @@
    [:div.single-column-1200
     [:& header {:filters params}]
     [:& monitor-list {:filters params}]]])
+

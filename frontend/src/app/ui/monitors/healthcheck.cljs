@@ -132,11 +132,11 @@
   {::mf/wrap [mf/memo]}
   [{:keys [monitor] :as props}]
   [:*
-   [:div.main-content
+   [:div.main-section
     [:& monitor-chart {:monitor monitor}]
     [:& monitor-detail {:monitor monitor}]]
 
-   [:div.main-content
+   [:div.main-section
     [:div.section-title "Status History"]
     [:hr]
     [:& monitor-brief-history {:monitor monitor}]]])

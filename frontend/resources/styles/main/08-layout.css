@@ -102,6 +102,18 @@
     }
 
   }
+
+  .main-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+
+    @media (max-width: 600px) {
+      --default-font-size: 14px;
+    }
+  }
 }
 
 .single-column-1200 {

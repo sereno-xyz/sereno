@@ -1,11 +1,4 @@
-.profile {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-  width: 100%;
-  padding: 10px;
-
+.profile-page {
   .page-title {
     .options {
       width: 150px;

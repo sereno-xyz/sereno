@@ -9,22 +9,13 @@
 
 (ns app.ui.monitors.status-history
   (:require
-   [app.common.data :as d]
-   [app.common.exceptions :as ex]
-   [app.common.math :as mth]
-   [app.common.uuid :as uuid]
-   [app.events :as ev]
    [app.store :as st]
-   [app.repo :as rp]
-   [app.ui.dropdown :refer [dropdown]]
-   [app.ui.forms :as forms]
    [app.ui.icons :as i]
    [app.ui.modal :as modal]
    [app.ui.monitors.common :refer [monitor-title]]
    [app.util.dom :as dom]
    [app.util.router :as r]
    [app.util.time :as dt]
-   [beicon.core :as rx]
    [cuerdas.core :as str]
    [okulary.core :as l]
    [potok.core :as ptk]
@@ -64,7 +55,7 @@
                      "created" i/circle
                      nil)]
          [:li.status {:on-click #(show-cause-info item)
-                      :style (if (= "down" (:status item))
+                      :style (when (= "down" (:status item))
                                #js {"cursor" "pointer"})}
           (str/upper (:status item))]
          [:li.created-at (dt/format (:created-at item) :datetime-med)]
@@ -78,7 +69,7 @@
 
 (mf/defc monitor-brief-history
   {::mf/wrap [mf/memo]}
-  [{:keys [monitor history] :as props}]
+  [{:keys [monitor] :as props}]
   (let [history-ref (mf/use-memo (mf/deps monitor) (history-ref monitor))
         history     (mf/deref history-ref)
         items       (->> (vals (:items history))
@@ -106,7 +97,7 @@
 
 (mf/defc monitor-history
   {::mf/wrap [mf/memo]}
-  [{:keys [monitor history] :as props}]
+  [{:keys [monitor] :as props}]
   (let [history-ref (mf/use-memo (mf/deps monitor) (history-ref monitor))
         history     (mf/deref history-ref)
         load        (st/emitf (ptk/event :load-more-status-history monitor))
@@ -147,6 +138,6 @@
        [:div.single-column-1200
         [:& monitor-title {:monitor monitor :section "Status History"}]
 
-        [:div.main-content
+        [:div.main-section
          [:& monitor-history {:monitor monitor}]]]])))
 

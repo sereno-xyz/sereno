@@ -26,7 +26,6 @@
    [app.ui.header :refer [header]]
    [app.ui.monitors :refer [monitors-page]]
    [app.ui.monitors.monitor :refer [monitor-page]]
-   [app.ui.monitors.status-history :refer [monitor-status-history-page]]
    [app.ui.notifications :refer [notifications]]
    [app.ui.profile :refer [profile-page]]
    [app.ui.static :refer [not-found-page not-authorized-page goodbye-page]]
@@ -34,6 +33,7 @@
    [app.util.timers :as ts]
    [cuerdas.core :as str]
    [expound.alpha :as expound]
+   [okulary.core :as l]
    [potok.core :as ptk]
    [rumext.alpha :as mf]))
 
@@ -96,6 +96,38 @@
     [:a {:href "https://github.com/sereno-xyz/sereno" :target "_blank"} "github"]]])
 
 
+(mf/defc main
+  [{:keys [route section] :as props}]
+
+  [:& main-layout {:route route}
+   (case section
+     :monitors
+     (let [params (:query-params route)
+           params (update params :tags
+                          (fn [tags]
+                            (cond
+                              (string? tags) #{tags}
+                              (vector? tags) (into #{} tags)
+                              (array? tags) (into #{} tags)
+                              (set? tags) tags
+                              :else #{})))]
+       [:& monitors-page {:params params}])
+
+     :contacts
+     [:& contacts-page]
+
+     :profile
+     [:& profile-page]
+
+     (:monitor
+      :monitor-status-history
+      :monitor-log)
+     (let [id (uuid (get-in route [:path-params :id]))]
+       [:& monitor-page {:id id :section section}])
+
+     nil)])
+
+
 ;; TODO: add coersion support
 
 (mf/defc app
@@ -132,35 +164,8 @@
          :not-found
          [:& not-found-page]
 
-         [:& main-layout {:route route}
-          (case section
-            :monitors
-            (let [params (:query-params route)
-                  params (update params :tags
-                                 (fn [tags]
-                                   (cond
-                                     (string? tags) #{tags}
-                                     (vector? tags) (into #{} tags)
-                                     (array? tags) (into #{} tags)
-                                     (set? tags) tags
-                                     :else #{})))]
-              [:& monitors-page {:params params}])
+         [:& main {:route route :section section}]))]))
 
-            :monitor
-            (let [id (uuid (get-in route [:path-params :id]))]
-              [:& monitor-page {:id id :section section}])
-
-            :monitor-status-history
-            (let [id (uuid (get-in route [:path-params :id]))]
-              [:& monitor-status-history-page {:id id}])
-
-            :contacts
-            [:& contacts-page]
-
-            :profile
-            [:& profile-page]
-
-            nil)]))]))
 
 ;; --- Error Handling
 

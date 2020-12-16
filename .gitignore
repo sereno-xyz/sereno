@@ -32,3 +32,4 @@ frontend/resources/images/sprites/*
 /deploy
 /web
 *bundle*
+/.clj-kondo/.cache

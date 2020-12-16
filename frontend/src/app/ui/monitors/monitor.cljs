@@ -9,7 +9,6 @@
 
 (ns app.ui.monitors.monitor
   (:require
-   [app.common.data :as d]
    [app.events :as ev]
    [app.store :as st]
    [app.ui.dropdown :refer [dropdown]]
@@ -19,6 +18,7 @@
    [app.ui.monitors.healthcheck :refer [healthcheck-monitor]]
    [app.ui.monitors.http :refer [http-monitor]]
    [app.ui.monitors.ssl :refer [ssl-monitor]]
+   [app.ui.monitors.status-history :refer [monitor-status-history-page]]
    [app.util.dom :as dom]
    [okulary.core :as l]
    [potok.core :as ptk]
@@ -107,9 +107,7 @@
   #(l/derived (l/in [:monitors id]) st/state))
 
 (mf/defc monitor-page
-  {::mf/wrap [mf/memo]}
   [{:keys [id section] :as props}]
-
   (mf/use-effect
    (mf/deps id)
    (fn []
@@ -118,17 +116,22 @@
 
   (let [monitor-ref (mf/use-memo (mf/deps id) (monitor-ref id))
         monitor     (mf/deref monitor-ref)]
-
     (when monitor
-      [:main.monitor-detail-section
-       [:div.single-column-1200
-        [:& monitor-title {:monitor monitor}
-         [:& monitor-options-button {:monitor monitor}]]
+      (case section
+        :monitor
+        [:main.main-content.monitor-page
+         [:div.single-column-1200
+          [:& monitor-title {:monitor monitor}
+           [:& monitor-options-button {:monitor monitor}]]
 
-        (case (:type monitor)
-          "http"        [:& http-monitor {:monitor monitor}]
-          "ssl"         [:& ssl-monitor {:monitor monitor}]
-          "healthcheck" [:& healthcheck-monitor {:monitor monitor}]
-          nil)]])))
+          (case (:type monitor)
+            "http"        [:& http-monitor {:monitor monitor}]
+            "ssl"         [:& ssl-monitor {:monitor monitor}]
+            "healthcheck" [:& healthcheck-monitor {:monitor monitor}]
+            nil)]]
 
+        :monitor-status-history
+        [:& monitor-status-history-page {:monitor monitor}]
 
+        :monitor-log
+        nil))))

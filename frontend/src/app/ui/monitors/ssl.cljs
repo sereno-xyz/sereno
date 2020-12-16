@@ -9,10 +9,8 @@
 
 (ns app.ui.monitors.ssl
   (:require
-   [app.common.data :as d]
-   [app.store :as st]
-   [app.ui.monitors.status-history :refer [monitor-brief-history]]
    [app.ui.monitors.http :refer [monitor-detail]]
+   [app.ui.monitors.status-history :refer [monitor-brief-history]]
    [rumext.alpha :as mf]))
 
 (mf/defc ssl-monitor
@@ -20,7 +18,7 @@
   [{:keys [monitor] :as props}]
   [:*
    [:& monitor-detail {:monitor monitor}]
-   [:div.main-content
+   [:div.main-section
     [:div.section-title "Status History"]
     [:hr]
     [:& monitor-brief-history {:monitor monitor}]]])

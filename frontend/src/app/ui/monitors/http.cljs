@@ -164,7 +164,7 @@
        (st/emit! (ptk/event :init-monitor-detail-section monitor))
        (st/emitf (ptk/event :stop-monitor-detail-section monitor))))
 
-    [:div.main-content
+    [:div.main-section
      [:& monitor-chart {:monitor monitor}]
      [:& monitor-info-table {:detail detail
                              :monitor monitor}]]))
@@ -174,7 +174,7 @@
   [{:keys [monitor] :as props}]
   [:*
    [:& monitor-detail {:monitor monitor}]
-   [:div.main-content
+   [:div.main-section
     [:div.section-title "Status History"]
     [:hr]
     [:& monitor-brief-history {:monitor monitor}]]])
