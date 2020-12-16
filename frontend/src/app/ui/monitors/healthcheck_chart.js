@@ -41,6 +41,7 @@ export function render(node, params) {
              .rangeRound([0, height]));
 
   svg.append("g")
+    .attr("transform", "translate(-1 0)")
     .selectAll("rect")
     .data(data)
     .join("rect")

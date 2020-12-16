@@ -28,7 +28,7 @@ export function render(node, params) {
   const bottomMargin = 0;
 
   const oneDay = dt.Duration.fromObject({days: 1});
-  const endDate = truncateToDay(dt.DateTime.utc()); //.plus(dt.Duration.fromObject({hours: 12}));
+  const endDate = truncateToDay(dt.DateTime.utc()) //.plus(dt.Duration.fromObject({hours: 24}));
   const startDate = endDate.minus(dt.Duration.fromObject({days: 90}));
   // console.log(endDate.toString())
   // console.log(startDate.toString())
@@ -58,6 +58,7 @@ export function render(node, params) {
   svg.append("g")
     .attr("fill", "var(--color-gray-20)")
     .attr("opacity", "0.15")
+    // .attr("transform", "translate(-10 0)")
     .attr("style", "pointer-events:none")
     .selectAll("rect")
     .data(ghostData)
@@ -77,6 +78,7 @@ export function render(node, params) {
 
   svg.append("g")
     .attr("fill", "var(--color-primary-light)")
+    .attr("transform", "translate(-13 0)")
     .selectAll("rect")
     .data(data)
     .join("rect")
@@ -95,6 +97,7 @@ export function render(node, params) {
     });
 
   svg.append("g")
+    .attr("transform", "translate(-13 0)")
     .style("cursor", "pointer")
     .selectAll("rect")
     .data(data)
