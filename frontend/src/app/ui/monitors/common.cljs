@@ -102,8 +102,11 @@
         show  (mf/use-callback #(reset! show? true))
         hide  (mf/use-callback #(reset! show? false))]
 
-    [:div.section-title-bar
-     [:h2 (:name monitor)]
+    [:div.page-title
+     [:div.breadcrumb
+      [:span.monitor-name (:name monitor)]
+      [:span.separator "➤"]
+      [:span.section-name "Detail"]]
      [:span.options {:on-click show}
       [:span.label "Options"]
       [:span.icon i/chevron-down]]
@@ -138,8 +141,7 @@
        (st/emitf (ptk/event :stop-monitor-status-history monitor))))
 
     [:div.main-content
-     [:div.section-title-bar.secondary
-      [:h2 "Status History"]]
+     [:div.section-title "Status History"]
      [:hr]
 
      [:div.history-table

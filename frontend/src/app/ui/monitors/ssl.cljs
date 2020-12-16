@@ -11,7 +11,7 @@
   (:require
    [app.common.data :as d]
    [app.store :as st]
-   [app.ui.monitors.common :refer [monitor-history]]
+   [app.ui.monitors.common :refer [monitor-history monitor-title]]
    [app.ui.monitors.http :refer [monitor-detail]]
    [rumext.alpha :as mf]))
 
@@ -20,6 +20,7 @@
   [{:keys [monitor] :as props}]
   [:main.monitor-detail-section
    [:section
+    [:& monitor-title {:monitor monitor}]
     [:& monitor-detail {:monitor monitor}]
     [:& monitor-history {:monitor monitor}]]])
 

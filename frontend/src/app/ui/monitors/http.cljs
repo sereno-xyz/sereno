@@ -164,9 +164,6 @@
        (st/emitf (ptk/event :stop-monitor-detail-section monitor))))
 
     [:div.main-content
-     [:& monitor-title {:monitor monitor}]
-     [:hr]
-
      [:& monitor-chart {:monitor monitor}]
      [:& monitor-info-table {:detail detail
                              :monitor monitor}]]))
@@ -176,6 +173,7 @@
   [{:keys [monitor] :as props}]
   [:main.monitor-detail-section
    [:section
+    [:& monitor-title {:monitor monitor}]
     [:& monitor-detail {:monitor monitor}]
     [:& monitor-history {:monitor monitor}]]])
 

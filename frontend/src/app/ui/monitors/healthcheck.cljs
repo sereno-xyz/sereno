@@ -132,10 +132,9 @@
   [{:keys [monitor] :as props}]
   [:main.monitor-detail-section
    [:section
+    [:& monitor-title {:monitor monitor}]
 
     [:div.main-content
-     [:& monitor-title {:monitor monitor}]
-     [:hr]
      [:& monitor-chart {:monitor monitor}]
      [:& monitor-detail {:monitor monitor}]]
 
