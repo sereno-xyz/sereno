@@ -56,6 +56,10 @@
          (.setQueryData ^js uri qdt)
          (.toString uri))))))
 
+(defn href
+  [& args]
+  (str "/#" (apply resolve args)))
+
 (defn create
   [routes]
   (r/router routes))

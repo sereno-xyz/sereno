@@ -33,6 +33,16 @@
    [potok.core :as ptk]
    [rumext.alpha :as mf]))
 
+(mf/defc page-title
+  [{:keys [title section children]}]
+  [:div.page-title
+   [:div.breadcrumb
+    [:a.monitor-name title]
+    (when section
+      [:span.separator "➤"]
+      [:span.section-name section])]
+     children])
+
 ;; --- Routes
 (s/def ::profile-form map?)
 
@@ -144,7 +154,12 @@
 
 (mf/defc options
   [{:keys [profile] :as props}]
-  (let [input-ref      (mf/use-ref)
+  (let [show? (mf/use-state false)
+        show  (mf/use-callback #(reset! show? true))
+        hide  (mf/use-callback #(reset! show? false))
+
+        input-ref      (mf/use-ref)
+
         show-dropdown? (mf/use-state false)
         show-dropdown  (mf/use-callback #(reset! show-dropdown? true))
         hide-dropdown  (mf/use-callback #(reset! show-dropdown? false))
@@ -190,9 +205,9 @@
                                                  :type :error
                                                  :timeout 2000}))))))))]
 
-    [:div.topside-options
-     [:div.select-like {:on-click show-dropdown}
-      [:span.text "Options"]
+    [:*
+     [:span.options {:on-click show}
+      [:span.label "Options"]
       [:span.icon i/chevron-down]]
 
      [:input {:style {:display "none"}
@@ -202,8 +217,8 @@
               :onChange on-selected
               :type "file"}]
 
-     [:& dropdown {:show @show-dropdown?
-                   :on-close hide-dropdown}
+     [:& dropdown {:show @show?
+                   :on-close hide}
       [:ul.dropdown
        [:li {:on-click on-export-click}
         [:span.icon i/download]
@@ -226,7 +241,9 @@
     (mf/use-effect (st/emitf (ptk/event :retrieve-profile)))
     [:section.profile
      [:div.single-column-1200
-      [:& options {:profile profile}]
+      [:& page-title {:title "Profile"}
+       [:& options {:profile profile}]]
+
       [:div.column-wrapper
        [:div.left-column
         [:& profile-section]

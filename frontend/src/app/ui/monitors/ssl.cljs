@@ -11,16 +11,16 @@
   (:require
    [app.common.data :as d]
    [app.store :as st]
-   [app.ui.monitors.common :refer [monitor-history monitor-title]]
+   [app.ui.monitors.status-history :refer [monitor-brief-history]]
    [app.ui.monitors.http :refer [monitor-detail]]
    [rumext.alpha :as mf]))
 
 (mf/defc ssl-monitor
   {::mf/wrap [mf/memo]}
   [{:keys [monitor] :as props}]
-  [:main.monitor-detail-section
-   [:section
-    [:& monitor-title {:monitor monitor}]
-    [:& monitor-detail {:monitor monitor}]
-    [:& monitor-history {:monitor monitor}]]])
-
+  [:*
+   [:& monitor-detail {:monitor monitor}]
+   [:div.main-content
+    [:div.section-title "Status History"]
+    [:hr]
+    [:& monitor-brief-history {:monitor monitor}]]])

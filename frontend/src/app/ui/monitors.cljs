@@ -22,7 +22,8 @@
    [app.ui.monitors.http-form]
    [app.ui.monitors.ssl-form]
    [app.ui.monitors.healthcheck-form]
-   [app.ui.monitors.common :refer [monitor-options]]
+   [app.ui.monitors.common :refer [monitor-title]]
+   [app.ui.monitors.monitor :refer [monitor-options]]
    [app.ui.monitors.http :refer [http-monitor]]
    [app.ui.monitors.ssl :refer [ssl-monitor]]
    [app.ui.monitors.healthcheck :refer [healthcheck-monitor]]
@@ -276,29 +277,3 @@
    [:div.single-column-1200
     [:& header {:filters params}]
     [:& monitor-list {:filters params}]]])
-
-(defn monitor-ref
-  [id]
-  #(l/derived (l/in [:monitors id]) st/state))
-
-(mf/defc monitor-page
-  {::mf/wrap [mf/memo]}
-  [{:keys [id section] :as props}]
-
-  (mf/use-effect
-   (mf/deps id)
-   (fn []
-     (st/emit! (ptk/event :init-monitor-page {:id id}))
-     (st/emitf (ptk/event :stop-monitor-page {:id id}))))
-
-  (let [monitor-ref (mf/use-memo (mf/deps id) (monitor-ref id))
-        monitor     (mf/deref monitor-ref)]
-
-    (when monitor
-      (case (:type monitor)
-        "http"        [:& http-monitor {:monitor monitor}]
-        "ssl"         [:& ssl-monitor {:monitor monitor}]
-        "healthcheck" [:& healthcheck-monitor {:monitor monitor}]
-        nil))))
-
-

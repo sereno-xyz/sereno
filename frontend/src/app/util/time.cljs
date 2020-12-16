@@ -9,6 +9,7 @@
 
 (ns app.util.time
   (:require
+   [app.util.object :as obj]
    ["luxon" :as lxn]
    ["humanize-duration" :as hmd]))
 
@@ -76,10 +77,13 @@
   ([ms] (js-humanize ms))
   ([ms {:keys [locale largest round units]
         :or {largest 2 round true}}]
-   (js-humanize ms #js {:language "shortEn"
-                        :largest largest
-                        :units (clj->js units)
-                        :round round})))
+   (let [params (obj/merge #js {:language "shortEn"
+                                :largest largest
+                                :round round}
+                           (when units
+                             #js {:units (clj->js units)}))]
+
+     (js-humanize ms params))))
 
 (defn format-time-distance
   [t1 t2]

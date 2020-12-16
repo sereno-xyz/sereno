@@ -636,6 +636,7 @@
               (-> state
                   (update-in [:monitor-status-history id :items] merge (d/index-by :id items))
                   (assoc-in  [:monitor-status-history id :load-more-since] last-dt)
+                  (assoc-in  [:monitor-status-history id :load-more-used] false)
                   (assoc-in  [:monitor-status-history id :load-more] more?))))]
 
     (ptk/reify ::fetch-monitor-status-history

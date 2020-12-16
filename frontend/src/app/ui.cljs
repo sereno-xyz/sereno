@@ -24,7 +24,9 @@
    [app.ui.auth.verify-token :refer [verify-token-page]]
    [app.ui.contacts :refer [contacts-page]]
    [app.ui.header :refer [header]]
-   [app.ui.monitors :refer [monitors-page monitor-page]]
+   [app.ui.monitors :refer [monitors-page]]
+   [app.ui.monitors.monitor :refer [monitor-page]]
+   [app.ui.monitors.status-history :refer [monitor-status-history-page]]
    [app.ui.notifications :refer [notifications]]
    [app.ui.profile :refer [profile-page]]
    [app.ui.static :refer [not-found-page not-authorized-page goodbye-page]]
@@ -54,6 +56,7 @@
    ["/monitors" :monitors]
    ["/monitors/:id"
     ["/detail" :monitor]
+    ["/status-history" :monitor-status-history]
     ["/log" :monitor-log]]])
 
 (mf/defc app-error
@@ -91,6 +94,9 @@
   [:div.version-overlay
    [:span "Version: " (:full cfg/version) " | source at "
     [:a {:href "https://github.com/sereno-xyz/sereno" :target "_blank"} "github"]]])
+
+
+;; TODO: add coersion support
 
 (mf/defc app
   {::mf/wrap [#(mf/catch % {:fallback app-error})]}
@@ -143,6 +149,10 @@
             :monitor
             (let [id (uuid (get-in route [:path-params :id]))]
               [:& monitor-page {:id id :section section}])
+
+            :monitor-status-history
+            (let [id (uuid (get-in route [:path-params :id]))]
+              [:& monitor-status-history-page {:id id}])
 
             :contacts
             [:& contacts-page]

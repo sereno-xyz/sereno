@@ -21,7 +21,8 @@
    [app.repo :as rp]
    [app.ui.icons :as i]
    [app.ui.modal :as modal]
-   [app.ui.monitors.common :refer [monitor-title monitor-history]]
+   [app.ui.monitors.common :refer [monitor-title]]
+   [app.ui.monitors.status-history :refer [monitor-brief-history]]
    [app.util.dom :as dom]
    [app.util.router :as r]
    [app.util.time :as dt]
@@ -171,9 +172,10 @@
 (mf/defc http-monitor
   {::mf/wrap [mf/memo]}
   [{:keys [monitor] :as props}]
-  [:main.monitor-detail-section
-   [:section
-    [:& monitor-title {:monitor monitor}]
-    [:& monitor-detail {:monitor monitor}]
-    [:& monitor-history {:monitor monitor}]]])
+  [:*
+   [:& monitor-detail {:monitor monitor}]
+   [:div.main-content
+    [:div.section-title "Status History"]
+    [:hr]
+    [:& monitor-brief-history {:monitor monitor}]]])
 
