@@ -117,14 +117,7 @@
    (router cfg)
    (rr/routes
     (rr/create-resource-handler {:path "/"})
-    (rr/create-default-handler))
-   {:middleware [[middleware/format-response-body]
-                 [middleware/errors errors/handle]
-                 [middleware/parse-request-body]
-                 [middleware/cookies]
-                 [middleware/query-params]
-                 [middleware/multipart-params]
-                 [session/middleware cfg]]}))
+    (rr/create-default-handler))))
 
 (defn- index-handler
   [request]
@@ -133,29 +126,36 @@
 (defn- router
   [{:keys [auth rpc webhooks metrics] :as cfg}]
   (rr/router
-   [["/metrics" {:get (:handler metrics)}]
-    ["/webhook"
-     ["/awssns" {:post (:awssns webhooks)}]
-     ["/telegram" {:post (:telegram webhooks)}]]
+   [["" {:middleware [[middleware/format-response-body]
+                      [middleware/parse-request-body]
+                      [middleware/query-params]
+                      [middleware/errors errors/handle]
+                      [middleware/cookies]
+                      [middleware/multipart-params]
+                      [session/middleware cfg]]}
+     ["/metrics" {:get (:handler metrics)}]
+     ["/webhook"
+      ["/awssns" {:post (:awssns webhooks)}]
+      ["/telegram" {:post (:telegram webhooks)}]]
 
-    ["/hc/:monitor-id"
-     {:get (:healthcheck webhooks)
-      :post (:healthcheck webhooks)}]
+     ["/hc/:monitor-id"
+      {:get (:healthcheck webhooks)
+       :post (:healthcheck webhooks)}]
 
-    ["/hc/:monitor-id/:label"
-     {:get (:healthcheck webhooks)
-      :post (:healthcheck webhooks)}]
+     ["/hc/:monitor-id/:label"
+      {:get (:healthcheck webhooks)
+       :post (:healthcheck webhooks)}]
 
-    ["/auth"
-     ["/login" {:post (:login auth)}]
-     ["/logout" {:post (:logout auth)}]
-     ["/google" {:post (:gauth auth)}]
-     ["/google/callback" {:get (:gauth-callback auth)}]]
+     ["/auth"
+      ["/login" {:post (:login auth)}]
+      ["/logout" {:post (:logout auth)}]
+      ["/google" {:post (:gauth auth)}]
+      ["/google/callback" {:get (:gauth-callback auth)}]]
 
-    ["/rpc/:cmd"
-     {:get (:handler rpc)
-      :post (:handler rpc)}]
+     ["/rpc/:cmd"
+      {:get (:handler rpc)
+       :post (:handler rpc)}]
 
-    ["/" {:get index-handler}]]))
+     ["/" {:get index-handler}]]]))
 
 

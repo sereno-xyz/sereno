@@ -16,6 +16,7 @@
    [app.common.uuid :as uuid]
    [app.events :as ev]
    [app.store :as st]
+   [app.repo :as rp]
    [app.ui.dropdown :refer [dropdown]]
    [app.ui.forms :as forms]
    [app.ui.icons :as i]
@@ -74,39 +75,55 @@
        [:div.details-field (str/upper (:type monitor))]]
       [:div.details-row
        [:div.details-field "Cadence"]
-       [:div.details-field (dt/humanize-duration (* 1000 (:cadence monitor)))]]]
+       [:div.details-field (dt/humanize-duration (* 1000 (:cadence monitor)))]]
 
-     [:div.details-column
       [:div.details-row
        [:div.details-field "Tags"]
        [:div.details-field (apply str (interpose ", " (:tags monitor)))]]
+      ]
+
+     [:div.details-column
 
       [:div.details-row
        [:div.details-field "Last ping"]
        [:div.details-field
         {:on-mouse-enter on-hover}
-        (dt/format (:monitored-at monitor) :datetime-med)]]]]))
+        (dt/format (:monitored-at monitor) :datetime-med)]]
+
+      [:div.details-row
+       [:div.details-field "Log entries"]
+       [:div.details-field (:total detail)]]
+
+      [:div.details-row
+       [:div.details-field "Incidents"]
+       [:div.details-field (:incidents detail)]]
+      ]]))
 
 (mf/defc monitor-chart
   [{:keys [monitor] :as props}]
-  (let [ref (mf/use-ref)]
+  (let [ref  (mf/use-ref)
+        data (mf/use-state [])]
+
+    (mf/use-effect
+     (mf/deps monitor)
+     (fn []
+       (->> (rp/qry! :retrieve-monitor-log-entries {:id (:id monitor)})
+            (rx/subs #(reset! data %)))))
 
     ;; Render Chart
-    #_(mf/use-layout-effect
-     (mf/deps buckets)
+    (mf/use-layout-effect
+     (mf/deps @data)
      (fn []
-       (when buckets
-         (let [dom  (mf/ref-val chart-ref)
-               data (clj->js buckets)]
+       (when @data
+         (let [dom  (mf/ref-val ref)
+               data (clj->js @data)]
            (ilc/render dom #js {:width 1160
-                                :height 90
-                                :onMouseOver on-mouse-over
-                                :onMouseOut on-mouse-out
+                                :height 15
                                 :data data})
            (fn []
              (ilc/clear dom))))))
 
-    [:div.latency-chart
+    [:div.logentries-chart
      [:div.chart {:ref ref}]]))
 
 

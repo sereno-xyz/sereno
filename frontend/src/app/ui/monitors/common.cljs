@@ -134,8 +134,8 @@
     (mf/use-effect
      (mf/deps monitor)
      (fn []
-       (st/emit! (ptk/event :initialize-monitor-status-history monitor))
-       (st/emitf (ptk/event :finalize-monitor-status-history monitor))))
+       (st/emit! (ptk/event :init-monitor-status-history monitor))
+       (st/emitf (ptk/event :stop-monitor-status-history monitor))))
 
     [:div.main-content
      [:div.section-title-bar.secondary

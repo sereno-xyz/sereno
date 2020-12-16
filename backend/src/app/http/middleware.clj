@@ -51,7 +51,7 @@
            (assoc request :body-params (parse :transit body))
 
            "application/json"
-           (assoc request :body-params (parse :transit body))
+           (assoc request :body-params (parse :json body))
 
            request))))))
 
@@ -93,7 +93,7 @@
   (fn [request]
     (try
       (handler request)
-      (catch Throwable e
+      (catch Exception e
         (on-error e request)))))
 
 (def errors

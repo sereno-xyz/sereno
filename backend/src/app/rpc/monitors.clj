@@ -515,6 +515,8 @@
 
 (declare sql:monitor-latencies)
 (declare sql:monitor-uptime)
+(declare sql:monitor-entries-counters)
+
 
 (s/def ::retrieve-monitor-detail
   (s/keys :req-un [::id]))
@@ -538,7 +540,16 @@
 
 (defn- retrieve-healthcheck-detail
   [conn {:keys [id] :as monitor}]
-  {})
+  (db/exec-one! conn [sql:monitor-entries-counters id id]))
+
+(def sql:monitor-entries-counters
+  "select (select count(*)
+             from monitor_entry as me
+            where me.monitor_id = ?) as total,
+          (select count(*)
+             from monitor_entry as me
+            where me.monitor_id = ?
+              and me.status != 'up') as incidents")
 
 (def sql:monitor-latencies
   "select percentile_cont(0.90) within group (order by latency) as latency_p90,
@@ -587,6 +598,35 @@
      from monitor_entry
     where monitor_id = ?
       and (now()-created_at) < '90 days'::interval group by 1 order by 1")
+
+
+
+
+;; --- Query: Monitor Log Entries
+;;
+;; Used for draw chart of http and ssl monitors.
+
+(declare sql:monitor-log-entries)
+
+(s/def ::retrieve-monitor-log-entries
+  (s/keys :req-un [::id]))
+
+(sv/defmethod ::retrieve-monitor-log-entries
+  [{:keys [pool]} {:keys [id profile-id]}]
+  (db/with-atomic [conn pool]
+    (let [monitor (db/get-by-params conn :monitor {:owner-id profile-id :id id})]
+      (when-not monitor
+        (ex/raise :type :not-found
+                  :hint "monitor does not exists"))
+      (db/exec! conn [sql:monitor-log-entries id]))))
+
+(def sql:monitor-log-entries
+   "select me.created_at as ts,
+           me.status
+     from monitor_entry as me
+    where me.monitor_id = ?
+      and me.created_at > now() - '90 days'::interval
+    order by 1")
 
 
 ;; --- Query: Retrieve Monitor Status

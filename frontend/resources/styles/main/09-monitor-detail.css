@@ -192,6 +192,25 @@
     }
   }
 
+  .logentries-chart {
+    display: flex;
+    flex-direction: column;
+    margin: 10px;
+
+    .chart {
+      svg {
+        border: 1px solid var(--color-gray-5);
+      }
+      display: flex;
+      justify-content: center;
+      display: flex;
+      position: relative;
+      max-width: 1200px;
+      height: 15px;
+    }
+  }
+
+
   .details-table {
     display: flex;
     flex-direction: row;
