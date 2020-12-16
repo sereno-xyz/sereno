@@ -11,6 +11,7 @@
   "Data manipulation and query helper functions."
   (:refer-clojure :exclude [concat read-string merge])
   (:require [clojure.set :as set]
+            [cuerdas.core :as str]
             [lambdaisland.uri :as u]
             #?(:cljs [cljs.reader :as r]
                :clj [clojure.edn :as r])
@@ -189,6 +190,16 @@
       (persistent! res)
       (recur (reduce-kv assoc! res (first maps))
              (next maps)))))
+
+(defn keywordize
+  "A helper that adapts database style row to clojure style map,
+  converting all snake_case attrs into kebab-case, and it only works
+  on a first level of the map."
+  [m]
+  (let [xf #(if (string? %) (keyword (str/replace % #"_" "-")) %)]
+    (persistent!
+     (reduce-kv (fn [m k v] (assoc! m (xf k) v))
+                (transient {}) m))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; URI

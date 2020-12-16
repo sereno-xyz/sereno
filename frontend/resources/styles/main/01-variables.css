@@ -16,12 +16,10 @@
   --color-primary-5: rgba( 16,149,174,0.07);
   --color-primary-6: rgba( 16,149,174,0.2);
 
-
   --color-primary: var(--color-primary-0);
   --color-primary-light: var(--color-primary-1);
   --color-primary-lighter: var(--color-primary-6);
   --color-primary-dark: var(--color-primary-4);
-
 
   --color-white: rgb(255,255,255);
   --color-black: rgb(0,0,0);
@@ -34,6 +32,7 @@
 
   --color-modal-overlay: rgba(48, 50, 54, 0.5);
 
+  --color-gray-1:  rgb(245, 245, 245);
   --color-gray-5:  rgb(232, 233, 234);
   --color-gray-10: rgb(227, 227, 227);
   --color-gray-20: rgb(177, 178, 181);

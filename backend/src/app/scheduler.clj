@@ -31,34 +31,58 @@
         offset (dt/get-cron-offset cron (:created-at item))]
     (dt/get-next-inst cron offset)))
 
-(defn schedule-item
-  [{:keys [conn]} item]
+(defmulti schedule-monitor-task
+  (fn [cfg monitor] (:type monitor)))
+
+(defmethod schedule-monitor-task "healthcheck"
+  [{:keys [conn]} {:keys [id] :as item}]
+  ;; For healthcheck monitors we only need to run the
+  ;; "check-monitor" task. Rescheduling is handled by the http
+  ;; handler.
+  (tasks/submit! conn {:name "check-monitor"
+                       :props {:id id}
+                       :max-retries 2
+                       :delay 0})
+
+  ;; We need to delete the monitor schedule entry for avoid
+  ;; infinite loop of scheduling because without removing it, the monitor
+  ;; becomes always ellegible for schedule.
+  (db/delete! conn :monitor-schedule
+              {:monitor-id id}))
+
+
+(defmethod schedule-monitor-task :default
+  [{:keys [conn]} {:keys [id] :as item}]
+  ;; Submit the task to be executed
+  (tasks/submit! conn {:name "monitor"
+                       :props {:id id}
+                       :max-retries 2
+                       :delay 0})
+
+  ;; Schedule the next task execution.
   (let [ninst (get-next-inst item)]
-    (tasks/submit! conn {:name "monitor"
-                         :props {:id (:id item)}
-                         :max-retries 2
-                         :delay 0})
     (db/update! conn :monitor-schedule
                 {:modified-at (dt/now)
                  :scheduled-at ninst}
-                {:monitor-id (:id item)})))
+                {:monitor-id id})))
 
 (def sql:retrieve-scheduled-monitors
-  "select m.id, m.created_at, m.status, m.cron_expr
+  "select m.id, m.type, m.created_at, m.status, m.cron_expr
      from monitor_schedule as ms
      join monitor as m on (m.id = ms.monitor_id)
     where ms.scheduled_at <= now()
       and m.status in ('started', 'up', 'down', 'warn')
-    order by ms.scheduled_at, ms.modified_at
+    order by ms.scheduled_at
     limit ?
-      for update of ms skip locked")
+      for update of ms
+     skip locked")
 
 (defn- event-loop-fn*
   [{:keys [pool batch-size] :as opts}]
   (db/with-atomic [conn pool]
     (let [items (db/exec! conn [sql:retrieve-scheduled-monitors batch-size])
           opts  (assoc opts :conn conn)]
-      (run! (partial schedule-item opts) items)
+      (run! (partial schedule-monitor-task opts) items)
       (count items))))
 
 (defn- event-loop-fn

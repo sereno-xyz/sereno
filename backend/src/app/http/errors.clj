@@ -35,7 +35,7 @@
                     "</pre>\n")}
         ;; Dissoc the error data because it is not serializable.
         {:status 400
-         :body (dissoc edata)})
+         :body (assoc edata :explain (with-out-str (expound/printer (:data edata))))})
 
       :else
       {:status 400
@@ -64,7 +64,7 @@
                      (get-context-string request edata)
                      (with-out-str (expound/printer (:data edata)))))
     {:status 500
-     :body edata}))
+     :body (assoc edata :explain (with-out-str (expound/printer (:data edata))))}))
 
 (defmethod handle-exception :not-authenticated
   [err req]

@@ -10,13 +10,14 @@
 (ns app.http.middleware
   (:require
    [app.common.exceptions :as ex]
+   [app.common.data :as d]
    [app.config :as cfg]
    [app.util.transit :as t]
    [clojure.data.json :as json]
    [clojure.java.io :as io]
    [clojure.tools.logging :as log]
+   [ring.util.codec :as codec]
    [ring.middleware.cookies :refer [wrap-cookies]]
-   [ring.middleware.keyword-params :refer [wrap-keyword-params]]
    [ring.middleware.multipart-params :refer [wrap-multipart-params]]
    [ring.middleware.params :refer [wrap-params]]
    [ring.middleware.resource :refer [wrap-resource]]))
@@ -50,7 +51,7 @@
            (assoc request :body-params (parse :transit body))
 
            "application/json"
-           (assoc request :body-params (parse :transit body))
+           (assoc request :body-params (parse :json body))
 
            request))))))
 
@@ -92,31 +93,30 @@
   (fn [request]
     (try
       (handler request)
-      (catch Throwable e
+      (catch Exception e
         (on-error e request)))))
 
 (def errors
   {:name ::errors
    :compile (constantly wrap-errors)})
 
-;; (def metrics
-;;   {:name ::metrics
-;;    :wrap (fn [handler]
-;;            (mtx/wrap-counter handler {:id "http__requests_counter"
-;;                                       :help "Absolute http requests counter."}))})
-
 (def cookies
   {:name ::cookies
    :compile (constantly wrap-cookies)})
 
-(def params
+(defn- wrap-query-params
+  [handler]
+  (fn [{:keys [query-string] :as request}]
+    (let [params (some-> query-string
+                         (codec/form-decode "UTF-8")
+                         (d/keywordize))
+          params (if (map? params) params {})]
+      (handler (assoc request :query-params params)))))
+
+(def query-params
   {:name ::params
-   :compile (constantly wrap-params)})
+   :compile (constantly wrap-query-params)})
 
 (def multipart-params
   {:name ::multipart-params
    :compile (constantly wrap-multipart-params)})
-
-(def keyword-params
-  {:name ::keyword-params
-   :compile (constantly wrap-keyword-params)})

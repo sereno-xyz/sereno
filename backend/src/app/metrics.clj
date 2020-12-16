@@ -9,13 +9,13 @@
 
 (ns app.metrics
   (:require
-   [clojure.tools.logging :as log]
    [app.common.exceptions :as ex]
-   [app.worker]
-   [next.jdbc :as jdbc]
    [app.util.time :as dt]
+   [app.worker]
+   [clojure.tools.logging :as log]
+   [cuerdas.core :as str]
    [integrant.core :as ig]
-   [cuerdas.core :as str])
+   [next.jdbc :as jdbc])
   (:import
    io.prometheus.client.CollectorRegistry
    io.prometheus.client.Counter
@@ -62,8 +62,7 @@
                    (origf tasks item)))
                {::original origf})))))
 
-
-(defn handler
+(defn- handler
   [registry request]
   (let [samples  (.metricFamilySamples ^CollectorRegistry registry)
         writer   (StringWriter.)]

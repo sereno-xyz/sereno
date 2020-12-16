@@ -28,11 +28,6 @@
                 (println "******** end email "(:id email) "**********"))]
       (log/info out))))
 
-;; TODO: add specs
-;; (defmethod ig/pre-init-spec ::handler
-;;   [_]
-;;   (s/keys :req-un [::smtp]))
-
 (defmethod ig/init-key ::handler
   [_ cfg]
   (fn [{:keys [props] :as tdata}]

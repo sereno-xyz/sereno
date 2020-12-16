@@ -71,7 +71,8 @@
            (dom/stop-propagation event)
            (case (:type monitor)
              "http" (st/emit! (modal/show {:type :http-monitor-form :item monitor}))
-             "ssl"  (st/emit! (modal/show {:type :ssl-monitor-form :item monitor})))))]
+             "ssl"  (st/emit! (modal/show {:type :ssl-monitor-form :item monitor}))
+             "healthcheck" (st/emit! (modal/show {:type :healthcheck-monitor-form :item monitor})))))]
 
     [:ul.dropdown
      (if (= "paused" (:status monitor))
@@ -101,8 +102,11 @@
         show  (mf/use-callback #(reset! show? true))
         hide  (mf/use-callback #(reset! show? false))]
 
-    [:div.section-title-bar
-     [:h2 (:name monitor)]
+    [:div.page-title
+     [:div.breadcrumb
+      [:span.monitor-name (:name monitor)]
+      [:span.separator "➤"]
+      [:span.section-name "Detail"]]
      [:span.options {:on-click show}
       [:span.label "Options"]
       [:span.icon i/chevron-down]]
@@ -113,14 +117,14 @@
 
 (defn history-ref
   [id]
-  (l/derived (l/in [:monitor-status-history id]) st/state))
+  #(l/derived (l/in [:monitor-status-history id]) st/state))
 
 (mf/defc monitor-history
   {::mf/wrap [mf/memo]}
-  [{:keys [monitor] :as props}]
-  (let [history-ref (mf/use-memo (mf/deps (:id monitor)) #(history-ref (:id monitor)))
+  [{:keys [monitor history] :as props}]
+  (let [history-ref (mf/use-memo (mf/deps (:id monitor)) (history-ref (:id monitor)))
         history     (mf/deref history-ref)
-        load        #(st/emit! (ptk/event :load-more-status-history monitor))
+        load        (st/emitf (ptk/event :load-more-status-history monitor))
 
         show-cause-info
         (mf/use-callback
@@ -133,12 +137,11 @@
     (mf/use-effect
      (mf/deps monitor)
      (fn []
-       (st/emit! (ptk/event :initialize-monitor-status-history monitor))
-       (st/emitf (ptk/event :finalize-monitor-status-history monitor))))
+       (st/emit! (ptk/event :init-monitor-status-history monitor))
+       (st/emitf (ptk/event :stop-monitor-status-history monitor))))
 
     [:div.main-content
-     [:div.section-title-bar.secondary
-      [:h2 "Status History"]]
+     [:div.section-title "Status History"]
      [:hr]
 
      [:div.history-table
@@ -151,12 +154,14 @@
        (for [item (->> (vals (:items history))
                        (sort-by :created-at)
                        (reverse))]
-         [:ul.table-body-item {:key (:id item)
-                               :title (get-in item [:cause :hint])
-                               :class (dom/classnames
-                                       :status-warn (= (:status item) "warn")
-                                       :status-up (= (:status item) "up")
-                                       :status-down (= (:status item) "down"))}
+         [:ul.table-body-item
+          {:key (:id item)
+           :title (get-in item [:cause :hint])
+           :class (dom/classnames
+                   :status-warn (= (:status item) "warn")
+                   :status-up (= (:status item) "up")
+                   :status-down (= (:status item) "down"))}
+
           [:li.icon (case (:status item)
                       "warn"    i/info-circle
                       "up"      i/chevron-circle-up
@@ -175,6 +180,7 @@
        [:div.load-more-button
         (when (:load-more history)
           [:a {:on-click load} "Load more"])]]]]))
+
 
 (mf/defc down-cause-modal
   {::mf/wrap [mf/memo]

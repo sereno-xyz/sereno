@@ -66,7 +66,7 @@
     ptk/WatchEvent
     (watch [this state stream]
       (rx/of (ptk/event :retrieve-profile)
-             (r/nav :monitor-list)))))
+             (r/nav :monitors)))))
 
 
 (s/def ::fullname ::us/not-empty-string)
@@ -472,6 +472,25 @@
              (rx/catch on-error))))))
 
 
+(s/def ::grace-time ::us/integer)
+(s/def ::create-healthcheck-monitor
+  (s/keys :req-un [::name ::cadence ::contacts ::grace-time]
+          :opt-un [::tags]))
+
+(defmethod ptk/resolve :create-healthcheck-monitor
+  [_ params]
+  (us/assert ::create-healthcheck-monitor params)
+  (ptk/reify ::create-healthcheck-monitor
+    ptk/WatchEvent
+    (watch [_ state stream]
+      (let [{:keys [on-success on-error]
+             :or {on-success identity
+                  on-error identity}} (meta params)]
+        (->> (rp/req! :create-healthcheck-monitor params)
+             (rx/tap on-success)
+             (rx/map #(ptk/event :fetch-monitors))
+             (rx/catch on-error))))))
+
 (s/def ::update-http-monitor
   (s/keys :req-un [::id ::name ::cadence ::contacts ::method ::uri]
           :opt-un [::tags ::should-include ::headers]))
@@ -512,6 +531,26 @@
              (rx/catch (fn [error]
                          (or (on-error error)
                              (rx/empty)))))))))
+
+
+(s/def ::update-healthcheck-monitor
+  (s/keys :req-un [::id ::name ::cadence ::contacts ::grace-time]
+          :opt-un [::tags]))
+
+(defmethod ptk/resolve :update-healthcheck-monitor
+  [_ {:keys [id] :as params}]
+  (us/assert ::update-healthcheck-monitor params)
+  (ptk/reify ::update-healthcheck-monitor
+    ptk/WatchEvent
+    (watch [_ state stream]
+      (let [{:keys [on-success on-error]
+             :or {on-error identity
+                  on-success identity}} (meta params)]
+        (->> (rp/req! :update-healthcheck-monitor params)
+             (rx/tap on-success)
+             (rx/map #(ptk/event :fetch-monitors))
+             (rx/catch on-error))))))
+
 
 (defn delete-monitor
   [{:keys [id] :as params}]
@@ -566,17 +605,17 @@
                          (on-error err)
                          (rx/empty))))))))
 
-(defmethod ptk/resolve :fetch-monitor-summary
+(defmethod ptk/resolve :fetch-monitor-detail
   [_ {:keys [id] :as params}]
   (us/assert ::us/uuid id)
   (letfn [(on-fetched [data state]
-            (update-in state [:monitor-summary id]
-                       (fn [summary]
-                         (d/merge summary data))))]
-    (ptk/reify :fetch-monitor-summary
+            (update-in state [:monitor-detail id]
+                       (fn [detail]
+                         (d/merge detail data))))]
+    (ptk/reify :fetch-monitor-detail
       ptk/WatchEvent
       (watch [_ state stream]
-        (->> (rp/qry! :retrieve-monitor-summary {:id id})
+        (->> (rp/qry! :retrieve-monitor-detail {:id id})
              (rx/map #(partial on-fetched %)))))))
 
 (defmethod ptk/resolve :fetch-monitor-status-history
@@ -596,8 +635,8 @@
                   last-dt (:created-at (last items))]
               (-> state
                   (update-in [:monitor-status-history id :items] merge (d/index-by :id items))
-                  (assoc-in [:monitor-status-history id :load-more-since] last-dt)
-                  (assoc-in [:monitor-status-history id :load-more] more?))))]
+                  (assoc-in  [:monitor-status-history id :load-more-since] last-dt)
+                  (assoc-in  [:monitor-status-history id :load-more] more?))))]
 
     (ptk/reify ::fetch-monitor-status-history
       ptk/WatchEvent
@@ -654,63 +693,52 @@
 ;; Initialization Events
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defmethod ptk/resolve :initialize-monitor-detail
+(defn- filter-update-messages-from-websocket
+  [stream id]
+  (->> stream
+       (rx/filter (ptk/type? ::websocket-message))
+       (rx/map deref)
+       (rx/filter #(= (:metadata/channel %) "db_changes"))
+       (rx/filter #(= (:database/table %) "monitor"))
+       (rx/filter #(= (:database/operation %) :update))
+       (rx/filter #(= id (:id %)))))
+
+(defmethod ptk/resolve :init-monitor-page
   [_ {:keys [id] :as params}]
-  (ptk/reify :initialize-monitor-detail
+  (ptk/reify :init-monitor-page
     ptk/WatchEvent
     (watch [_ state stream]
-      (let [stoper (rx/filter (ptk/type? :finalize-monitor-detail) stream)]
+      (let [stoper (rx/filter (ptk/type? :stop-monitor-page) stream)]
         (rx/concat
          (rx/of (ptk/event :fetch-monitor params)
                 (ptk/event :fetch-contacts))
-         (->> stream
-              (rx/filter (ptk/type? ::websocket-message))
-              (rx/map deref)
-              (rx/filter #(= (:metadata/channel %) "db_changes"))
-              (rx/filter #(= (:database/table %) "monitor"))
-              (rx/filter #(= (:database/operation %) :update))
-              (rx/filter #(= id (:id %)))
+         (->> (filter-update-messages-from-websocket stream id)
               (rx/map #(ptk/event :fetch-monitor params))
               (rx/take-until stoper)))))))
 
-
-(defmethod ptk/resolve :initialize-monitor-summary
+(defmethod ptk/resolve :init-monitor-detail-section
   [_ {:keys [id] :as params}]
-  (ptk/reify ::initialize-monitor-summary
+  (ptk/reify :init-monitor-detail-section
     ptk/WatchEvent
     (watch [_ state stream]
-      (let [stoper (rx/filter (ptk/type? :finalize-monitor-summary) stream)]
-
-        (rx/merge
-         ;; Initial fetch of summary data
-         (rx/of (ptk/event :fetch-monitor-summary params))
-
-         ;; Watch for backend update notifications
-         (->> stream
-              (rx/filter (ptk/type? ::websocket-message))
-              (rx/map deref)
-              (rx/filter #(= (:metadata/channel %) "db_changes"))
-              (rx/filter #(= (:database/table %) "monitor"))
-              (rx/filter #(= (:database/operation %) :update))
-              (rx/filter #(= id (:id %)))
-              (rx/map #(ptk/event :fetch-monitor-summary params))
-              (rx/take-until stoper))
-         )))))
+      (let [stoper (rx/filter (ptk/type? :stop-monitor-detail-section) stream)]
+        (rx/concat
+         (rx/of (ptk/event :fetch-monitor-detail {:id id}))
+         (->> (filter-update-messages-from-websocket stream id)
+              (rx/map #(ptk/event :fetch-monitor-detail params))
+              (rx/take-until stoper)))))))
 
 
-(defmethod ptk/resolve :initialize-monitor-status-history
+(defmethod ptk/resolve :init-monitor-status-history
   [_ {:keys [id] :as params}]
-  (us/assert ::us/uuid id)
-  (ptk/reify ::initialize-monitor-status-history
-    ptk/UpdateEvent
-    (update [_ state]
-      (assoc-in state [:monitor-status-history id] {:items {} :load-more false}))
-
+  (ptk/reify :init-monitor-status-history
     ptk/WatchEvent
     (watch [_ state stream]
-      (let [stoper (rx/filter (ptk/type? :finalize-monitor-status-history) stream)]
+      (prn :init-monitor-status-history)
+      (let [stoper (rx/filter (ptk/type? :stop-monitor-status-history) stream)
+            params (select-keys params [:id])]
         (rx/merge
-         (rx/of (ptk/event :fetch-monitor-status-history {:id id}))
+         (rx/of (ptk/event :fetch-monitor-status-history params))
          (->> stream
               (rx/filter #(or (= ::monitor-started %)
                               (= ::monitor-paused %)))
@@ -726,30 +754,29 @@
               (rx/map #(ptk/event :fetch-monitor-status-history params))
               (rx/take-until stoper)))))))
 
+;; (defmethod ptk/resolve :initialize-monitor-log
+;;   [_ {:keys [id] :as params}]
+;;   (us/assert ::us/uuid id)
+;;   (ptk/reify ::initialize-monitor-status-history
+;;     ptk/UpdateEvent
+;;     (update [_ state]
+;;       (assoc-in state [:monitor-log id] {:items {} :load-more false}))
 
-(defmethod ptk/resolve :initialize-monitor-log
-  [_ {:keys [id] :as params}]
-  (us/assert ::us/uuid id)
-  (ptk/reify ::initialize-monitor-status-history
-    ptk/UpdateEvent
-    (update [_ state]
-      (assoc-in state [:monitor-log id] {:items {} :load-more false}))
+;;     ptk/WatchEvent
+;;     (watch [_ state stream]
+;;       (let [stoper (rx/filter (ptk/type? :finalize-monitor-log) stream)]
+;;         (rx/merge
+;;          (rx/of (ptk/event :fetch-monitor-log params))
 
-    ptk/WatchEvent
-    (watch [_ state stream]
-      (let [stoper (rx/filter (ptk/type? :finalize-monitor-log) stream)]
-        (rx/merge
-         (rx/of (ptk/event :fetch-monitor-log params))
-
-         #_(->> stream
-              (rx/filter (ptk/type? ::websocket-message))
-              (rx/map deref)
-              (rx/filter #(= (:metadata/channel %) "db_changes"))
-              (rx/filter #(= (:database/table %) "monitor"))
-              (rx/filter #(= (:database/operation %) :update))
-              (rx/filter #(= id (:id %)))
-              (rx/map #(ptk/event :fetch-monitor-log params))
-              (rx/take-until stoper)))))))
+;;          #_(->> stream
+;;               (rx/filter (ptk/type? ::websocket-message))
+;;               (rx/map deref)
+;;               (rx/filter #(= (:metadata/channel %) "db_changes"))
+;;               (rx/filter #(= (:database/table %) "monitor"))
+;;               (rx/filter #(= (:database/operation %) :update))
+;;               (rx/filter #(= id (:id %)))
+;;               (rx/map #(ptk/event :fetch-monitor-log params))
+;;               (rx/take-until stoper)))))))
 
 
 (defmethod ptk/resolve :initialize-monitor-list

@@ -187,6 +187,57 @@
       nil)))
 
 
+;; --- Mutation: Create health check monitor
+
+(s/def ::grace-time ::us/integer)
+
+(s/def ::create-healthcheck-monitor
+  (s/keys :req-un [::name ::profile-id ::contacts ::cadence ::grace-time]
+          :opt-un [::tags]))
+
+(sv/defmethod ::create-healthcheck-monitor
+  [{:keys [pool]} {:keys [name contacts tags profile-id cadence grace-time]}]
+  (db/with-atomic [conn pool]
+    (let [id      (uuid/next)
+          profile (get-profile conn profile-id)
+          now-t   (dt/now)
+          params  {:schedule :simple
+                   :grace-time grace-time}]
+
+      (validate-monitor-limits! conn profile)
+      (validate-cadence-limits! profile cadence)
+
+      (db/insert! conn :monitor
+                  {:id id
+                   :owner-id profile-id
+                   :name name
+                   :cadence cadence
+                   :cron-expr "" ; Explicitly empty
+                   :created-at now-t
+                   :status "started"
+                   :type "healthcheck"
+                   :params (db/tjson params)
+                   :tags (into-array String tags)})
+
+      (db/insert! conn :monitor-status
+                  {:monitor-id id
+                   :status "created"
+                   :created-at now-t
+                   :finished-at now-t})
+
+      (db/insert! conn :monitor-status
+                  {:monitor-id id
+                   :status "started"
+                   :created-at now-t})
+
+      (doseq [cid contacts]
+        (db/insert! conn :monitor-contact-rel
+                    {:monitor-id id
+                     :contact-id cid}))
+      nil)))
+
+
+
 ;; --- Mutation: Update Http Monitor
 
 (s/def ::update-http-monitor
@@ -200,10 +251,11 @@
           monitor (db/get-by-params conn :monitor
                                     {:id id :owner-id profile-id}
                                     {:for-update true})
+          profile (get-profile conn profile-id)
           cron    (parse-and-validate-cadence! cadence)
           offset  (dt/get-cron-offset cron (:created-at monitor))]
 
-      (validate-cadence-limits! profile-id cadence)
+      (validate-cadence-limits! profile cadence)
 
       (when-not monitor
         (ex/raise :type :not-found
@@ -271,6 +323,50 @@
                    :owner-id profile-id})
 
       (db/delete! conn :monitor-contact-rel {:monitor-id id})
+      (doseq [cid contacts]
+        (db/insert! conn :monitor-contact-rel
+                    {:monitor-id id
+                     :contact-id cid}))
+
+      nil)))
+
+
+;; --- Mutation: Update Health Check monitor
+
+(s/def ::update-healthcheck-monitor
+  (s/keys :req-un [::id ::name ::profile-id ::contacts ::cadence ::grace-time]
+          :opt-un [::tags]))
+
+(sv/defmethod ::update-healthcheck-monitor
+  [{:keys [pool]} {:keys [id name profile-id cadence grace-time contacts tags]}]
+  (db/with-atomic [conn pool]
+    (let [params  {:schedule :simple
+                   :grace-time grace-time}
+          profile (get-profile conn profile-id)
+          monitor (db/get-by-params conn :monitor
+                                    {:id id :owner-id profile-id}
+                                    {:for-update true})]
+
+      (validate-cadence-limits! profile cadence)
+
+      (when-not monitor
+        (ex/raise :type :not-found
+                  :code :object-does-not-found))
+
+      (when (not= "healthcheck" (:type monitor))
+        (ex/raise :type :validation
+                  :code :wront-monitor-type))
+
+      (db/update! conn :monitor
+                  {:name name
+                   :cadence cadence
+                   :params (db/tjson params)
+                   :tags (into-array String tags)}
+                  {:id id
+                   :owner-id profile-id})
+
+      (db/delete! conn :monitor-contact-rel {:monitor-id id})
+
       (doseq [cid contacts]
         (db/insert! conn :monitor-contact-rel
                     {:monitor-id id
@@ -403,32 +499,57 @@
 
 (sv/defmethod ::retrieve-monitor
   [{:keys [pool]} {:keys [profile-id id] :as params}]
-  (let [row (db/exec-one! pool [sql:retrieve-monitor profile-id id])]
-    (when-not row
+  (let [monitor (some-> (db/exec-one! pool [sql:retrieve-monitor profile-id id])
+                        (decode-monitor-row))]
+    (when-not monitor
       (ex/raise :type :not-found))
-    (decode-monitor-row row)))
+    monitor))
 
 
-;; --- Query: Retrieve Monitor Latency Summary
+;; --- Query: Retrieve Monitor Summary
+;;
+;; NOTE: only works for not healthcheck monitors
 
-(declare sql:monitor-chart-buckets)
+(declare retrieve-generic-detail)
+(declare retrieve-healthcheck-detail)
+
 (declare sql:monitor-latencies)
 (declare sql:monitor-uptime)
+(declare sql:monitor-entries-counters)
 
-(s/def ::retrieve-monitor-summary
+
+(s/def ::retrieve-monitor-detail
   (s/keys :req-un [::id]))
 
-(sv/defmethod ::retrieve-monitor-summary
+(sv/defmethod ::retrieve-monitor-detail
   [{:keys [pool]} {:keys [id profile-id]}]
   (db/with-atomic [conn pool]
-    (let [monitor (db/exec-one! conn [sql:retrieve-monitor profile-id id])]
+    (let [monitor (db/get-by-params conn :monitor {:owner-id profile-id :id id})]
       (when-not monitor
         (ex/raise :type :not-found
                   :hint "monitor does not exists"))
-      (let [buckets   (db/exec! conn [sql:monitor-chart-buckets id])
-            latencies (db/exec-one! conn [sql:monitor-latencies id ])
-            uptime    (db/exec-one! conn [sql:monitor-uptime id ])]
-        (d/merge latencies uptime {:buckets buckets})))))
+      (if (= "healthcheck" (:type monitor))
+        (retrieve-healthcheck-detail conn monitor)
+        (retrieve-generic-detail conn monitor)))))
+
+(defn- retrieve-generic-detail
+  [conn {:keys [id] :as monitor}]
+  (let [latencies (db/exec-one! conn [sql:monitor-latencies id ])
+        uptime    (db/exec-one! conn [sql:monitor-uptime id ])]
+    (d/merge latencies uptime)))
+
+(defn- retrieve-healthcheck-detail
+  [conn {:keys [id] :as monitor}]
+  (db/exec-one! conn [sql:monitor-entries-counters id id]))
+
+(def sql:monitor-entries-counters
+  "select (select count(*)
+             from monitor_entry as me
+            where me.monitor_id = ?) as total,
+          (select count(*)
+             from monitor_entry as me
+            where me.monitor_id = ?
+              and me.status != 'up') as incidents")
 
 (def sql:monitor-latencies
   "select percentile_cont(0.90) within group (order by latency) as latency_p90,
@@ -453,13 +574,59 @@
           (select extract(epoch from sum(duration)) from entries where status = 'down')::float8 as down_seconds,
           (select extract(epoch from sum(duration)) from entries where status = 'up' or status = 'warn')::float8 as up_seconds")
 
-;; TODO: seems like the where condition is not very efficient
-(def sql:monitor-chart-buckets
+;; --- Query: Monitor Log Buckets
+;;
+;; Used for draw chart of http and ssl monitors.
+
+(declare sql:monitor-log-buckets)
+
+(s/def ::retrieve-monitor-log-buckets
+  (s/keys :req-un [::id]))
+
+(sv/defmethod ::retrieve-monitor-log-buckets
+  [{:keys [pool]} {:keys [id profile-id]}]
+  (db/with-atomic [conn pool]
+    (let [monitor (db/get-by-params conn :monitor {:owner-id profile-id :id id})]
+      (when-not monitor
+        (ex/raise :type :not-found
+                  :hint "monitor does not exists"))
+      (db/exec! conn [sql:monitor-log-buckets id]))))
+
+(def sql:monitor-log-buckets
    "select time_bucket('1 day'::interval, created_at) as ts,
            round(avg(latency)::numeric, 2)::float8 as avg
      from monitor_entry
     where monitor_id = ?
       and (now()-created_at) < '90 days'::interval group by 1 order by 1")
+
+
+
+
+;; --- Query: Monitor Log Entries
+;;
+;; Used for draw chart of http and ssl monitors.
+
+(declare sql:monitor-log-entries)
+
+(s/def ::retrieve-monitor-log-entries
+  (s/keys :req-un [::id]))
+
+(sv/defmethod ::retrieve-monitor-log-entries
+  [{:keys [pool]} {:keys [id profile-id]}]
+  (db/with-atomic [conn pool]
+    (let [monitor (db/get-by-params conn :monitor {:owner-id profile-id :id id})]
+      (when-not monitor
+        (ex/raise :type :not-found
+                  :hint "monitor does not exists"))
+      (db/exec! conn [sql:monitor-log-entries id]))))
+
+(def sql:monitor-log-entries
+   "select me.created_at as ts,
+           me.status
+     from monitor_entry as me
+    where me.monitor_id = ?
+      and me.created_at > now() - '90 days'::interval
+    order by 1")
 
 
 ;; --- Query: Retrieve Monitor Status
@@ -485,7 +652,7 @@
   [{:keys [pool]} {:keys [id profile-id since limit]}]
   (let [since   (or since (dt/now))
         limit   (min limit 50)
-        monitor (db/exec-one! pool [sql:retrieve-monitor profile-id id])]
+        monitor (db/get-by-params pool :monitor {:owner-id profile-id :id id})]
     (when-not monitor
       (ex/raise :type :not-found
                 :hint "monitor does not exists"))

@@ -27,7 +27,8 @@
 (defn- rpc-handler
   [methods request]
   (let [type    (keyword (get-in request [:path-params :cmd]))
-        data    (merge (:params request)
+        data    (merge (:path-params request)
+                       (:query-params request)
                        (:body-params request)
                        (:uploads request))
 

@@ -21,9 +21,11 @@
    [app.ui.modal :as modal]
    [app.ui.monitors.http-form]
    [app.ui.monitors.ssl-form]
+   [app.ui.monitors.healthcheck-form]
    [app.ui.monitors.common :refer [monitor-options]]
-   [app.ui.monitors.http :refer [http-monitor-detail]]
-   [app.ui.monitors.ssl :refer [ssl-monitor-detail]]
+   [app.ui.monitors.http :refer [http-monitor]]
+   [app.ui.monitors.ssl :refer [ssl-monitor]]
+   [app.ui.monitors.healthcheck :refer [healthcheck-monitor]]
    [app.util.dom :as dom]
    [app.util.router :as r]
    [app.util.time :as dt]
@@ -84,14 +86,14 @@
                                      (= lval val) "all"
                                      (not= lval val) val
                                      :else lval)))]
-             (st/emit! (r/nav' :monitor-list {} filters)))))
+             (st/emit! (r/nav' :monitors {} filters)))))
 
         update-tags
         (mf/use-callback
          (mf/deps filters)
          (fn [tags]
            (let [filters (assoc filters :tags tags)]
-             (st/emit! (r/nav' :monitor-list {} filters)))))]
+             (st/emit! (r/nav' :monitors {} filters)))))]
 
     (mf/use-effect
      #(->> (rp/qry! :retrieve-all-tags {})
@@ -130,6 +132,10 @@
         (mf/use-callback
          (st/emitf (modal/show {:type :ssl-monitor-form})))
 
+        create-hc-monitor
+        (mf/use-callback
+         (st/emitf (modal/show {:type :healthcheck-monitor-form})))
+
         show-dropdown? (mf/use-state false)
         show-dropdown  (mf/use-callback #(reset! show-dropdown? true))
         hide-dropdown  (mf/use-callback #(reset! show-dropdown? false))]
@@ -152,7 +158,8 @@
         [:li.disabled {:title "DNS registry monitor (not implemented yet)."}
          [:div.icon i/globe]
          [:div.text "DNS"]]
-        [:li.disabled {:title "Heartbeat / Keepalive monitor (not implemented yet)."}
+        [:li {:title "Heartbeat / Keepalive monitor (not implemented yet)."
+              :on-click create-hc-monitor}
          [:div.icon i/heartbeat]
          [:div.text "Keepalive"]]]]]]))
 
@@ -160,7 +167,7 @@
   [{:keys [item] :as props}]
   (let [status (:status item)
         router (mf/deref st/router-ref)
-        uri    (str "#" (r/resolve router :monitor-detail {:id (:id item)}))
+        uri    (str "#" (r/resolve router :monitor {:id (:id item)}))
 
         on-hover
         (mf/use-callback
@@ -197,8 +204,9 @@
                       "Waiting data"))}
 
        (case (:type item)
-         "http" i/cloud
-         "ssl"  i/shield-alt
+         "http"        i/cloud
+         "ssl"         i/shield-alt
+         "healthcheck" i/heartbeat
          nil)]
 
       [:div.monitor-title
@@ -207,8 +215,6 @@
        (when (seq (:tags item))
          (let [tags (apply str (interpose ", " (:tags item)))]
            [:span.tags {:title tags} tags]))]
-
-
 
       [:div.monitor-updated
        {:on-mouse-enter on-hover
@@ -258,10 +264,7 @@
          (for [item monitors]
            [:& monitor-item {:key (:id item) :item item}])]])]))
 
-(def monitor-list-filters-ref
-  (l/derived :monitor-list-filters st/state))
-
-(mf/defc monitor-list-page
+(mf/defc monitors-page
   {::mf/wrap [mf/memo]}
   [{:keys [params] :as props}]
   (mf/use-effect
@@ -276,23 +279,26 @@
 
 (defn monitor-ref
   [id]
-  (l/derived (l/in [:monitors id]) st/state))
+  #(l/derived (l/in [:monitors id]) st/state))
 
-(mf/defc monitor-detail-page
+(mf/defc monitor-page
   {::mf/wrap [mf/memo]}
   [{:keys [id section] :as props}]
-  (let [monitor-ref (mf/use-memo (mf/deps id) #(monitor-ref id))
-        monitor     (mf/deref monitor-ref)]
 
-    (mf/use-effect
-     (fn []
-       (st/emit! (ptk/event :initialize-monitor-detail {:id id}))
-       (st/emitf (ptk/event :finalize-monitor-detail {:id id}))))
+  (mf/use-effect
+   (mf/deps id)
+   (fn []
+     (st/emit! (ptk/event :init-monitor-page {:id id}))
+     (st/emitf (ptk/event :stop-monitor-page {:id id}))))
+
+  (let [monitor-ref (mf/use-memo (mf/deps id) (monitor-ref id))
+        monitor     (mf/deref monitor-ref)]
 
     (when monitor
       (case (:type monitor)
-        "http" [:& http-monitor-detail {:monitor monitor}]
-        "ssl"  [:& ssl-monitor-detail {:monitor monitor}]
+        "http"        [:& http-monitor {:monitor monitor}]
+        "ssl"         [:& ssl-monitor {:monitor monitor}]
+        "healthcheck" [:& healthcheck-monitor {:monitor monitor}]
         nil))))
 
 
