@@ -116,7 +116,7 @@
 
     ;; Render Chart
     (mf/use-layout-effect
-     (mf/deps buckets)
+     (mf/deps @buckets)
      (fn []
        (when buckets
          (let [dom  (mf/ref-val ref)

@@ -87,14 +87,17 @@
                          (take 10))
 
         router      (mf/deref st/router-ref)
-        history-url (r/href router :monitor-status-history {:id (:id monitor)})]
+        history-url (r/href router :monitor-status-history {:id (:id monitor)})
+        params      (assoc monitor
+                           :brief true
+                           :limit 10)]
 
 
     (mf/use-effect
      (mf/deps monitor)
      (fn []
-       (st/emit! (ptk/event :init-monitor-status-history monitor))
-       (st/emitf (ptk/event :stop-monitor-status-history monitor))))
+       (st/emit! (ptk/event :init-monitor-status-history params))
+       (st/emitf (ptk/event :stop-monitor-status-history))))
 
     [:*
      [:& status-history-table {:items items}]
@@ -131,12 +134,6 @@
 (mf/defc monitor-status-history-page
   {::mf/wrap [mf/memo]}
   [{:keys [id] :as props}]
-  ;; (mf/use-effect
-  ;;  (mf/deps id)
-  ;;  (fn []
-  ;;    (st/emit! (ptk/event :init-monitor-page {:id id}))
-  ;;    (st/emitf (ptk/event :stop-monitor-page {:id id}))))
-
   (mf/use-effect
    (mf/deps id)
    (fn []

@@ -633,11 +633,13 @@
           (on-fetched [items state]
             (let [more?   (load-more? items)
                   last-dt (:created-at (last items))]
-              (-> state
-                  (update-in [:monitor-status-history id :items] merge (d/index-by :id items))
-                  (assoc-in  [:monitor-status-history id :load-more-since] last-dt)
-                  (assoc-in  [:monitor-status-history id :load-more-used] false)
-                  (assoc-in  [:monitor-status-history id :load-more] more?))))]
+              (update-in state [:monitor-status-history id]
+                         (fn [data]
+                           (as-> data $
+                             (if (:brief params)
+                               (assoc $ :items (d/index-by :id items))
+                               (update $ :items merge (d/index-by :id items)))
+                             (assoc $ :load-more-since last-dt :load-more more?))))))]
 
     (ptk/reify ::fetch-monitor-status-history
       ptk/WatchEvent
@@ -735,9 +737,8 @@
   (ptk/reify :init-monitor-status-history
     ptk/WatchEvent
     (watch [_ state stream]
-      (prn :init-monitor-status-history)
       (let [stoper (rx/filter (ptk/type? :stop-monitor-status-history) stream)
-            params (select-keys params [:id])]
+            params (select-keys params [:id :brief :limit])]
         (rx/merge
          (rx/of (ptk/event :fetch-monitor-status-history params))
          (->> stream

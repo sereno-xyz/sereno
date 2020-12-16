@@ -28,10 +28,8 @@ export function render(node, params) {
   const bottomMargin = 0;
 
   const oneDay = dt.Duration.fromObject({days: 1});
-  const endDate = truncateToDay(dt.DateTime.utc()) //.plus(dt.Duration.fromObject({hours: 24}));
+  const endDate = truncateToDay(dt.DateTime.utc());
   const startDate = endDate.minus(dt.Duration.fromObject({days: 90}));
-  console.log("end", endDate.toString())
-  console.log("start", startDate.toString())
 
   const x = (d3.scaleUtc()
              .domain([startDate, endDate])
