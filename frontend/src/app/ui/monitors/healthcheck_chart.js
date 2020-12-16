@@ -28,7 +28,7 @@ export function render(node, params) {
   let startDate = endDate.minus(dt.Duration.fromObject({hours: 1}));
 
   if (data.length > 1) {
-    endDate = data[data.length-1].ts.toUTC();
+    // endDate = data[data.length-1].ts.toUTC();
     startDate = data[0].ts.toUTC();
   }
 

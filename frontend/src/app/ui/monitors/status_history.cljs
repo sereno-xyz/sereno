@@ -118,26 +118,14 @@
       (when (:load-more history)
         [:a {:on-click load} "Load more"])]]))
 
-(defn monitor-ref
-  [id]
-  #(l/derived (l/in [:monitors id]) st/state))
-
 (mf/defc monitor-status-history-page
   {::mf/wrap [mf/memo]}
-  [{:keys [id] :as props}]
-  (mf/use-effect
-   (mf/deps id)
-   (fn []
-     (st/emit! (ptk/event :init-monitor-page {:id id}))
-     (st/emitf (ptk/event :stop-monitor-page {:id id}))))
-
-  (let [monitor-ref (mf/use-memo (mf/deps id) (monitor-ref id))
-        monitor     (mf/deref monitor-ref)]
-    (when monitor
-      [:main.monitor-detail-section
-       [:div.single-column-1200
-        [:& monitor-title {:monitor monitor :section "Status History"}]
-
-        [:div.main-section
-         [:& monitor-history {:monitor monitor}]]]])))
+  [{:keys [monitor] :as props}]
+  [:main.main-content.monitor-page
+   [:div.single-column-1200
+    [:& monitor-title {:monitor monitor :section "Status History"}]
+    [:div.main-section
+     [:div.section-title "Status History"]
+     [:hr]
+     [:& monitor-history {:monitor monitor}]]]])
 
