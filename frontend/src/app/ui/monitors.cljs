@@ -23,8 +23,8 @@
    [app.ui.monitors.ssl-form]
    [app.ui.monitors.healthcheck-form]
    [app.ui.monitors.common :refer [monitor-options]]
-   [app.ui.monitors.http :refer [http-monitor-detail]]
-   [app.ui.monitors.ssl :refer [ssl-monitor-detail]]
+   [app.ui.monitors.http :refer [http-monitor]]
+   [app.ui.monitors.ssl :refer [ssl-monitor]]
    [app.ui.monitors.healthcheck :refer [healthcheck-monitor]]
    [app.util.dom :as dom]
    [app.util.router :as r]
@@ -293,11 +293,11 @@
 
   (let [monitor-ref (mf/use-memo (mf/deps id) (monitor-ref id))
         monitor     (mf/deref monitor-ref)]
-    (prn "monitor-page" monitor)
+
     (when monitor
       (case (:type monitor)
-        "http"        [:& http-monitor-detail {:monitor monitor}]
-        "ssl"         [:& ssl-monitor-detail {:monitor monitor}]
+        "http"        [:& http-monitor {:monitor monitor}]
+        "ssl"         [:& ssl-monitor {:monitor monitor}]
         "healthcheck" [:& healthcheck-monitor {:monitor monitor}]
         nil))))
 

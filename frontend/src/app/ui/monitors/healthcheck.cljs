@@ -119,7 +119,7 @@
     [:div.main-content
      [:& monitor-title {:monitor monitor}]
      [:hr]
-     #_[:& monitor-chart {:monitor monitor}]
+     [:& monitor-chart {:monitor monitor}]
      [:& monitor-detail {:monitor monitor}]]
 
     [:& monitor-history {:monitor monitor}]]])
