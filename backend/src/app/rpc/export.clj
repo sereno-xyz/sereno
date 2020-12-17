@@ -19,6 +19,8 @@
    [app.util.transit :as t]
    [app.util.services :as sv]
    [clojure.java.io :as io]
+   [clojure.data.csv :as csv]
+   [clojure.data.json :as json]
    [clojure.spec.alpha :as s]
    [clojure.tools.logging :as log]
    [ring.core.protocols :as rp])
@@ -99,6 +101,7 @@
         :headers {"content-type" "text/plain"
                   "content-disposition" "attachment; filename=\"export.data\""}
         :body (generate-export-body cfg params)})}))
+
 
 ;; --- Request Import
 
@@ -186,3 +189,73 @@
   (db/with-atomic [conn pool]
     (process-import! conn params)
     nil))
+
+
+;; --- Request Export Status History as CSV
+
+(declare generate-status-history-csv-export)
+(declare sql:monitor-status-history)
+
+(s/def ::format ::us/keyword)
+(s/def ::id ::us/uuid)
+
+(s/def ::export-monitor-status-history
+  (s/keys :req-un [::format ::id]))
+
+(sv/defmethod ::export-monitor-status-history
+  [{:keys [pool]} {:keys [id format] :as params}]
+  (letfn [(generate-csv [items out]
+            (csv/write-csv out [["created_at", "finished_at", "status"]])
+            (doseq [row items]
+              (csv/write-csv out [[(dt/instant->isoformat (:created-at row))
+                                   (dt/instant->isoformat (:finished-at row))
+                                   (:status row)]])))
+
+          (generate-json [items out]
+            (doseq [row items]
+              (-> {:id (str (:id row))
+                   :created_at  (dt/instant->isoformat (:created-at row))
+                   :finished-at (dt/instant->isoformat (:finished-at row))
+                   :status (:status row)
+                   :cause (:cause row)}
+                  (json/write out))
+              (binding [*out* out]
+                (print "\n"))))
+
+          (generate-transit [items out]
+            (let [writer (t/writer out)]
+              (doseq [row items]
+                (t/write! writer row))))
+
+          (write-to-stream [out]
+            (let [items (db/exec! pool [sql:monitor-status-history id])
+                  items (map decode-status-row items)]
+              (try
+                (if (or (= format :csv)
+                        (= format :json))
+                  (with-open [out (io/writer out)]
+                    (case format
+                      :csv (generate-csv items out)
+                      :json (generate-json items out)))
+                  (generate-transit items out))
+                (catch org.eclipse.jetty.io.EofException _)
+                (catch Exception e
+                  (log/errorf e "Exception on export")))))]
+
+  (with-meta {}
+    {:transform-response
+     (fn [_ _]
+       {:status 200
+        :headers {"content-type" "text/plain"
+                  "content-disposition" "attachment; filename=\"export.json\""
+                  }
+        :body (reify rp/StreamableResponseBody
+                (write-body-to-stream [_ _ out]
+                  (write-to-stream out)))})})))
+
+(def ^:private
+  sql:monitor-status-history
+  "select e.id, e.created_at, e.finished_at, e.status, e.cause
+     from monitor_status as e
+    where e.monitor_id = ?
+    order by e.created_at desc")

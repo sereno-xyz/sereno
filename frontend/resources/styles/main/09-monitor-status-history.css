@@ -1,4 +1,18 @@
 .main-layout {
+
+  .status-history-page {
+    .page-title {
+      .options {
+        width: 150px;
+      }
+      .dropdown {
+        width: 170px;
+        right: 15px;
+      }
+    }
+  }
+
+
   .history-table {
     display: flex;
     flex-direction: column;

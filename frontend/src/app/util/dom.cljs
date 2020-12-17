@@ -64,7 +64,12 @@
 (defn get-target
   "Extract the target from event instance."
   [event]
-  (.-target event))
+  (.-target ^js event))
+
+(defn get-current-target
+  "Extract the target from event instance."
+  [event]
+  (.-currentTarget ^js event))
 
 (defn get-parent
   [dom]
@@ -129,6 +134,11 @@
 (defn set-html!
   [el html]
   (set! (.-innerHTML el) html))
+
+(defn get-data-attr!
+  [node n]
+  (when-let [ds (.-dataset ^js node)]
+    (unchecked-get ds n)))
 
 (defn append-child!
   [el child]

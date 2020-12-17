@@ -9,7 +9,10 @@
 
 (ns app.ui.monitors.status-history
   (:require
+   [app.common.data :as d]
+   [app.config :as cfg]
    [app.store :as st]
+   [app.ui.dropdown :refer [dropdown]]
    [app.ui.icons :as i]
    [app.ui.modal :as modal]
    [app.ui.monitors.common :refer [monitor-title]]
@@ -17,9 +20,56 @@
    [app.util.router :as r]
    [app.util.time :as dt]
    [cuerdas.core :as str]
+   [lambdaisland.uri :as u]
    [okulary.core :as l]
    [potok.core :as ptk]
    [rumext.alpha :as mf]))
+
+(mf/defc options
+  [{:keys [monitor] :as props}]
+  (let [on-export-click
+        (mf/use-callback
+         (fn [event]
+           (let [node   (dom/create-element "a")
+                 target (dom/get-current-target event)
+                 format (dom/get-data-attr! target "format")
+                 url  (-> (u/uri cfg/public-uri)
+                          (assoc :path "/rpc/export-monitor-status-history")
+                          (u/assoc-query :id (:id monitor)
+                                         :format format))]
+             (dom/set-attr! node "href" (str url))
+             (dom/set-attr! node "download" (str "status-history." format))
+             (dom/click node))))]
+
+    [:ul.dropdown
+     [:li {:title "Export as CSV"
+           :data-id (:id monitor)
+           :data-format "csv"
+           :on-click on-export-click}
+      [:div.icon i/download]
+      [:div.text "Export as CSV"]]
+     [:li {:title "Export as JSON"
+           :data-id (:id monitor)
+           :data-format "json"
+           :on-click on-export-click}
+      [:div.icon i/download]
+      [:div.text "Export as JSON"]]]))
+
+(mf/defc options-select
+  [{:keys [monitor] :as props}]
+  (let [show? (mf/use-state false)
+        show  (mf/use-callback #(reset! show? true))
+        hide  (mf/use-callback #(reset! show? false))]
+
+    [:*
+     [:span.options {:on-click show}
+      [:span.label "Options"]
+      [:span.icon i/chevron-down]]
+
+     [:& dropdown {:show @show?
+                   :on-close hide}
+      [:& options {:monitor monitor}]]]))
+
 
 
 (mf/defc status-history-table
@@ -122,9 +172,10 @@
 (mf/defc monitor-status-history-page
   {::mf/wrap [mf/memo]}
   [{:keys [monitor] :as props}]
-  [:main.main-content.monitor-page
+  [:main.main-content.monitor-page.status-history-page
    [:div.single-column-1200
-    [:& monitor-title {:monitor monitor :section "Status History"}]
+    [:& monitor-title {:monitor monitor :section "Status History"}
+     [:& options-select {:monitor monitor}]]
     [:div.main-section
      [:& monitor-history {:monitor monitor}]]]])
 

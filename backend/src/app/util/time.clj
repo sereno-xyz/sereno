@@ -57,6 +57,11 @@
   [d ta]
   (.minus ^Temporal d ^TemporalAmount ta))
 
+(defn instant->isoformat
+  [v]
+  (when v
+    (.format DateTimeFormatter/ISO_INSTANT ^Instant v)))
+
 (defn now
   ([]
    (Instant/now))
