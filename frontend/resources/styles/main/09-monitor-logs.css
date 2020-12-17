@@ -13,6 +13,9 @@
       list-style: none;
       width: 100%;
       cursor: pointer;
+      padding-left: 10px;
+      padding-right: 10px;
+
 
       &:hover {
         background-color: var(--color-primary-5);
@@ -26,9 +29,8 @@
         font-family: "JetBrains Mono", monospace;
         color: var(--color-gray-50);
         display: flex;
-        height: 2.5rem;
+        min-height: 30px;
         align-items: center;
-        padding-left: 10px;
 
         &:not(:last-child) {
           margin-right: 7px;
@@ -38,22 +40,41 @@
       &.healthcheck > li {
         &.created-at {
           font-weight: 300;
-          min-width: 150px;
+          min-width: 330px;
+          width: 100%;
         }
 
         &.method {
           font-weight: 500;
-          min-width: 280px;
-          flex-grow: 1;
+          min-width: 50px;
+          /* border: 1px solid red; */
+          /* flex-grow: 1; */
+        }
+
+        &.host {
+          min-width: 170px;
         }
 
         &.user-agent {
-          width: 100%;
           overflow: hidden;
+          min-width: 200px;
+          width: 200px;
+          color: var(--color-gray-30);
           > span {
             text-overflow: ellipsis;
             white-space: nowrap;
             overflow: hidden;
+          }
+        }
+      }
+
+      @media (max-width: 600px) {
+        flex-direction: column;
+        margin-bottom: 15px;
+        > li {
+          min-height: 20px;
+          &.user-agent {
+            width: 100% !important;
           }
         }
       }

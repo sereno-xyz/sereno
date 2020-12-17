@@ -462,7 +462,6 @@
   (ptk/reify ::create-ssl-monitor
     ptk/WatchEvent
     (watch [_ state stream]
-      (prn ":create-ssl-monitor" params)
       (let [{:keys [on-success on-error]
              :or {on-success identity
                   on-error identity}} (meta params)]
@@ -740,7 +739,6 @@
               (rx/map #(ptk/event :fetch-monitor-detail params))
               (rx/take-until stoper)))))))
 
-
 (defmethod ptk/resolve :init-monitor-status-history
   [_ {:keys [id] :as params}]
   (ptk/reify :init-monitor-status-history
@@ -777,6 +775,14 @@
          (->> (filter-update-messages-from-websocket stream id)
               (rx/map #(ptk/event :fetch-monitor-logs params))
               (rx/take-until stoper)))))))
+
+(defmethod ptk/resolve :stop-monitor-logs
+  [_ {:keys [id] :as params}]
+  (ptk/reify :stop-monitor-logs
+    ptk/UpdateEvent
+    (update [_ state]
+      (update state :monitor-logs dissoc id))))
+
 
 (defmethod ptk/resolve :initialize-monitor-list
   [_ params]

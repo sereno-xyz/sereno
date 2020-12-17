@@ -150,7 +150,7 @@
           "# Reports failure by appending the /fail suffix:\n"
           "curl --retry 5 " url "/fail\n\n"
           "# Reports failure by appending a non-zero exit status:\n"
-          "curl --retry 5 " url "/1"]]]
+          "curl --retry 5 " url "?exit=1"]]]
 
        [:div.help-section
         [:h3 "Attaching logs:"]
@@ -161,7 +161,7 @@
          [:code.lang-bash
           "#!/usr/bin/env sh\n"
           "logs=$(/usr/bin/some-command 2>&1)\n"
-          "curl -m 5 --retry 5 --data-raw \"$logs\" " url "/$?"]]
+          "curl -m 5 --retry 5 --data-raw \"$logs\" " url "?exit=$?"]]
         [:p
          "The payload size is determined by the maximum HTTP post request body size accepted by "
          "the server (default 1MB)."]]

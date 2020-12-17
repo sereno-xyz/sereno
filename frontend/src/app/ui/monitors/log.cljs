@@ -94,16 +94,16 @@
                   :status-up (= (:status item) "up")
                   :status-down (= (:status item) "down"))}
          [:li.created-at {:title (dt/format (:created-at item) :datetime-full)}
-          (dt/format (:created-at item) "LLL d") ", "
-          (dt/format (:created-at item) :time-24-simple)]
+          (dt/format (:created-at item) :datetime-full)]
 
-         ;; (dt/format (:created-at item) :datetime-med)]
          [:li.method
-          "HTTPS " (str/upper (name (get-in item [:metadata :method])))
-          " from "(get-in item [:metadata :host])]
+          (str/upper (name (get-in item [:metadata :method])))]
+
+         [:li.host {:title "From IP"}
+          (get-in item [:metadata :host])]
 
          [:li.user-agent
-          [:span "ua: " (get-in item [:metadata :user-agent])]]])]]))
+          [:span (get-in item [:metadata :user-agent])]]])]]))
 
 
 (defn logs-data-ref
@@ -122,10 +122,10 @@
                       (reverse))]
 
     (mf/use-effect
-     (mf/deps monitor)
+     (mf/deps (:id monitor))
      (fn []
        (st/emit! (ptk/event :init-monitor-logs monitor))
-       (st/emitf (ptk/event :stop-monitor-logs))))
+       (st/emitf (ptk/event :stop-monitor-logs monitor))))
 
     [:*
      [:& healthcheck-logs-table {:items items}]
