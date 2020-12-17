@@ -107,13 +107,10 @@
     }
 
     .modal-close-button {
-      /* position: absolute; */
       align-items: center;
       cursor: pointer;
       display: flex;
       justify-content: center;
-      /* top: 20px; */
-      /* right: 20px; */
 
       svg {
         fill: var(--color-gray-30);
@@ -126,8 +123,7 @@
   .modal-content {
     display: flex;
     flex-direction: column;
-    padding: 10px 20px;
-    /* border-top: 1px solid var(--color-gray-10); */
+    padding: 20px 20px;
     h3 {
       color: var(--color-gray-40);
       font-size: var(--default-font-size);
@@ -419,12 +415,13 @@
       flex-direction: column;
     }
 
-
     &:not(:last-child) {
       margin-bottom: 7px;
     }
 
     .label {
+      display: flex;
+      align-items: center;
       font-weight: 500;
       min-width: 60px;
     }

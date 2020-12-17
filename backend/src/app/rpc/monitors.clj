@@ -629,7 +629,7 @@
     order by 1")
 
 
-;; --- Query: Retrieve Monitor Status
+;; --- Query: Retrieve Monitor Status History
 
 (declare decode-status-row)
 
@@ -668,6 +668,8 @@
 
 ;; --- Query: Retrieve Monitor Log
 
+(declare decode-log-row)
+
 (def sql:retrieve-monitor-entries
   "select * from monitor_entry
     where monitor_id = ?
@@ -675,10 +677,10 @@
     order by created_at desc
     limit ?")
 
-(s/def ::retrieve-monitor-log
+(s/def ::retrieve-monitor-logs
   (s/keys :req-un [::profile-id ::id ::since ::limit]))
 
-(sv/defmethod ::retrieve-monitor-log
+(sv/defmethod ::retrieve-monitor-logs
   [{:keys [pool]} {:keys [id profile-id since limit] :as params}]
   (let [limit   (min limit 50)
         monitor (db/exec-one! pool [sql:retrieve-monitor profile-id id])
@@ -686,8 +688,16 @@
     (when-not monitor
       (ex/raise :type :not-found
                 :hint "monitor does not exists"))
-    entries))
+    (map decode-log-row entries)))
 
+(defn decode-log-row
+  [{:keys [cause metadata] :as row}]
+  (cond-> row
+    (db/pgobject? cause)
+    (assoc :cause (db/decode-transit-pgobject cause))
+
+    (db/pgobject? metadata)
+    (assoc :metadata (db/decode-transit-pgobject metadata))))
 
 ;; --- Query: Retrieve all tags
 

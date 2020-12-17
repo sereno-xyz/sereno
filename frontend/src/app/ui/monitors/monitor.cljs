@@ -19,6 +19,7 @@
    [app.ui.monitors.http :refer [http-monitor]]
    [app.ui.monitors.ssl :refer [ssl-monitor]]
    [app.ui.monitors.status-history :refer [monitor-status-history-page]]
+   [app.ui.monitors.log :refer [monitor-log-page]]
    [app.util.dom :as dom]
    [okulary.core :as l]
    [potok.core :as ptk]
@@ -134,4 +135,6 @@
         [:& monitor-status-history-page {:monitor monitor}]
 
         :monitor-log
+        [:& monitor-log-page {:monitor monitor}]
+
         nil))))

@@ -126,7 +126,5 @@
    [:div.single-column-1200
     [:& monitor-title {:monitor monitor :section "Status History"}]
     [:div.main-section
-     [:div.section-title "Status History"]
-     [:hr]
      [:& monitor-history {:monitor monitor}]]]])
 

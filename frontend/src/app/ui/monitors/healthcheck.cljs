@@ -44,13 +44,13 @@
   (let [detail-ref  (mf/use-memo (mf/deps monitor) (detail-ref monitor))
         detail      (mf/deref detail-ref)
 
-        go-back     (mf/use-callback #(st/emit! (r/nav :monitors)))
-        go-detail   (st/emitf (r/nav :monitor {:id (:id monitor)}))
-
         pause       (st/emitf (ev/pause-monitor monitor))
         resume      (st/emitf (ev/resume-monitor monitor))
         edit        #(modal/show! {::modal/type :monitor-form
                                    :item monitor})
+
+        router      (mf/deref st/router-ref)
+        log-url     (r/href router :monitor-log {:id (:id monitor)})
 
         on-hover
         (mf/use-callback
@@ -81,9 +81,6 @@
        [:div.details-field "Cadence"]
        [:div.details-field (dt/humanize-duration (* 1000 (:cadence monitor)))]]
 
-      #_[:div.details-row
-       [:div.details-field "URL"]
-       [:div.details-field (str cfg/public-uri "/hc/" (:id monitor))]]
       [:div.details-row
        [:div.details-field "Tags"]
        [:div.details-field (apply str (interpose ", " (:tags monitor)))]]
@@ -104,6 +101,11 @@
       [:div.details-row
        [:div.details-field "Incidents"]
        [:div.details-field (:incidents detail)]]
+
+      [:div.details-row
+       [:div.details-field ""]
+       [:div.details-field
+        [:a.visible-link {:href log-url} "Show all logs"]]]
       ]]))
 
 (mf/defc help-modal
@@ -116,23 +118,16 @@
         url        (str cfg/public-uri "/hc/" (:id monitor))]
 
     (mf/use-effect
-     #(let [node (mf/ref-val ref)]
-        (doseq [item (.querySelectorAll ^js node "pre code")]
-          (js/hljs.highlightBlock item))))
-
+     #(ex/ignoring
+       (let [node (mf/ref-val ref)]
+         (doseq [item (.querySelectorAll ^js node "pre code")]
+           (js/hljs.highlightBlock item)))))
 
     [:div.modal-overlay {:ref ref}
      [:div.modal.healthcheck-help
       [:div.floating-close
        {:on-click cancel-fn}
        i/times]
-      #_[:div.modal-header
-       [:div.modal-header-title
-        [:h2 "Help & Examples"]]
-       [:div.modal-close-button
-        {:on-click cancel-fn}
-        i/times]]
-
       [:div.modal-content
        [:div.help-section
         [:h3 "How to ping:"]
@@ -170,12 +165,7 @@
         [:p
          "The payload size is determined by the maximum HTTP post request body size accepted by "
          "the server (default 1MB)."]]
-
-
-
        ]]]))
-
-
 
 (mf/defc monitor-info
   [{:keys [monitor] :as props}]
@@ -203,8 +193,8 @@
       [:p "Keep this monitor up by making HTTP requests to this URL: "]
       [:code (str cfg/public-uri "/hc/" (:id monitor))]
       [:div.buttons
-       [:a {:on-click copy-link} "Copy link"]
-       [:a {:on-click show-help} "Show examples"]]]]))
+       [:a.visible-link {:on-click copy-link} "Copy link"]
+       [:a.visible-link {:on-click show-help} "Show examples"]]]]))
 
 
 (mf/defc monitor-chart
@@ -215,6 +205,8 @@
     (mf/use-effect
      (mf/deps monitor)
      (fn []
+       ;; TODO: refactor to use windowed data bacause fetching all
+       ;; logs for charting does not scales well.
        (->> (rp/qry! :retrieve-monitor-log-entries {:id (:id monitor)})
             (rx/subs #(reset! data %)))))
 

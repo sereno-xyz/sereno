@@ -659,11 +659,13 @@
       (let [since (get-in state [:monitor-status-history id :load-more-since])]
         (rx/of (ptk/event :fetch-monitor-status-history {:id id :since since}))))))
 
-(defmethod ptk/resolve :fetch-monitor-log
+
+(defmethod ptk/resolve :fetch-monitor-logs
   [_ {:keys [id since limit]
-      :or {limit 20
-           since (dt/now)}
+      :or {since (dt/now)
+           limit 20}
       :as params}]
+  (us/assert ::us/uuid id)
   (letfn [(load-more? [result]
             (cond
               (zero? (count result)) false
@@ -672,25 +674,32 @@
 
           (on-fetched [items state]
             (let [more?   (load-more? items)
-                  last-dt (:created-at (last items))]
-              (-> state
-                  (update-in [:monitor-log id :items] merge (d/index-by (juxt :monitor-id :created-at) items))
-                  (assoc-in [:monitor-log id :last-dt] last-dt)
-                  (assoc-in [:monitor-log id :load-more] more?))))]
+                  last-dt (:created-at (last items))
+                  id-fn   #(hash-set (:monitor-id %) (inst-ms (:created-at %)))]
+              (update-in state [:monitor-logs id]
+                         (fn [data]
+                           (as-> data $
+                             (if (:brief params)
+                               (assoc $ :items (d/index-by id-fn items))
+                               (update $ :items merge (d/index-by id-fn items)))
+                             (assoc $ :load-more-since last-dt :load-more more?))))))]
 
-    (ptk/reify :fetch-monitor-log
+    (ptk/reify ::fetch-monitor-logs
       ptk/WatchEvent
       (watch [_ state stream]
-        (->> (rp/req! :retrieve-monitor-log {:id id :since since :limit limit})
+        (->> (rp/qry! :retrieve-monitor-logs
+                      {:id id
+                       :since since
+                       :limit limit})
              (rx/map #(partial on-fetched %)))))))
 
-(defmethod ptk/resolve :load-more-log
+(defmethod ptk/resolve :load-more-logs
   [_ {:keys [id]}]
-  (ptk/reify :load-more-log
+  (ptk/reify ::load-more-logs
     ptk/WatchEvent
     (watch [_ state stream]
-      (let [since (get-in state [:monitor-log id :last-dt])]
-        (rx/of (ptk/event :fetch-monitor-log {:id id :since since}))))))
+      (let [since (get-in state [:monitor-logs id :load-more-since])]
+        (rx/of (ptk/event :fetch-monitor-logs {:id id :since since}))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Initialization Events
@@ -756,30 +765,18 @@
               (rx/map #(ptk/event :fetch-monitor-status-history params))
               (rx/take-until stoper)))))))
 
-;; (defmethod ptk/resolve :initialize-monitor-log
-;;   [_ {:keys [id] :as params}]
-;;   (us/assert ::us/uuid id)
-;;   (ptk/reify ::initialize-monitor-status-history
-;;     ptk/UpdateEvent
-;;     (update [_ state]
-;;       (assoc-in state [:monitor-log id] {:items {} :load-more false}))
-
-;;     ptk/WatchEvent
-;;     (watch [_ state stream]
-;;       (let [stoper (rx/filter (ptk/type? :finalize-monitor-log) stream)]
-;;         (rx/merge
-;;          (rx/of (ptk/event :fetch-monitor-log params))
-
-;;          #_(->> stream
-;;               (rx/filter (ptk/type? ::websocket-message))
-;;               (rx/map deref)
-;;               (rx/filter #(= (:metadata/channel %) "db_changes"))
-;;               (rx/filter #(= (:database/table %) "monitor"))
-;;               (rx/filter #(= (:database/operation %) :update))
-;;               (rx/filter #(= id (:id %)))
-;;               (rx/map #(ptk/event :fetch-monitor-log params))
-;;               (rx/take-until stoper)))))))
-
+(defmethod ptk/resolve :init-monitor-logs
+  [_ {:keys [id] :as params}]
+  (ptk/reify :init-monitor-logs
+    ptk/WatchEvent
+    (watch [_ state stream]
+      (let [stoper (rx/filter (ptk/type? :stop-monitor-logs) stream)
+            params (select-keys params [:id :brief :limit])]
+        (rx/merge
+         (rx/of (ptk/event :fetch-monitor-logs params))
+         (->> (filter-update-messages-from-websocket stream id)
+              (rx/map #(ptk/event :fetch-monitor-logs params))
+              (rx/take-until stoper)))))))
 
 (defmethod ptk/resolve :initialize-monitor-list
   [_ params]

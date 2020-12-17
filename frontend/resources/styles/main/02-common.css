@@ -43,6 +43,12 @@ a {
     color: var(--color-primary);
     text-decoration: none;
   }
+
+  &.visible-link {
+    text-decoration: underline;
+    color: var(--color-primary);
+
+  }
 }
 
 p {

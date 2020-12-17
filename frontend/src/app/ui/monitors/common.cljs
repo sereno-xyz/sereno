@@ -98,5 +98,3 @@
          [:div.info-row.as-column {:title trace}
           [:span.label "Stack Trace: "]
           [:span.content.code-block trace]])]]]))
-
-

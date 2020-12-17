@@ -34,6 +34,7 @@
 (defn- resolve-format
   [v]
   (case v
+    :time-24-simple (.-TIME_24_SIMPLE ^js DateTime)
     :datetime-short (.-DATETIME_SHORT ^js DateTime)
     :datetime-med   (.-DATETIME_MED ^js DateTime)
     :datetime-full  (.-DATETIME_FULL ^js DateTime)
@@ -46,7 +47,9 @@
   ([v fmt]
    (when v
      (let [f (resolve-format fmt)]
-       (.toLocaleString ^js v f)))))
+       (if (string? f)
+         (.toFormat ^js v f)
+         (.toLocaleString ^js v f))))))
 
 (defn format-iso
   [d]

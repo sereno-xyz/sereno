@@ -151,20 +151,24 @@
         qparams (us/conform ::query-params query-params)
         host    (or (get headers "x-forwarded-for")
                     (get headers "host"))
-        uagent  (get headers "user-agent")]
+        uagent  (get headers "user-agent")
+        method  (:request-method request)]
     (d/merge pparams qparams
              {:host host
-              :content (slurp body)
-              :user-agent uagent})))
+              :method method
+              :user-agent uagent}
+             (when (not= :get method)
+               {:body (slurp body)}))))
 
 (defn- build-result
-  [{:keys [exit content user-agent label host] :as params}]
+  [{:keys [exit body user-agent label host method] :as params}]
   (let [metadata (d/remove-nil-vals
-                  {:content content
+                  {:log body
+                   :method method
                    :host host
                    :user-agent user-agent
                    :label label
-                   :exit exit})]
+                   :exit-code exit})]
 
     (cond
       (and (some? exit) (not (zero? exit)))
