@@ -32,6 +32,10 @@
     &:not(:first-child) {
       margin-top: 20px;
     }
+
+    &.centered {
+      align-items: center;
+    }
   }
 
   hr {
@@ -223,4 +227,36 @@
     margin-bottom: 20px;
     height: 20px;
   }
+
+  .monitor-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0px 10px;
+    font-weight: 300;
+
+
+    code {
+      user-select: text;
+      font-family: "JetBrains Mono", monospace;
+      font-weight: 500;
+      background-color: var(--color-gray-5);
+      padding: 7px;
+      border-radius: var(--default-border-radius);
+    }
+
+    .buttons {
+      display: flex;
+      margin-top: 10px;
+      a {
+        color: var(--color-primary);
+        text-decoration: underline;
+        &:not(:last-child) {
+          margin-right: 15px;
+        }
+      }
+    }
+
+  }
+
 }

@@ -10,13 +10,15 @@
 (ns app.ui.monitors.healthcheck
   (:require
    ["./healthcheck_chart" :as ilc]
+   [app.config :as cfg]
    [app.common.data :as d]
    [app.common.exceptions :as ex]
    [app.common.math :as mth]
    [app.common.uuid :as uuid]
    [app.events :as ev]
-   [app.store :as st]
+   [app.events.messages :as em]
    [app.repo :as rp]
+   [app.store :as st]
    [app.ui.dropdown :refer [dropdown]]
    [app.ui.forms :as forms]
    [app.ui.icons :as i]
@@ -27,6 +29,7 @@
    [app.util.router :as r]
    [app.util.time :as dt]
    [beicon.core :as rx]
+   [promesa.core :as p]
    [cuerdas.core :as str]
    [okulary.core :as l]
    [potok.core :as ptk]
@@ -78,6 +81,9 @@
        [:div.details-field "Cadence"]
        [:div.details-field (dt/humanize-duration (* 1000 (:cadence monitor)))]]
 
+      #_[:div.details-row
+       [:div.details-field "URL"]
+       [:div.details-field (str cfg/public-uri "/hc/" (:id monitor))]]
       [:div.details-row
        [:div.details-field "Tags"]
        [:div.details-field (apply str (interpose ", " (:tags monitor)))]]
@@ -99,6 +105,107 @@
        [:div.details-field "Incidents"]
        [:div.details-field (:incidents detail)]]
       ]]))
+
+(mf/defc help-modal
+  {::mf/wrap [mf/memo]
+   ::mf/register modal/components
+   ::mf/register-as :healthcheck-help}
+  [{:keys [monitor]}]
+  (let [cancel-fn  (st/emitf (modal/hide))
+        ref        (mf/use-ref)
+        url        (str cfg/public-uri "/hc/" (:id monitor))]
+
+    (mf/use-effect
+     #(let [node (mf/ref-val ref)]
+        (doseq [item (.querySelectorAll ^js node "pre code")]
+          (js/hljs.highlightBlock item))))
+
+
+    [:div.modal-overlay {:ref ref}
+     [:div.modal.healthcheck-help
+      [:div.floating-close
+       {:on-click cancel-fn}
+       i/times]
+      #_[:div.modal-header
+       [:div.modal-header-title
+        [:h2 "Help & Examples"]]
+       [:div.modal-close-button
+        {:on-click cancel-fn}
+        i/times]]
+
+      [:div.modal-content
+       [:div.help-section
+        [:h3 "How to ping:"]
+        [:p "Keep this check up by making HTTP requests to this URL with curl: "]
+        [:pre
+         [:code.lang-bash
+          (str "curl -m 5 --retry 5 " url)]]
+        [:p "or wget:"]
+        [:pre
+         [:code.lang-bash
+          (str "wget " url " -T 5 -t 5 -O /dev/null")]]
+        ]
+       [:div.help-section
+        [:h3 "Signaling failures:"]
+        [:p
+         "You can explicitly signal failure by sending the exit code or a " [:code "fail"] " label "
+         "to your normal ping URL:"]
+        [:pre
+         [:code.lang-bash
+          "# Reports failure by appending the /fail suffix:\n"
+          "curl --retry 5 " url "/fail\n\n"
+          "# Reports failure by appending a non-zero exit status:\n"
+          "curl --retry 5 " url "/1"]]]
+
+       [:div.help-section
+        [:h3 "Attaching logs:"]
+        [:p
+         "Using the POST request, you can include in the body an arbitrary text payload to be attached "
+         "as metadata:"]
+        [:pre
+         [:code.lang-bash
+          "#!/usr/bin/env sh\n"
+          "logs=$(/usr/bin/some-command 2>&1)\n"
+          "curl -m 5 --retry 5 --data-raw \"$logs\" " url "/$?"]]
+        [:p
+         "The payload size is determined by the maximum HTTP post request body size accepted by "
+         "the server (default 1MB)."]]
+
+
+
+       ]]]))
+
+
+
+(mf/defc monitor-info
+  [{:keys [monitor] :as props}]
+  (let [url (str cfg/public-uri "/hc/" (:id monitor))
+
+        copied
+        (mf/use-callback
+         (st/emitf (em/show {:type :success :content "copied URL" :timeout 800})))
+
+        copy-link
+        (mf/use-callback
+         (mf/deps monitor)
+         (fn []
+           (p/then (dom/write-to-clipboard url) copied)))
+
+        show-help
+        (mf/use-callback
+         (mf/deps monitor)
+         (st/emitf (modal/show {:type :healthcheck-help
+                                :monitor monitor})))]
+
+    [:*
+     [:div.section-title "How to ping?"]
+     [:div.monitor-info
+      [:p "Keep this monitor up by making HTTP requests to this URL: "]
+      [:code (str cfg/public-uri "/hc/" (:id monitor))]
+      [:div.buttons
+       [:a {:on-click copy-link} "Copy link"]
+       [:a {:on-click show-help} "Show examples"]]]]))
+
 
 (mf/defc monitor-chart
   [{:keys [monitor] :as props}]
@@ -135,6 +242,9 @@
    [:div.main-section
     [:& monitor-chart {:monitor monitor}]
     [:& monitor-detail {:monitor monitor}]]
+
+   [:div.main-section.centered
+    [:& monitor-info {:monitor monitor}]]
 
    [:div.main-section
     [:div.section-title "Status History"]

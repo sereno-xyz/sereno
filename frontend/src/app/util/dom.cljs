@@ -126,7 +126,6 @@
   (.setAttribute ^js el attr val)
   el)
 
-
 (defn set-html!
   [el html]
   (set! (.-innerHTML el) html))
@@ -194,3 +193,9 @@
   [b]
   {:pre [(blob? b)]}
   (js/URL.createObjectURL b))
+
+(defn write-to-clipboard
+  [data]
+  (assert (string? data) "`data` should be string")
+  (let [cboard (unchecked-get js/navigator "clipboard")]
+    (.writeText ^js cboard data)))

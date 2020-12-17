@@ -27,7 +27,8 @@
   (let [show-cause-info
         (mf/use-callback
          (fn [item]
-           (when (= "down" (:status item))
+           (when (and (= "down" (:status item))
+                      (some? (:cause item)))
              (st/emit! (modal/show {:type :monitor-cause-info
                                     :cause (:cause item)})))))]
     [:div.history-table
