@@ -37,7 +37,6 @@
   [{:keys [item]}]
   (let [cancel-fn  (st/emitf (modal/hide))
         mdata      (:metadata item)]
-    (prn mdata)
     [:div.modal-overlay
      [:div.modal.monitor-cause-info
       [:div.modal-header
