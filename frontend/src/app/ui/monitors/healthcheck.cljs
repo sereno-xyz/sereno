@@ -199,32 +199,61 @@
 
 (mf/defc monitor-chart
   [{:keys [monitor] :as props}]
-  (let [ref  (mf/use-ref)
-        data (mf/use-state [])]
+  (let [ref       (mf/use-ref)
+
+
+        buckets   (mf/use-state [])
+        bucket    (mf/use-state nil)
+
+        on-mouse-over
+        (mf/use-callback
+         (mf/deps @buckets)
+         (fn [index]
+           (reset! bucket (nth @buckets index))))
+
+        on-mouse-out
+        (mf/use-callback
+         (mf/deps @buckets)
+         (fn []
+           (reset! bucket nil)))]
 
     (mf/use-effect
      (mf/deps monitor)
      (fn []
-       ;; TODO: refactor to use windowed data bacause fetching all
-       ;; logs for charting does not scales well.
-       (->> (rp/qry! :retrieve-monitor-log-entries {:id (:id monitor)})
-            (rx/subs #(reset! data %)))))
+       (->> (rp/qry! :retrieve-monitor-log-buckets {:id (:id monitor)})
+            (rx/subs #(reset! buckets %)))))
 
     ;; Render Chart
     (mf/use-layout-effect
-     (mf/deps @data)
+     (mf/deps @buckets)
      (fn []
-       (when @data
+       (when @buckets
          (let [dom  (mf/ref-val ref)
-               data (clj->js @data)]
+               data (clj->js @buckets)]
            (ilc/render dom #js {:width 1160
-                                :height 15
+                                :height 90
+                                :onMouseOver on-mouse-over
+                                :onMouseOut on-mouse-out
                                 :data data})
            (fn []
              (ilc/clear dom))))))
 
-    [:div.logentries-chart
-     [:div.chart {:ref ref}]]))
+    [:*
+     [:div.topside-options
+      (let [data (deref bucket)]
+        [:ul.period-info
+         [:li
+          [:span.label "Entries: "]
+          [:span.value.latency  (if data (:num-entries data)  "---")]]
+         [:li
+          [:span.label "Period: "]
+          [:span.value.period
+           (if data
+             (dt/format (:ts data) :date-med-with-weekday)
+             "---")]]])]
+
+     [:div.latency-chart
+      [:div.chart {:ref ref}]]]))
 
 
 (mf/defc healthcheck-monitor

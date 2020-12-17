@@ -25,7 +25,6 @@ export function render(node, params) {
                .attr("height", height));
 
   const barWidth = 10;
-  const bottomMargin = 0;
 
   const oneDay = dt.Duration.fromObject({days: 1});
   const endDate = truncateToDay(dt.DateTime.utc());
@@ -37,7 +36,7 @@ export function render(node, params) {
 
   const y = (d3.scaleLinear()
              .domain([d3.max([300, d3.max(data, d => d["avg"])]), 0])
-             .rangeRound([0, height-bottomMargin]));
+             .rangeRound([0, height]));
 
   const ghostData = (() => {
     const totalBars = 90;

@@ -63,7 +63,6 @@
         [:span.content (:user-agent mdata)]]
 
        (let [exit (:exit-code mdata :empty)]
-         (js/console.log exit)
          (when (not= :empty exit)
            [:div.info-row.as-column
             [:span.label "Exit code: "]
@@ -117,7 +116,7 @@
   [{:keys [monitor] :as props}]
   (let [data-ref (mf/use-memo (mf/deps monitor) (logs-data-ref monitor))
         data     (mf/deref data-ref)
-        load     (st/emitf (ptk/event :load-more-log monitor))
+        load     (st/emitf (ptk/event :load-more-logs monitor))
         items    (->> (vals (:items data))
                       (sort-by #(inst-ms (:created-at %)))
                       (reverse))]

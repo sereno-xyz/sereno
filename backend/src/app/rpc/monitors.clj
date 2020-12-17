@@ -576,7 +576,7 @@
 
 ;; --- Query: Monitor Log Buckets
 ;;
-;; Used for draw chart of http and ssl monitors.
+;; Used for draw monitor chart.
 
 (declare sql:monitor-log-buckets)
 
@@ -594,39 +594,11 @@
 
 (def sql:monitor-log-buckets
    "select time_bucket('1 day'::interval, created_at) as ts,
-           round(avg(latency)::numeric, 2)::float8 as avg
+           round(avg(latency)::numeric, 2)::float8 as avg,
+           count(*) num_entries
      from monitor_entry
     where monitor_id = ?
-      and (now()-created_at) < '90 days'::interval group by 1 order by 1")
-
-
-
-
-;; --- Query: Monitor Log Entries
-;;
-;; Used for draw chart of http and ssl monitors.
-
-(declare sql:monitor-log-entries)
-
-(s/def ::retrieve-monitor-log-entries
-  (s/keys :req-un [::id]))
-
-(sv/defmethod ::retrieve-monitor-log-entries
-  [{:keys [pool]} {:keys [id profile-id]}]
-  (db/with-atomic [conn pool]
-    (let [monitor (db/get-by-params conn :monitor {:owner-id profile-id :id id})]
-      (when-not monitor
-        (ex/raise :type :not-found
-                  :hint "monitor does not exists"))
-      (db/exec! conn [sql:monitor-log-entries id]))))
-
-(def sql:monitor-log-entries
-   "select me.created_at as ts,
-           me.status
-     from monitor_entry as me
-    where me.monitor_id = ?
-      and me.created_at > now() - '90 days'::interval
-    order by 1")
+      and created_at > now() - '90 days'::interval group by 1 order by 1")
 
 
 ;; --- Query: Retrieve Monitor Status History
