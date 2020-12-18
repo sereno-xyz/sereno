@@ -28,6 +28,7 @@
    [app.util.dom :as dom]
    [app.util.router :as r]
    [app.util.time :as dt]
+   [app.util.http :as http]
    [beicon.core :as rx]
    [promesa.core :as p]
    [cuerdas.core :as str]
@@ -185,7 +186,14 @@
         (mf/use-callback
          (mf/deps monitor)
          (st/emitf (modal/show {:type :healthcheck-help
-                                :monitor monitor})))]
+                                :monitor monitor})))
+
+        ping-now
+        (mf/use-callback
+         (mf/deps monitor)
+         (fn []
+           (->> (http/send! {:method :head :uri url})
+                (rx/subs identity))))]
 
     [:*
      [:div.section-title "How to ping?"]
@@ -194,7 +202,8 @@
       [:code (str cfg/public-uri "/hc/" (:id monitor))]
       [:div.buttons
        [:a.visible-link {:on-click copy-link} "Copy link"]
-       [:a.visible-link {:on-click show-help} "Show examples"]]]]))
+       [:a.visible-link {:on-click show-help} "Show examples"]
+       [:a.visible-link {:on-click ping-now} "Ping now!"]]]]))
 
 
 (mf/defc monitor-chart

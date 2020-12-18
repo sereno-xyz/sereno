@@ -141,6 +141,7 @@
 
      ["/hc/:monitor-id"
       {:get (:healthcheck webhooks)
+       :head (:healthcheck webhooks)
        :post (:healthcheck webhooks)}]
 
      ["/hc/:monitor-id/:label"

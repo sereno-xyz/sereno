@@ -145,6 +145,8 @@
 (s/def ::query-params
   (s/keys :opt-un [::exit]))
 
+(def empty-body? #{:get :head})
+
 (defn- parse-request
   [{:keys [headers body path-params query-params] :as request}]
   (let [pparams (us/conform ::path-params path-params)
@@ -157,7 +159,7 @@
              {:host host
               :method method
               :user-agent uagent}
-             (when (not= :get method)
+             (when-not (empty-body? method)
                {:body (slurp body)}))))
 
 (defn- build-result
