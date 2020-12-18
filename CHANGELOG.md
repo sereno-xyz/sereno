@@ -1,15 +1,16 @@
 # Changelog #
 
-## Upcoming changes (v1.3.0)
+## Unreleased Changes (v1.3.0)
 
-- Better error reporting
-- Improved charts.
+- Fixes on error reporting.
+- Fixes on export/import.
+- Minor improvements on chart rendering.
+- Add monitor page minor restyling.
 - Add healthcheck/keepalive monitor.
-- Restyle monitor detail page.
 - Add log visualization page for healthcheck monitors.
 - Add the ability to export status history as CSV and JSON.
 - Add the ability to export logs as CSV and JSON.
-- Fix issues on export/import.
+- Add the ability to export and import single monitor.
 
 
 ## v1.2.0
