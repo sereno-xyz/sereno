@@ -181,7 +181,7 @@
         (mf/use-callback
          (fn [event]
            (let [node (dom/create-element "a")
-                 uri  (assoc (d/uri cfg/public-uri) :path "/rpc/request-export")]
+                 uri  (assoc (d/uri cfg/public-uri) :path "/rpc/export-monitors")]
              (dom/set-attr! node "href" (str uri))
              (dom/set-attr! node "download" "export.data")
              (dom/click node))))

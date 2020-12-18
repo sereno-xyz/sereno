@@ -9,6 +9,7 @@
 
 (ns app.ui.monitors.monitor
   (:require
+   [app.config :as cfg]
    [app.events :as ev]
    [app.store :as st]
    [app.ui.dropdown :refer [dropdown]]
@@ -21,6 +22,7 @@
    [app.ui.monitors.status-history :refer [monitor-status-history-page]]
    [app.ui.monitors.logs :refer [monitor-logs-page]]
    [app.util.dom :as dom]
+   [lambdaisland.uri :as u]
    [okulary.core :as l]
    [potok.core :as ptk]
    [rumext.alpha :as mf]))
@@ -64,7 +66,19 @@
            (case (:type monitor)
              "http" (st/emit! (modal/show {:type :http-monitor-form :item monitor}))
              "ssl"  (st/emit! (modal/show {:type :ssl-monitor-form :item monitor}))
-             "healthcheck" (st/emit! (modal/show {:type :healthcheck-monitor-form :item monitor})))))]
+             "healthcheck" (st/emit! (modal/show {:type :healthcheck-monitor-form :item monitor})))))
+
+        on-export-click
+        (mf/use-callback
+         (mf/deps monitor)
+         (fn [event]
+           (let [node (dom/create-element "a")
+                 url  (-> (u/uri cfg/public-uri)
+                          (assoc :path "/rpc/export-monitors")
+                          (u/assoc-query :ids (str (:id monitor))))]
+             (dom/set-attr! node "href" (str url))
+             (dom/set-attr! node "download" (str "export-" (:id monitor) ".data"))
+             (dom/click node))))]
 
     [:ul.dropdown
      (if (= "paused" (:status monitor))
@@ -80,7 +94,8 @@
            :title "Edit"}
       [:div.icon i/pen-square]
       [:div.text "Edit"]]
-     [:li.disabled {:title "Export (not implemented yet)"}
+     [:li {:title "Export monitor"
+           :on-click on-export-click}
       [:div.icon i/download]
       [:div.text "Export"]]
      [:li.danger {:on-click on-delete

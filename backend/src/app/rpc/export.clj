@@ -33,62 +33,75 @@
 ;; Exports & Imports
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(def sql:monitor-status-history-by-owner
-  "select ms.*
-     from monitor_status as ms
-     join monitor as m on (m.id = ms.monitor_id)
-    where m.owner_id = ?
-    order by ms.created_at")
-
-(def sql:monitors-by-owner
+(def sql:monitors
   "select * from monitor where owner_id=? order by created_at")
 
-(def sql:monitor-logs-by-owner
-  "select me.* from monitor_entry as me
-     join monitor as m on (m.id = me.monitor_id)
+(def sql:monitor
+  (str "with monitors as (" sql:monitors ") "
+       "select * from monitors where id = ?"))
+
+(def sql:monitor-status-history
+  "select ms.*
+     from monitor_status as ms
+    where ms.monitor_id = ?
+    order by ms.created_at")
+
+(def sql:monitor-logs
+  "select me.*
+     from monitor_entry as me
     where me.created_at >= now() - ?::interval
       and me.created_at < ?
-      and m.owner_id = ?
+      and me.monitor_id = ?
     order by me.created_at desc
     limit ?")
 
-(s/def :internal.rpc.request-export/days
-  (s/& ::us/integer #(>= 90 %)))
 
-(s/def ::request-export
-  (s/keys :opt-un [::profile-id
-                   :internal.rpc.request-export/days]))
+(s/def ::days (s/& ::us/integer #(>= 90 %)))
+(s/def ::ids ::us/str-of-uuid)
 
-(sv/defmethod ::request-export
-  [{:keys [pool]} {:keys [days profile-id] :or {days 90} :as params}]
+(s/def ::export-monitors
+  (s/keys :opt-un [::profile-id ::days ::ids]))
+
+(sv/defmethod ::export-monitors
+  [{:keys [pool]} {:keys [days profile-id ids] :or {days 90} :as params}]
   (letfn [(retrieve-monitors [conn]
-            (->> (db/exec! conn [sql:monitors-by-owner profile-id])
+            (->> (db/exec! conn [sql:monitors profile-id])
                  (map decode-monitor-row)))
 
-          (retrieve-monitor-status [conn]
-            (->> (db/exec! conn [sql:monitor-status-history-by-owner profile-id])
+          (retrieve-monitor [conn id]
+            (->> (db/exec-one! conn [sql:monitor profile-id id])
+                 (decode-monitor-row)))
+
+          (retrieve-monitor-status [conn {:keys [id] :as monitor}]
+            (->> (db/exec! conn [sql:monitor-status-history id])
                  (map decode-status-row)))
 
-          (retrieve-monitor-entries [conn {:keys [since limit] :or {limit 1000}}]
+          (retrieve-monitor-entries [conn {:keys [id] :as monitor} {:keys [since limit] :or {limit 1000}}]
             (let [until (-> (dt/duration {:days days})
                             (db/interval))]
-              (->> (db/exec! conn [sql:monitor-logs-by-owner until since profile-id limit])
+              (->> (db/exec! conn [sql:monitor-logs until since id limit])
                    (map decode-log-row))))
+
+          (export-monitor [conn writer monitor]
+            (t/write! writer {:type :monitor :payload monitor})
+            (doseq [mstatus (retrieve-monitor-status conn monitor)]
+              (t/write! writer {:type :monitor-status :payload mstatus}))
+            (loop [since (dt/now)]
+              (let [entries (retrieve-monitor-entries conn monitor {:since since})]
+                (when (seq entries)
+                  (t/write! writer {:type :monitor-entries-chunk :payload entries})
+                  (recur (:created-at (last entries)))))))
 
           (write-to-stream* [out]
             (db/with-atomic [conn pool]
               (with-open [zout (GZIPOutputStream. out)]
                 (let [writer (t/writer zout {:type :json})]
                   (t/write! writer {:type :export :format 1 :created-at (dt/now)})
-                  (doseq [monitor (retrieve-monitors conn)]
-                    (t/write! writer {:type :monitor :payload monitor}))
-                  (doseq [mstatus (retrieve-monitor-status conn)]
-                    (t/write! writer {:type :monitor-status :payload mstatus}))
-                  (loop [since (dt/now)]
-                    (let [entries (retrieve-monitor-entries conn {:since since})]
-                      (when (seq entries)
-                        (t/write! writer {:type :monitor-entries-chunk :payload entries})
-                        (recur (:created-at (last entries))))))))))
+                  (if (seq ids)
+                    (doseq [monitor (map (partial retrieve-monitor conn) ids)]
+                      (export-monitor conn writer monitor))
+                    (doseq [monitor (retrieve-monitors conn)]
+                      (export-monitor conn writer monitor)))))))
 
           (write-to-stream [out]
             (try
@@ -102,7 +115,7 @@
      (fn [_ _]
        {:status 200
         :headers {"content-type" "text/plain"
-                  "content-disposition" "attachment; filename=\"export.data\""}
+                  #_#_"content-disposition" "attachment; filename=\"export.data\""}
         :body (reify rp/StreamableResponseBody
                 (write-body-to-stream [_ _ out]
                   (write-to-stream out)))})})))
@@ -202,8 +215,6 @@
 
 ;; --- Export Monitor Status History
 
-(declare sql:monitor-status-history)
-
 (s/def ::format ::us/keyword)
 (s/def ::id ::us/uuid)
 
@@ -259,13 +270,6 @@
                 (write-body-to-stream [_ _ out]
                   (write-to-stream out)))})})))
 
-(def ^:private
-  sql:monitor-status-history
-  "select e.id, e.created_at, e.finished_at, e.status, e.cause
-     from monitor_status as e
-    where e.monitor_id = ?
-    order by e.created_at desc")
-
 
 ;; --- Export Monitor Logs
 
@@ -302,7 +306,7 @@
           (retrieve-monitor-logs [{:keys [since limit] :or {limit 1000}}]
             (let [until (-> (dt/duration {:days 90})
                             (db/interval))
-                  rows  (->> (db/exec! pool [sql:monitor-logs-chunk until since id limit])
+                  rows  (->> (db/exec! pool [sql:monitor-logs until since id limit])
                              (mapv decode-log-row))]
               (Thread/sleep 0)
               (lazy-seq
@@ -336,13 +340,3 @@
         :body (reify rp/StreamableResponseBody
                 (write-body-to-stream [_ _ out]
                   (write-to-stream out)))})})))
-
-(def ^:private
-  sql:monitor-logs-chunk
-  "select me.* from monitor_entry as me
-    where me.created_at >= now() - ?::interval
-      and me.created_at < ?
-      and me.monitor_id = ?
-    order by me.created_at desc
-    limit ?")
-
