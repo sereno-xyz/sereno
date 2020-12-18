@@ -7,15 +7,16 @@
 ;;
 ;; Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
 
-(ns app.ui.monitors.log
+(ns app.ui.monitors.logs
   (:require
    [app.common.data :as d]
    [app.common.exceptions :as ex]
    [app.common.math :as mth]
    [app.common.uuid :as uuid]
+   [app.config :as cfg]
    [app.events :as ev]
-   [app.store :as st]
    [app.repo :as rp]
+   [app.store :as st]
    [app.ui.dropdown :refer [dropdown]]
    [app.ui.forms :as forms]
    [app.ui.icons :as i]
@@ -26,9 +27,56 @@
    [app.util.time :as dt]
    [beicon.core :as rx]
    [cuerdas.core :as str]
+   [lambdaisland.uri :as u]
    [okulary.core :as l]
    [potok.core :as ptk]
    [rumext.alpha :as mf]))
+
+(mf/defc options
+  [{:keys [monitor] :as props}]
+  (let [on-export-click
+        (mf/use-callback
+         (fn [event]
+           (let [node   (dom/create-element "a")
+                 target (dom/get-current-target event)
+                 format (dom/get-data-attr! target "format")
+                 url  (-> (u/uri cfg/public-uri)
+                          (assoc :path "/rpc/export-monitor-logs")
+                          (u/assoc-query :id (:id monitor)
+                                         :format format))]
+             (dom/set-attr! node "href" (str url))
+             (dom/set-attr! node "download" (str "logs." format))
+             (dom/click node))))]
+
+    [:ul.dropdown
+     [:li {:title "Export as CSV"
+           :data-id (:id monitor)
+           :data-format "csv"
+           :on-click on-export-click}
+      [:div.icon i/download]
+      [:div.text "Export as CSV"]]
+     [:li {:title "Export as JSON"
+           :data-id (:id monitor)
+           :data-format "json"
+           :on-click on-export-click}
+      [:div.icon i/download]
+      [:div.text "Export as JSON"]]]))
+
+(mf/defc options-select
+  [{:keys [monitor] :as props}]
+  (let [show? (mf/use-state false)
+        show  (mf/use-callback #(reset! show? true))
+        hide  (mf/use-callback #(reset! show? false))]
+
+    [:*
+     [:span.options {:on-click show}
+      [:span.label "Options"]
+      [:span.icon i/chevron-down]]
+
+     [:& dropdown {:show @show?
+                   :on-close hide}
+      [:& options {:monitor monitor}]]]))
+
 
 (mf/defc healthcheck-log-detail-modal
   {::mf/wrap [mf/memo]
@@ -111,7 +159,7 @@
   #(l/derived (l/in [:monitor-logs id]) st/state))
 
 
-(mf/defc monitor-log
+(mf/defc monitor-logs
   {::mf/wrap [mf/memo]}
   [{:keys [monitor] :as props}]
   (let [data-ref (mf/use-memo (mf/deps monitor) (logs-data-ref monitor))
@@ -133,13 +181,13 @@
       (when (:load-more data)
         [:a {:on-click load} "Load more"])]]))
 
-(mf/defc monitor-log-page
+(mf/defc monitor-logs-page
   {::mf/wrap [mf/memo]}
   [{:keys [monitor] :as props}]
-  [:main.main-content.monitor-page
+  [:main.main-content.monitor-page.monitor-logs-page
    [:div.single-column-1200
-    [:& monitor-title {:monitor monitor :section "Monitor Log"}]
-
+    [:& monitor-title {:monitor monitor :section "Monitor Log"}
+     [:& options-select {:monitor monitor}]]
     [:div.main-section
-     [:& monitor-log {:monitor monitor}]]]])
+     [:& monitor-logs {:monitor monitor}]]]])
 

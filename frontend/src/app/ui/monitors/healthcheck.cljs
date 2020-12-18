@@ -50,7 +50,7 @@
                                    :item monitor})
 
         router      (mf/deref st/router-ref)
-        log-url     (r/href router :monitor-log {:id (:id monitor)})
+        log-url     (r/href router :monitor-logs {:id (:id monitor)})
 
         on-hover
         (mf/use-callback

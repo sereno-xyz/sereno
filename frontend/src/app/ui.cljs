@@ -57,7 +57,7 @@
    ["/monitors/:id"
     ["/detail" :monitor]
     ["/status-history" :monitor-status-history]
-    ["/log" :monitor-log]]])
+    ["/logs" :monitor-logs]]])
 
 (mf/defc app-error
   [{:keys [error] :as props}]
@@ -121,7 +121,7 @@
 
      (:monitor
       :monitor-status-history
-      :monitor-log)
+      :monitor-logs)
      (let [id (uuid (get-in route [:path-params :id]))]
        [:& monitor-page {:id id :section section}])
 

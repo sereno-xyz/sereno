@@ -13,6 +13,7 @@
    [app.common.uuid :as uuid]
    [app.db :as db]
    [app.rpc.monitors :refer [decode-monitor-row
+                             decode-log-row
                              decode-status-row
                              change-monitor-status!]]
    [app.util.time :as dt]
@@ -31,7 +32,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Exports & Imports
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 
 (defn- generate-export!
   [{:keys [pool]} {:keys [monitors days profile-id out]
@@ -191,9 +191,8 @@
     nil))
 
 
-;; --- Request Export Status History as CSV
+;; --- Export Monitor Status History
 
-(declare generate-status-history-csv-export)
 (declare sql:monitor-status-history)
 
 (s/def ::format ::us/keyword)
@@ -246,9 +245,7 @@
     {:transform-response
      (fn [_ _]
        {:status 200
-        :headers {"content-type" "text/plain"
-                  "content-disposition" "attachment; filename=\"export.json\""
-                  }
+        :headers {"content-type" "text/plain"}
         :body (reify rp/StreamableResponseBody
                 (write-body-to-stream [_ _ out]
                   (write-to-stream out)))})})))
@@ -259,3 +256,84 @@
      from monitor_status as e
     where e.monitor_id = ?
     order by e.created_at desc")
+
+
+;; --- Export Monitor Logs
+
+(declare sql:monitor-logs-chunk)
+
+(s/def ::format ::us/keyword)
+(s/def ::id ::us/uuid)
+
+(s/def ::export-monitor-logs
+  (s/keys :req-un [::format ::id]))
+
+(sv/defmethod ::export-monitor-logs
+  [{:keys [pool]} {:keys [id format] :as params}]
+  (letfn [(generate-csv [items out]
+            (csv/write-csv out [["created_at", "status", "latency", "cause_code", "cause_hint"]])
+            (doseq [row items]
+              (csv/write-csv out [[(dt/instant->isoformat (:created-at row))
+                                   (:status row)
+                                   (:latency row)
+                                   (name (get-in row [:cause :code] ""))
+                                   (get-in row [:cause :hint])]])))
+
+          (generate-json [items out]
+            (doseq [row items]
+              (-> {:id (str (:id row))
+                   :created_at  (dt/instant->isoformat (:created-at row))
+                   :status (:status row)
+                   :latency (:latency row)
+                   :cause (:cause row)}
+                  (json/write out))
+              (binding [*out* out]
+                (print "\n"))))
+
+          (retrieve-monitor-logs [{:keys [since limit] :or {limit 1000}}]
+            (let [until (-> (dt/duration {:days 90})
+                            (db/interval))
+                  rows  (->> (db/exec! pool [sql:monitor-logs-chunk until since id limit])
+                             (mapv decode-log-row))]
+              (Thread/sleep 0)
+              (lazy-seq
+               (when (seq rows)
+                 (concat rows (retrieve-monitor-logs {:since (:created-at (last rows))}))))))
+
+          (generate-transit [items out]
+            (let [writer (t/writer out {:type :json})]
+              (doseq [row items]
+                (t/write! writer row))))
+
+          (write-to-stream [out]
+            (let [items (retrieve-monitor-logs {:since (dt/now)})]
+              (try
+                (if (or (= format :csv)
+                        (= format :json))
+                  (with-open [out (io/writer out)]
+                    (case format
+                      :csv (generate-csv items out)
+                      :json (generate-json items out)))
+                  (generate-transit items out))
+                (catch org.eclipse.jetty.io.EofException _)
+                (catch Exception e
+                  (log/errorf e "Exception on export")))))]
+
+  (with-meta {}
+    {:transform-response
+     (fn [_ _]
+       {:status 200
+        :headers {"content-type" "text/plain"}
+        :body (reify rp/StreamableResponseBody
+                (write-body-to-stream [_ _ out]
+                  (write-to-stream out)))})})))
+
+(def ^:private
+  sql:monitor-logs-chunk
+  "select me.* from monitor_entry as me
+    where me.created_at >= now() - ?::interval
+      and me.created_at < ?
+      and me.monitor_id = ?
+    order by me.created_at desc
+    limit ?")
+

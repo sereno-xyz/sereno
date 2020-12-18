@@ -1,4 +1,17 @@
 .main-layout {
+  .monitor-logs-page {
+    .page-title {
+      .options {
+        width: 150px;
+      }
+      .dropdown {
+        width: 170px;
+        right: 15px;
+      }
+    }
+  }
+
+
   .logs-table {
     display: flex;
     flex-direction: column;
