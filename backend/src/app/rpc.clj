@@ -28,10 +28,7 @@
   [methods request]
   (let [type    (keyword (get-in request [:path-params :cmd]))
         data    (merge (:path-params request)
-                       (:query-params request)
-                       (:body-params request)
-                       (:uploads request))
-
+                       (:params request))
         data    (if (:profile-id request)
                   (assoc data :profile-id (:profile-id request))
                   (dissoc data :profile-id))

@@ -33,47 +33,24 @@
 ;; Exports & Imports
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn- generate-export!
-  [{:keys [pool]} {:keys [monitors days profile-id out]
-                   :or {days 90}
-                   :as params}]
-  (letfn [(retrieve-monitors [conn]
-            (->> (db/exec! conn ["select * from monitor where owner_id=?" profile-id])
-                 (map decode-monitor-row)))
-          (retrieve-monitor-status [conn]
-            (let [sql "select ms.* from monitor_status as ms
-                         join monitor as m on (m.id = ms.monitor_id)
-                        where m.owner_id = ?"]
-              (->> (db/exec! conn [sql profile-id])
-                   (map decode-status-row))))
+(def sql:monitor-status-history-by-owner
+  "select ms.*
+     from monitor_status as ms
+     join monitor as m on (m.id = ms.monitor_id)
+    where m.owner_id = ?
+    order by ms.created_at")
 
-          (retrieve-monitor-entries [conn {:keys [since limit]
-                                           :or {since (dt/now)
-                                                limit 1000}}]
-            (let [sql "select me.* from monitor_entry as me
-                         join monitor as m on (m.id = me.monitor_id)
-                        where me.created_at >= now() - ?::interval
-                          and me.created_at < ?
-                          and m.owner_id = ?
-                        order by me.created_at desc
-                        limit ?"
-                  until (-> (dt/duration {:days days})
-                            (db/interval))]
-              (db/exec! conn [sql until since profile-id limit])))]
+(def sql:monitors-by-owner
+  "select * from monitor where owner_id=? order by created_at")
 
-    (db/with-atomic [conn pool]
-      (with-open [zout (GZIPOutputStream. out)]
-        (let [writer (t/writer zout {:type :json})]
-          (t/write! writer {:type :export :format 1 :created-at (dt/now)})
-          (doseq [monitor (retrieve-monitors conn)]
-            (t/write! writer {:type :monitor :payload monitor}))
-          (doseq [mstatus (retrieve-monitor-status conn)]
-            (t/write! writer {:type :monitor-status :payload mstatus}))
-          (loop [since (dt/now)]
-            (let [entries (retrieve-monitor-entries conn {:since since})]
-              (when (seq entries)
-                (t/write! writer {:type :monitor-entries-chunk :payload entries})
-                (recur (:created-at (last entries)))))))))))
+(def sql:monitor-logs-by-owner
+  "select me.* from monitor_entry as me
+     join monitor as m on (m.id = me.monitor_id)
+    where me.created_at >= now() - ?::interval
+      and me.created_at < ?
+      and m.owner_id = ?
+    order by me.created_at desc
+    limit ?")
 
 (s/def :internal.rpc.request-export/days
   (s/& ::us/integer #(>= 90 %)))
@@ -82,25 +59,53 @@
   (s/keys :opt-un [::profile-id
                    :internal.rpc.request-export/days]))
 
-(defn- generate-export-body
-  [cfg params]
-  (reify rp/StreamableResponseBody
-    (write-body-to-stream [_ _ out]
-      (try
-        (generate-export! cfg (assoc params :out out))
-        (catch org.eclipse.jetty.io.EofException _)
-        (catch Exception e
-          (log/errorf e "Exception on export"))))))
-
 (sv/defmethod ::request-export
-  [cfg params]
+  [{:keys [pool]} {:keys [days profile-id] :or {days 90} :as params}]
+  (letfn [(retrieve-monitors [conn]
+            (->> (db/exec! conn [sql:monitors-by-owner profile-id])
+                 (map decode-monitor-row)))
+
+          (retrieve-monitor-status [conn]
+            (->> (db/exec! conn [sql:monitor-status-history-by-owner profile-id])
+                 (map decode-status-row)))
+
+          (retrieve-monitor-entries [conn {:keys [since limit] :or {limit 1000}}]
+            (let [until (-> (dt/duration {:days days})
+                            (db/interval))]
+              (->> (db/exec! conn [sql:monitor-logs-by-owner until since profile-id limit])
+                   (map decode-log-row))))
+
+          (write-to-stream* [out]
+            (db/with-atomic [conn pool]
+              (with-open [zout (GZIPOutputStream. out)]
+                (let [writer (t/writer zout {:type :json})]
+                  (t/write! writer {:type :export :format 1 :created-at (dt/now)})
+                  (doseq [monitor (retrieve-monitors conn)]
+                    (t/write! writer {:type :monitor :payload monitor}))
+                  (doseq [mstatus (retrieve-monitor-status conn)]
+                    (t/write! writer {:type :monitor-status :payload mstatus}))
+                  (loop [since (dt/now)]
+                    (let [entries (retrieve-monitor-entries conn {:since since})]
+                      (when (seq entries)
+                        (t/write! writer {:type :monitor-entries-chunk :payload entries})
+                        (recur (:created-at (last entries))))))))))
+
+          (write-to-stream [out]
+            (try
+              (write-to-stream* out)
+              (catch org.eclipse.jetty.io.EofException _)
+              (catch Exception e
+                (log/errorf e "Exception on export"))))]
+
   (with-meta {}
     {:transform-response
      (fn [_ _]
        {:status 200
         :headers {"content-type" "text/plain"
                   "content-disposition" "attachment; filename=\"export.data\""}
-        :body (generate-export-body cfg params)})}))
+        :body (reify rp/StreamableResponseBody
+                (write-body-to-stream [_ _ out]
+                  (write-to-stream out)))})})))
 
 
 ;; --- Request Import
@@ -128,14 +133,18 @@
               state))
 
           (process-monitor-entries-chunk [state items]
-            (let [fields [:monitor-id :created-at :reason :latency :status]
-                  index  (:monitors state)]
+            (let [fields  [:monitor-id :created-at :cause :metadata :latency :status]
+                  index   (:monitors state)
+                  optjson (fn [v] (if (nil? v) v (db/tjson v)))]
               (db/insert-multi! conn :monitor-entry
                                 fields
                                 (->> items
                                      (map (fn [row]
                                             (let [monitor-id (get index (:monitor-id row))]
-                                              (assoc row :monitor-id monitor-id))))
+                                              (-> row
+                                                  (assoc :monitor-id monitor-id)
+                                                  (update :cause optjson)
+                                                  (update :metadata optjson)))))
                                      (map (apply juxt fields))))
               state))
 

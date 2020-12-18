@@ -132,6 +132,7 @@
                       [middleware/errors errors/handle]
                       [middleware/cookies]
                       [middleware/multipart-params]
+                      [middleware/keyword-params]
                       [session/middleware cfg]]}
      ["/metrics" {:get (:handler metrics)}]
      ["/webhook"

@@ -17,6 +17,7 @@
    [clojure.java.io :as io]
    [clojure.tools.logging :as log]
    [ring.util.codec :as codec]
+   [ring.middleware.keyword-params :refer [wrap-keyword-params]]
    [ring.middleware.cookies :refer [wrap-cookies]]
    [ring.middleware.multipart-params :refer [wrap-multipart-params]]
    [ring.middleware.params :refer [wrap-params]]
@@ -48,10 +49,16 @@
         (handler
          (case ctype
            "application/transit+json"
-           (assoc request :body-params (parse :transit body))
+           (let [params (parse :transit body)]
+             (-> request
+                 (assoc :body-params params)
+                 (update :params merge params)))
 
            "application/json"
-           (assoc request :body-params (parse :json body))
+           (let [params (parse :json body)]
+             (-> request
+                 (assoc :body-params params)
+                 (update :params merge params)))
 
            request))))))
 
@@ -108,10 +115,12 @@
   [handler]
   (fn [{:keys [query-string] :as request}]
     (let [params (some-> query-string
-                         (codec/form-decode "UTF-8")
-                         (d/keywordize))
+                         (codec/form-decode "UTF-8"))
           params (if (map? params) params {})]
-      (handler (assoc request :query-params params)))))
+      (-> request
+          (update :query-params merge params)
+          (update :params merge params)
+          (handler)))))
 
 (def query-params
   {:name ::params
@@ -120,3 +129,7 @@
 (def multipart-params
   {:name ::multipart-params
    :compile (constantly wrap-multipart-params)})
+
+(def keyword-params
+  {:name ::keyword-params
+   :compile (constantly wrap-keyword-params)})

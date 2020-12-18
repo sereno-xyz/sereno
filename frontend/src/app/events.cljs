@@ -27,6 +27,7 @@
    [okulary.core :as l]
    [potok.core :as ptk]))
 
+(def re-throw #(rx/throw %))
 (declare logged-in)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -595,14 +596,12 @@
     ptk/WatchEvent
     (watch [_ state stream]
       (let [{:keys [on-success on-error]
-             :or {on-error identity
+             :or {on-error re-throw
                   on-success identity}} (meta params)]
         (->> (rp/req! :resume-monitor {:id id})
              (rx/tap on-success)
              (rx/map (constantly ::monitor-started))
-             (rx/catch (fn [err]
-                         (on-error err)
-                         (rx/empty))))))))
+             (rx/catch on-error))))))
 
 (defmethod ptk/resolve :fetch-monitor-detail
   [_ {:keys [id] :as params}]
