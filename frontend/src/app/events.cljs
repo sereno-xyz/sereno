@@ -51,7 +51,7 @@
     ptk/WatchEvent
     (watch [this state s]
       (let [{:keys [on-error on-success]
-             :or {on-error identity
+             :or {on-error re-throw
                   on-success identity}} (meta data)
             params {:email email
                     :password password}]
@@ -134,7 +134,7 @@
     ptk/WatchEvent
     (watch [_ state stream]
       (let [{:keys [on-error on-success]
-             :or {on-error identity
+             :or {on-error re-throw
                   on-success identity}} (meta data)]
         (->> (rp/req! :register-profile data)
              (rx/tap on-success)
@@ -155,7 +155,7 @@
     ptk/WatchEvent
     (watch [_ state stream]
       (let [{:keys [on-error on-success]
-             :or {on-error identity
+             :or {on-error re-throw
                   on-success identity}} (meta data)]
 
         (->> (rp/req! :request-profile-recovery data)
@@ -176,7 +176,7 @@
     ptk/WatchEvent
     (watch [_ state stream]
       (let [{:keys [on-error on-success]
-             :or {on-error identity
+             :or {on-error re-throw
                   on-success identity}} (meta data)]
         (->> (rp/req! :recover-profile data)
              (rx/tap on-success)
@@ -215,7 +215,7 @@
     ptk/WatchEvent
     (watch [_ state stream]
       (let [{:keys [on-error on-success]
-             :or {on-error identity
+             :or {on-error re-throw
                   on-success identity}} (meta params)]
         (->> (rp/req! :update-profile params)
              (rx/tap on-success)
@@ -234,7 +234,7 @@
     ptk/WatchEvent
     (watch [_ state stream]
       (let [{:keys [on-error on-success]
-             :or {on-error identity
+             :or {on-error re-throw
                   on-success identity}} (meta data)]
         (->> (rp/req! :request-email-change data)
              (rx/tap on-success)
@@ -257,7 +257,7 @@
     ptk/WatchEvent
     (watch [_ state stream]
       (let [{:keys [on-error on-success]
-             :or {on-error identity
+             :or {on-error re-throw
                   on-success identity}} (meta params)]
         (->> (rp/req! :update-profile-password params)
              (rx/tap on-success)
@@ -292,7 +292,7 @@
     ptk/WatchEvent
     (watch [_ state stream]
       (let [{:keys [on-error on-success]
-             :or {on-error identity
+             :or {on-error re-throw
                   on-success identity}} (meta params)]
         (->> (rp/req! :create-email-contact params)
              (rx/tap on-success)
@@ -309,7 +309,7 @@
     ptk/WatchEvent
     (watch [_ state stream]
       (let [{:keys [on-error on-success]
-             :or {on-error identity
+             :or {on-error re-throw
                   on-success identity}} (meta params)]
         (->> (rp/req! :create-mattermost-contact params)
              (rx/tap on-success)
@@ -326,7 +326,7 @@
     ptk/WatchEvent
     (watch [_ state stream]
       (let [{:keys [on-error on-success]
-             :or {on-error identity
+             :or {on-error re-throw
                   on-success identity}} (meta params)]
         (->> (rp/req! :create-discord-contact params)
              (rx/tap on-success)
@@ -343,7 +343,7 @@
     ptk/WatchEvent
     (watch [_ state stream]
       (let [{:keys [on-error on-success]
-             :or {on-error identity
+             :or {on-error re-throw
                   on-success identity}} (meta params)]
         (->> (rp/req! :create-telegram-contact params)
              (rx/tap on-success)
@@ -367,7 +367,7 @@
     ptk/WatchEvent
     (watch [_ state stream]
       (let [{:keys [on-error on-success]
-             :or {on-error identity
+             :or {on-error re-throw
                   on-success identity}} (meta params)]
         (->> (rp/req! :update-contact params)
              (rx/tap on-success)
@@ -385,7 +385,7 @@
     ptk/WatchEvent
     (watch [_ state stream]
       (let [{:keys [on-error on-success]
-             :or {on-error identity
+             :or {on-error re-throw
                   on-success identity}} (meta params)]
         (->> (rp/req! :delete-contact {:id id})
              (rx/tap on-success)
@@ -445,7 +445,7 @@
     (watch [_ state stream]
       (let [{:keys [on-success on-error]
              :or {on-success identity
-                  on-error identity}} (meta params)]
+                  on-error re-throw}} (meta params)]
         (->> (rp/req! :create-http-monitor params)
              (rx/tap on-success)
              (rx/map #(ptk/event :fetch-monitors))
@@ -465,7 +465,7 @@
     (watch [_ state stream]
       (let [{:keys [on-success on-error]
              :or {on-success identity
-                  on-error identity}} (meta params)]
+                  on-error re-throw}} (meta params)]
         (->> (rp/req! :create-ssl-monitor params)
              (rx/tap on-success)
              (rx/map #(ptk/event :fetch-monitors))
@@ -485,7 +485,7 @@
     (watch [_ state stream]
       (let [{:keys [on-success on-error]
              :or {on-success identity
-                  on-error identity}} (meta params)]
+                  on-error re-throw}} (meta params)]
         (->> (rp/req! :create-healthcheck-monitor params)
              (rx/tap on-success)
              (rx/map #(ptk/event :fetch-monitors))
@@ -502,7 +502,7 @@
     ptk/WatchEvent
     (watch [_ state stream]
       (let [{:keys [on-success on-error]
-             :or {on-error identity
+             :or {on-error re-throw
                   on-success identity}} (meta params)]
         (->> (rp/req! :update-http-monitor params)
              (rx/tap on-success)
@@ -523,7 +523,7 @@
     ptk/WatchEvent
     (watch [_ state stream]
       (let [{:keys [on-success on-error]
-             :or {on-error identity
+             :or {on-error re-throw
                   on-success identity}} (meta params)]
         (->> (rp/req! :update-ssl-monitor params)
              (rx/tap on-success)
@@ -544,7 +544,7 @@
     ptk/WatchEvent
     (watch [_ state stream]
       (let [{:keys [on-success on-error]
-             :or {on-error identity
+             :or {on-error re-throw
                   on-success identity}} (meta params)]
         (->> (rp/req! :update-healthcheck-monitor params)
              (rx/tap on-success)
@@ -576,7 +576,7 @@
     ptk/WatchEvent
     (watch [_ state stream]
       (let [{:keys [on-success on-error]
-             :or {on-error identity
+             :or {on-error re-throw
                   on-success identity}} (meta params)]
         (->> (rp/req! :pause-monitor {:id id})
              (rx/tap on-success)
