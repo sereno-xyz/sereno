@@ -21,7 +21,7 @@
    [clojure.tools.logging :as log]
    [integrant.core :as ig]))
 
-(declare retrieve-monitor)
+(declare update-monitor-status!)
 
 (defmethod ig/pre-init-spec ::handler
   [_]
@@ -39,7 +39,7 @@
           (let [result {:status "down"
                         :cause {:code :missing-keepalive
                                 :hint "the ping request is not received on time"}}]
-            (tsk/update-monitor-status! conn id result)
+            (update-monitor-status! conn id result)
             (tsk/insert-monitor-status-change! conn id result)
             (tsk/notify-contacts! conn monitor result))
 
@@ -56,3 +56,8 @@
                        (dt/duration->str age)
                        (dt/duration->str maxage)
                        scheduled-at)))))))
+
+
+(defn update-monitor-status!
+  [conn id result]
+  (db/exec! conn ["update monitor set status=? where id=?" (:status result) id]))
