@@ -183,6 +183,10 @@
 
 (defmethod ptk/handle-error :assertion
   [{:keys [data stack message context] :as error}]
+  (ts/schedule
+   (st/emitf (em/show {:content "Internal assertion error."
+                       :type :error
+                       :timeout 2000})))
   (js/console.group message)
   (js/console.info (str/format "ns: '%s'\nname: '%s'\nfile: '%s:%s'"
                                 (:ns context)

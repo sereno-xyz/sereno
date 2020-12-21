@@ -62,7 +62,7 @@
 
     ;; Fetch Summary Data
     (mf/use-effect
-     (mf/deps monitor)
+     (mf/deps (:id monitor))
      (fn []
        (st/emit! (ptk/event :init-monitor-detail-section monitor))
        (st/emitf (ptk/event :stop-monitor-detail-section monitor))))

@@ -136,7 +136,7 @@
 
 
     (mf/use-effect
-     (mf/deps monitor)
+     (mf/deps (:id monitor))
      (fn []
        (st/emit! (ptk/event :init-monitor-status-history params))
        (st/emitf (ptk/event :stop-monitor-status-history))))
@@ -158,7 +158,7 @@
                          (reverse))]
 
     (mf/use-effect
-     (mf/deps monitor)
+     (mf/deps (:id monitor))
      (fn []
        (st/emit! (ptk/event :init-monitor-status-history monitor))
        (st/emitf (ptk/event :stop-monitor-status-history monitor))))

@@ -40,9 +40,10 @@
      [:div.close {:on-click on-close} i/times]]))
 
 (mf/defc notifications
+  {::mf/wrap [mf/memo]}
   []
   (let [message  (mf/deref st/message-ref)
-        on-close (st/emitf (em/hide))]
+        on-close (mf/use-fn (st/emitf (em/hide)))]
     (when message
       [:& notification-item
        {:type (:type message)

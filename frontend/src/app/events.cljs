@@ -13,6 +13,7 @@
    [beicon.core :as rx]
    [app.config :as cfg]
    [app.common.spec :as us]
+   [app.common.exceptions :as ex]
    [app.common.data :as d]
    [app.events.messages :as em]
    [app.repo :as rp]
@@ -371,8 +372,8 @@
                   on-success identity}} (meta params)]
         (->> (rp/req! :update-contact params)
              (rx/tap on-success)
-             (rx/catch on-error))))))
-
+             (rx/catch on-error))))
+    ))
 
 (defn delete-contact
   [{:keys [id] :as params}]
@@ -406,7 +407,7 @@
 
 (defmethod ptk/resolve :fetch-monitors
   [_ params]
-  (ptk/reify ::fetch-monitors
+  (ptk/reify :fetch-monitors
     ptk/WatchEvent
     (watch [_ state stream]
       (->> (rp/qry! :retrieve-monitors)
@@ -646,7 +647,6 @@
                       {:id id
                        :since since
                        :limit limit})
-
              (rx/map #(partial on-fetched %)))))))
 
 (defmethod ptk/resolve :load-more-status-history

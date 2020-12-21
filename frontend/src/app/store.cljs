@@ -20,36 +20,12 @@
 
 (enable-console-print!)
 
-(defonce state  (l/atom {}))
-(defonce store  (ptk/store {:resolve ptk/resolve}))
-(defonce stream (ptk/input-stream store))
+(defonce state  (ptk/store {:resolve ptk/resolve}))
+(defonce stream (ptk/input-stream state))
 
 (defmethod ptk/resolve :default
   [type params]
   (ptk/data-event type params))
-
-;; (defn- repr-event
-;;   [event]
-;;   (cond
-;;     (satisfies? ptk/Event event)
-;;     (str "typ: " (pr-str (ptk/type event)))
-
-;;     (and (fn? event)
-;;          (pos? (count (.-name event))))
-;;     (str "fn: " (demunge (.-name event)))
-
-;;     :else
-;;     (str "unk: " (pr-str event))))
-
-
-;; (when *assert*
-;;   (defonce debug-subscription
-;;     (as-> stream $
-;;       (rx/filter ptk/event? $)
-;;       ;; (rx/filter (fn [s] (debug? :events)) $)
-;;       (rx/subscribe $ (fn [event]
-;;                         (println "[stream]: " (repr-event event)))))))
-
 
 ;; Refs
 
@@ -78,10 +54,10 @@
 (defn emit!
   ([] nil)
   ([event]
-   (ptk/emit! store event)
+   (ptk/emit! state event)
    nil)
   ([event & events]
-   (apply ptk/emit! store (cons event events))
+   (apply ptk/emit! state (cons event events))
    nil))
 
 (defn emitf
@@ -95,5 +71,5 @@
   "Initialize the state materialization."
   ([] (init {}))
   ([props]
-   (emit! #(merge % initial-state props))
-   (rx/to-atom store state)))
+   (emit! #(merge % initial-state props))))
+

@@ -14,7 +14,6 @@
    [app.common.spec :as us]
    [potok.core :as ptk]))
 
-(def default-animation-timeout 600)
 (def default-timeout 2000)
 
 (s/def ::content ::us/not-empty-string)
@@ -30,14 +29,7 @@
   (ptk/reify ::hide
     ptk/UpdateEvent
     (update [_ state]
-      (update state :message assoc :status :hide))
-
-    ptk/WatchEvent
-    (watch [_ state stream]
-      (let [stoper (rx/filter (ptk/type? ::show) stream)]
-        (->> (rx/of #(dissoc % :message))
-             (rx/delay default-animation-timeout)
-             (rx/take-until stoper))))))
+      (dissoc state :message))))
 
 (defn show
   [{:keys [timeout] :or {timeout default-timeout} :as data}]
