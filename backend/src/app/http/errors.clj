@@ -5,7 +5,7 @@
 ;; This Source Code Form is "Incompatible With Secondary Licenses", as
 ;; defined by the Mozilla Public License, v. 2.0.
 ;;
-;; Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
+;; Copyright (c) 2020-2021 Andrey Antukh <niwi@niwi.nz>
 
 (ns app.http.errors
   "A errors handling for the http server."
@@ -15,6 +15,17 @@
    [cuerdas.core :as str]
    [expound.alpha :as expound]
    [io.aviso.exception :as e]))
+
+(defn get-context-string
+  [request edata]
+  (str "=| uri:          " (pr-str (:uri request)) "\n"
+       "=| method:       " (pr-str (:request-method request)) "\n"
+       "=| params:  " (pr-str (:params request)) "\n"
+
+       (when (map? edata)
+         (str "=| ex-data:      " (pr-str edata) "\n"))
+
+       "\n"))
 
 (defmulti handle-exception
   (fn [err & rest]
@@ -40,21 +51,6 @@
       :else
       {:status 400
        :body edata})))
-
-(defn get-context-string
-  [request edata]
-  (str "=| uri:          " (pr-str (:uri request)) "\n"
-       "=| method:       " (pr-str (:request-method request)) "\n"
-       "=| path-params:  " (pr-str (:path-params request)) "\n"
-       "=| query-params: " (pr-str (:query-params request)) "\n"
-
-       (when-let [bparams (:body-params request)]
-         (str "=| body-params:  " (pr-str bparams) "\n"))
-
-       (when (map? edata)
-         (str "=| ex-data:      " (pr-str edata) "\n"))
-
-       "\n"))
 
 (defmethod handle-exception :assertion
   [error request]
@@ -86,9 +82,12 @@
     (log/errorf error
                 (str "Internal Error\n"
                      (get-context-string request edata)))
-
-    {:status 500
-     :body (dissoc edata :data)}))
+    (if (nil? edata)
+      {:status 500
+       :body {:type :server-error
+              :hint (ex-message error)}}
+      {:status 500
+       :body (dissoc edata :data)})))
 
 (defn handle
   [error req]
