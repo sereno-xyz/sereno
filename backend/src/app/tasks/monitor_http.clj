@@ -119,7 +119,7 @@
         request {:uri (:uri params)
                  :method (:method params)
                  :headers (:headers params {})
-                 :timeout 5000}
+                 :timeout 10000}
 
         incl-t  (as-> params $
                   (:should-include $)
