@@ -87,8 +87,9 @@
 
    :app.http.auth/handlers
    {:http-client (ig/ref :app.http/client)
-    :pool (ig/ref :app.db/pool)
-    :rpc  (ig/ref :app.rpc/rpc)}
+    :tokens      (ig/ref :app.tokens/instance)
+    :pool        (ig/ref :app.db/pool)
+    :rpc         (ig/ref :app.rpc/rpc)}
 
    :app.http/router
    {:rpc      (ig/ref :app.rpc/rpc)
@@ -167,9 +168,9 @@
    {:pool (ig/ref :app.db/pool)}
 
    :app.tasks.notify/handler
-   {:pool (ig/ref :app.db/pool)
-    :tokens (ig/ref :app.tokens/instance)
-    :telegram (ig/ref :app.telegram/service)
+   {:pool        (ig/ref :app.db/pool)
+    :tokens      (ig/ref :app.tokens/instance)
+    :telegram    (ig/ref :app.telegram/service)
     :public-uri  (:public-uri cfg/config)
     :http-client (ig/ref :app.http/client)}
 
