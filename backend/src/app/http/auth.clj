@@ -56,7 +56,7 @@
 (defn- build-redirect-url
   [cfg]
   (let [public (uri/uri (:public-uri cfg))]
-    (str (assoc public :path "/api/oauth/google/callback"))))
+    (str (assoc public :path "/auth/google/callback"))))
 
 (defn- get-access-token
   [cfg code]
