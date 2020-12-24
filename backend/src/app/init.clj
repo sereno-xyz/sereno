@@ -89,7 +89,11 @@
    {:http-client (ig/ref :app.http/client)
     :tokens      (ig/ref :app.tokens/instance)
     :pool        (ig/ref :app.db/pool)
-    :rpc         (ig/ref :app.rpc/rpc)}
+    :rpc         (ig/ref :app.rpc/rpc)
+
+    :public-uri           (:public-uri cfg/config)
+    :google-client-id     (:google-client-id cfg/config)
+    :google-client-secret (:google-client-secret cfg/config)}
 
    :app.http/router
    {:rpc      (ig/ref :app.rpc/rpc)
@@ -183,7 +187,7 @@
     :password (:smtp-password cfg/config)
     :metrics  (ig/ref :app.metrics/metrics)
     :default-reply-to (:smtp-default-reply-to cfg/config)
-    :default-from (:smtp-default-from cfg/config)}
+    :default-from     (:smtp-default-from cfg/config)}
 
    :app.telegram/service
    {:id (:telegram-id cfg/config)

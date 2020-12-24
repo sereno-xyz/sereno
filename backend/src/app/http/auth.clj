@@ -19,6 +19,33 @@
    [integrant.core :as ig]
    [lambdaisland.uri :as uri]))
 
+(declare login-handler)
+(declare logout-handler)
+(declare gauth-handler)
+(declare gauth-callback-handler)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Init
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(s/def ::http-client some?)
+(s/def ::tokens some?)
+
+(defmethod ig/pre-init-spec ::handlers [_]
+  (s/keys :req-un [::http-client ::db/pool ::tokens]))
+
+(defmethod ig/init-key ::handlers
+  [_ cfg]
+  {:login (partial login-handler cfg)
+   :logout (partial logout-handler cfg)
+   :gauth (partial gauth-handler cfg)
+   :gauth-callback (partial gauth-callback-handler cfg)})
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Handlers
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (def gauth-uri "https://accounts.google.com/o/oauth2/v2/auth")
 (def gauth-scope
   (str "email profile "
@@ -34,8 +61,8 @@
 (defn- get-access-token
   [cfg code]
   (let [params {:code code
-                :client_id (get-in cfg [:google :client-id])
-                :client_secret (get-in cfg [:google :client-secret])
+                :client_id (:google-client-id cfg)
+                :client_secret (:google-client-secret cfg)
                 :redirect_uri (build-redirect-url cfg)
                 :grant_type "authorization_code"}
         req    {:method :post
@@ -91,7 +118,7 @@
                 :state token
                 :response_type "code"
                 :redirect_uri (build-redirect-url cfg)
-                :client_id (get-in cfg [:google :client-id])}
+                :client_id (:google-client-id cfg)}
         query  (uri/map->query-string params)
         uri    (-> (uri/uri gauth-uri)
                    (assoc :query query))]
@@ -152,15 +179,3 @@
   {:status 200
    :cookies (session/cookies {:value "" :max-age -1})
    :body ""})
-
-(s/def ::http-client some?)
-
-(defmethod ig/pre-init-spec ::handlers [_]
-  (s/keys :req-un [::http-client ::db/pool]))
-
-(defmethod ig/init-key ::handlers
-  [_ cfg]
-  {:login (partial login-handler cfg)
-   :logout (partial logout-handler cfg)
-   :gauth (partial gauth-handler cfg)
-   :gauth-callback (partial gauth-callback-handler cfg)})
