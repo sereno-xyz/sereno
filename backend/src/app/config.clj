@@ -76,20 +76,9 @@
                    ::telegram-token
                    ::telegram-username]))
 
-(defn- env->config
-  [env]
-  (reduce-kv (fn [acc k v]
-               (cond-> acc
-                 (str/starts-with? (name k) "sereno-")
-                 (assoc (keyword (subs (name k) 7)) v)
-
-                 (str/starts-with? (name k) "app-")
-                 (assoc (keyword (subs (name k) 4)) v)))
-             {}
-             env))
-
-(def default-config
+(def defaults
   {:debug true
+   :host "devenv"
    :smtp-enabled false
    :smtp-host "localhost"
    :smtp-port 25
@@ -104,13 +93,27 @@
    :repl-server-port 4461
    :http-server-port 4460})
 
-(def config
+(defn- env->config
+  [env]
+  (reduce-kv (fn [acc k v]
+               (cond-> acc
+                 (str/starts-with? (name k) "sereno-")
+                 (assoc (keyword (subs (name k) 7)) v)
+
+                 (str/starts-with? (name k) "app-")
+                 (assoc (keyword (subs (name k) 4)) v)))
+             {}
+             env))
+
+(defn read-config
+  [env]
   (->> (env->config env)
-       (merge default-config)
+       (merge defaults)
        (us/conform ::config)))
 
-(def version
-  (v/parse "%version%"))
+
+(def config (read-config env))
+(def version (v/parse "%version%"))
 
 (defmethod ig/init-key ::secrets
   [type {:keys [key] :as opts}]
@@ -124,7 +127,3 @@
                               :alg :hkdf
                               :digest :blake2b-512})]
        (bk/get-bytes engine length)))})
-
-(defmethod ig/init-key :default
-  [type opts]
-  opts)

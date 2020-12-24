@@ -58,13 +58,16 @@
   [& exprs]
   `(bench (do ~@exprs)))
 
+
 ;; --- Development Stuff
 
 (defn- start
   []
   (alter-var-root #'system (fn [sys]
                              (when sys (ig/halt! sys))
-                             (ig/init init/system-config)))
+                             (-> init/system-config
+                                 (ig/prep)
+                                 (ig/init))))
   :started)
 
 (defn- stop
@@ -83,54 +86,3 @@
   []
   (stop)
   (repl/refresh-all :after 'user/start))
-
-
-(defn lint
-  [path]
-  (-> (kondo/run! {:lint [path]
-                   :config
-                   {:linters
-                    {:unused-binding
-                     {:exclude-destructured-keys-in-fn-args true
-                      :exclude-destructured-as true}
-                     :unresolved-symbol
-                     {:exclude ['(app.util.services/defmethod)
-                                '(app.db/with-atomic)]}}}})
-      (kondo/print!)))
-
-;; (defn install-trust!
-;;   []
-;;   (let [trust  (reify X509TrustManager
-;;                  (getAcceptedIssuers [it] nil)
-;;                  (checkServerTrusted [it a b] nil)
-;;                  (checkClientTrusted [it a b] nil))
-;;         trusts (into-array TrustManager [trust])
-;;         sslctx (SSLContext/getInstance "SSL")
-;;         _      (.init sslctx nil trusts (java.security.SecureRandom.))]
-;;     (HttpsURLConnection/setDefaultSSLSocketFactory (.getSocketFactory sslctx))))
-
-(defn check
-  [uri]
-  ;; (install-trust!)
-  (let [url   (URL. ^String uri)
-        conn  (.openConnection url)]
-    (when-not (instance? HttpsURLConnection conn)
-      (ex/raise :type :invalid-arguments
-                :code :not-https-uri-provided
-                :message "Provide a valid https uri."))
-
-    (.setConnectTimeout ^HttpsURLConnection conn 5000)
-    (.connect ^HttpsURLConnection conn)
-
-    (try
-      (let [certs (.getServerCertificates ^HttpsURLConnection conn)]
-        (doseq [^X509Certificate cert (seq certs)]
-          (let [name   (.. cert getSubjectDN getName)
-                expire (.getNotAfter cert)
-                expire (.toInstant expire)]
-            (prn "cert:" name "," expire))))
-      (finally
-        (.disconnect ^HttpsURLConnection conn)))))
-
-
-

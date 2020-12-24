@@ -121,7 +121,8 @@
 (s/def ::http-client fn?)
 
 (defmethod ig/pre-init-spec ::service [_]
-  (s/keys :req-un [::db/pool ::token ::id ::http-client]))
+  (s/keys :req-un [::db/pool ::http-client]
+          :opt-un [::token ::id]))
 
 (defmethod ig/init-key ::service
   [_ cfg]

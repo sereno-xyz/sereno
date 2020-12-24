@@ -10,6 +10,7 @@
 (ns app.init
   (:require
    [app.config :as cfg]
+   [app.common.data :as d]
    [app.util.time :as dt]
    [clojure.tools.logging :as log]
    [clojure.tools.namespace.repl :as repl]
@@ -23,6 +24,10 @@
 
 ;; Set value for all new threads bindings.
 (alter-var-root #'*assert* enable-asserts)
+
+(defmethod ig/init-key :default [_ data] data)
+(defmethod ig/prep-key :default [_ data]
+  (d/remove-nil-vals data))
 
 (Thread/setDefaultUncaughtExceptionHandler
  (reify Thread$UncaughtExceptionHandler
@@ -41,38 +46,21 @@
 ;; --- Entry point
 
 (def system-config
-  {:app.config/public-uri
-   (:public-uri cfg/config)
-
-   :app.config/google
-   {:client-id (:google-client-id cfg/config)
-    :client-secret (:google-client-secret cfg/config)}
-
-   :app.config/smtp
-   {:host (:smtp-host cfg/config)
-    :port (:smtp-port cfg/config)
-    :default-reply-to (:smtp-default-reply-to cfg/config)
-    :default-from (:smtp-default-from cfg/config)
-    :enabled (:smtp-enabled cfg/config)
-    :tls (:smtp-tls cfg/config)
-    :username (:smtp-username cfg/config)
-    :password (:smtp-password cfg/config)}
-
-   :app.metrics/metrics
+  {:app.metrics/metrics
    {}
 
    :app.migrations/migrations
    {}
 
    :app.db/pool
-   {:uri (:database-uri cfg/config)
-    :username (:database-username cfg/config)
-    :password (:database-password cfg/config)
-    :metrics (ig/ref :app.metrics/metrics)
-    :migrations (ig/ref :app.migrations/migrations)
+   {:uri         (:database-uri cfg/config)
+    :username    (:database-username cfg/config)
+    :password    (:database-password cfg/config)
+    :metrics     (ig/ref :app.metrics/metrics)
+    :migrations  (ig/ref :app.migrations/migrations)
     :name "main"
     :min-pool-size 0
-    :max-pool-size 10}
+    :max-pool-size 20}
 
    :app.config/secrets
    {:key (:secret-key cfg/config "default")}
@@ -94,7 +82,7 @@
     :http-client (ig/ref :app.http/client)
     :metrics     (ig/ref :app.metrics/metrics)
 
-    :public-uri  (ig/ref :app.config/public-uri)
+    :public-uri  (:public-uri cfg/config)
     :default-profile-type (:default-profile-type cfg/config "default")}
 
    :app.http.auth/handlers
@@ -182,11 +170,19 @@
    {:pool (ig/ref :app.db/pool)
     :tokens (ig/ref :app.tokens/instance)
     :telegram (ig/ref :app.telegram/service)
-    :public-uri  (ig/ref :app.config/public-uri)
+    :public-uri  (:public-uri cfg/config)
     :http-client (ig/ref :app.http/client)}
 
    :app.tasks.sendmail/handler
-   {:smtp (ig/ref :app.config/smtp)}
+   {:host     (:smtp-host cfg/config)
+    :port     (:smtp-port cfg/config)
+    :enabled  (:smtp-enabled cfg/config)
+    :tls      (:smtp-tls cfg/config)
+    :username (:smtp-username cfg/config)
+    :password (:smtp-password cfg/config)
+    :metrics  (ig/ref :app.metrics/metrics)
+    :default-reply-to (:smtp-default-reply-to cfg/config)
+    :default-from (:smtp-default-from cfg/config)}
 
    :app.telegram/service
    {:id (:telegram-id cfg/config)
@@ -230,9 +226,10 @@
   (ig/load-namespaces system-config)
   (alter-var-root #'system (fn [sys]
                              (when sys (ig/halt! sys))
-                             (ig/init system-config)))
-  (log/infof "Welcome to penpot! Version: '%s'." (:full cfg/version)))
-
+                             (-> system-config
+                                 (ig/prep)
+                                 (ig/init))))
+  (log/infof "Welcome to sereno! Version: '%s'." (:full cfg/version)))
 
 (defn refresh-and-restart
   []

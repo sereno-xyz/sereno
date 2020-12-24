@@ -24,10 +24,135 @@
    [integrant.core :as ig]
    [promesa.exec :as px])
   (:import
+   org.eclipse.jetty.util.thread.QueuedThreadPool
    java.util.concurrent.ExecutorService
+   java.util.concurrent.Executors
+   java.util.concurrent.Executor
    java.time.Duration
    java.time.Instant
    java.util.Date))
+
+(s/def ::executor #(instance? Executor %))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Executor
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(s/def ::name ::us/string)
+(s/def ::min-threads ::us/integer)
+(s/def ::max-threads ::us/integer)
+(s/def ::idle-timeout ::us/integer)
+
+(defmethod ig/pre-init-spec ::executor [_]
+  (s/keys :opt-un [::min-threads ::max-threads ::idle-timeout ::name]))
+
+(defmethod ig/prep-key ::executor
+  [_ cfg]
+  (merge {:min-threads 0
+          :max-threads 256
+          :idle-timeout 60000
+          :name "worker"}
+         cfg))
+
+(defmethod ig/init-key ::executor
+  [_ {:keys [min-threads max-threads idle-timeout name]}]
+  (doto (QueuedThreadPool. (int max-threads)
+                           (int min-threads)
+                           (int idle-timeout))
+    (.setStopTimeout 500)
+    (.setName name)
+    (.start)))
+
+(defmethod ig/halt-key! ::executor
+  [_ instance]
+  (.stop ^QueuedThreadPool instance))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Worker
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(declare event-loop-fn)
+
+(s/def ::queue ::us/string)
+(s/def ::parallelism ::us/integer)
+(s/def ::batch-size ::us/integer)
+(s/def ::tasks (s/map-of string? ::us/fn))
+(s/def ::poll-interval ::dt/duration)
+
+(defmethod ig/pre-init-spec ::worker [_]
+  (s/keys :req-un [::executor
+                   ::db/pool
+                   ::batch-size
+                   ::name
+                   ::poll-interval
+                   ::queue
+                   ::tasks]))
+
+(defmethod ig/prep-key ::worker
+  [_ cfg]
+  (merge {:batch-size 2
+          :name "worker"
+          :poll-interval (dt/duration {:seconds 5})
+          :queue "default"}
+         cfg))
+
+(defmethod ig/init-key ::worker
+  [_ {:keys [pool poll-interval name queue] :as cfg}]
+  (log/infof "Starting worker '%s' on queue '%s'." name queue)
+  (let [cch     (a/chan 1)
+        poll-ms (inst-ms poll-interval)]
+    (a/go-loop []
+      (let [[val port] (a/alts! [cch (event-loop-fn cfg)] :priority true)]
+        (cond
+          ;; Terminate the loop if close channel is closed or
+          ;; event-loop-fn returns nil.
+          (or (= port cch) (nil? val))
+          (log/infof "Stop condition found. Shutdown worker: '%s'" name)
+
+          (db/pool-closed? pool)
+          (do
+            (log/info "Worker eventloop is aborted because pool is closed.")
+            (a/close! cch))
+
+          (and (instance? java.sql.SQLException val)
+               (contains? #{"08003" "08006" "08001" "08004"} (.getSQLState ^java.sql.SQLException val)))
+          (do
+            (log/error "Connection error, trying resume in some instants.")
+            (a/<! (a/timeout poll-interval))
+            (recur))
+
+          (and (instance? java.sql.SQLException val)
+               (= "40001" (.getSQLState ^java.sql.SQLException val)))
+          (do
+            (log/debug "Serialization failure (retrying in some instants).")
+            (a/<! (a/timeout poll-ms))
+            (recur))
+
+          (instance? Exception val)
+          (do
+            (log/errorf val "Unexpected error ocurried on polling the database (will resume in some instants).")
+            (a/<! (a/timeout poll-ms))
+            (recur))
+
+          (= ::handled val)
+          (recur)
+
+          (= ::empty val)
+          (do
+            (a/<! (a/timeout poll-ms))
+            (recur)))))
+
+    (reify
+      java.lang.AutoCloseable
+      (close [_]
+        (a/close! cch)))))
+
+
+(defmethod ig/halt-key! ::worker
+  [_ instance]
+  (.close ^java.lang.AutoCloseable instance))
+
 
 (def ^:private
   sql:mark-as-retry
@@ -62,7 +187,7 @@
     nil))
 
 (defn- mark-as-completed
-  [conn {:keys [task] :as opts}]
+  [conn {:keys [task] :as cfg}]
   (let [now (dt/now)]
     (db/update! conn :task
                 {:completed-at now
@@ -120,8 +245,7 @@
     (finally
       (log/debugf "Finished task '%s/%s/%s'." (:name item) (:id item) (:retry-num item)))))
 
-(def ^:private
-  sql:select-next-tasks
+(def sql:select-next-tasks
   "select * from task as t
     where t.scheduled_at <= now()
       and t.queue = ?
@@ -131,17 +255,17 @@
       for update skip locked")
 
 (defn- event-loop-fn*
-  [{:keys [tasks pool executor batch-size] :or {batch-size 1} :as opts}]
+  [{:keys [tasks pool executor batch-size] :as cfg}]
   (db/with-atomic [conn pool]
-    (let [queue (:queue opts "default")
+    (let [queue (:queue cfg)
           items (->> (db/exec! conn [sql:select-next-tasks queue batch-size])
                      (map decode-task-row)
                      (seq))
-          opts  (assoc opts :conn conn)]
+          cfg  (assoc cfg :conn conn)]
 
       (if (nil? items)
         ::empty
-        (let [proc-xf (comp (map #(partial run-task opts %))
+        (let [proc-xf (comp (map #(partial run-task cfg %))
                             (map #(px/submit! executor %)))]
           (->> (into [] proc-xf items)
                (map deref)
@@ -153,106 +277,5 @@
           ::handled)))))
 
 (defn- event-loop-fn
-  [{:keys [executor] :as opts}]
-  (aa/thread-call executor #(event-loop-fn* opts)))
-
-;; --- Executor
-
-(s/def ::name ::us/string)
-(s/def ::min-threads ::us/integer)
-(s/def ::max-threads ::us/integer)
-(s/def ::idle-timeout ::us/integer)
-
-(defmethod ig/pre-init-spec ::executor [_]
-  (s/keys :opt-un [::min-threads ::max-threads ::idle-timeout ::name]))
-
-(defmethod ig/init-key ::executor
-  [_ {:keys [min-threads max-threads idle-timeout name]
-      :or {min-threads 0
-           max-threads 64
-           idle-timeout 60000
-           name "worker"}
-      :as opts}]
-  (doto (org.eclipse.jetty.util.thread.QueuedThreadPool. (int max-threads)
-                                                         (int min-threads)
-                                                         (int idle-timeout))
-    (.setStopTimeout 500)
-    (.setName name)))
-
-(defmethod ig/halt-key! ::executor
-  [_ instance]
-  (.stop ^org.eclipse.jetty.util.thread.QueuedThreadPool instance))
-
-
-;; --- Worker
-
-(s/def ::name ::us/string)
-(s/def ::queue ::us/string)
-(s/def ::parallelism ::us/integer)
-(s/def ::batch-size ::us/integer)
-(s/def ::tasks (s/map-of string? ::us/fn))
-(s/def ::poll-interval ::dt/duration)
-
-(defmethod ig/pre-init-spec ::worker [_]
-  (s/keys :req-un [::aa/executor
-                   ::db/pool
-                   ::batch-size
-                   ::name
-                   ::poll-interval
-                   ::queue
-                   ::tasks]))
-
-(defmethod ig/init-key ::worker
-  [_ {:keys [pool poll-interval name queue] :as opts}]
-  (log/infof "Starting worker '%s' on queue '%s'." name queue)
-  (let [cch     (a/chan 1)
-        poll-ms (inst-ms poll-interval)]
-    (a/go-loop []
-      (let [[val port] (a/alts! [cch (event-loop-fn opts)] :priority true)]
-        (cond
-          ;; Terminate the loop if close channel is closed or
-          ;; event-loop-fn returns nil.
-          (or (= port cch) (nil? val))
-          (log/infof "Stop condition found. Shutdown worker: '%s'" name)
-
-          (db/pool-closed? pool)
-          (do
-            (log/info "Worker eventloop is aborted because pool is closed.")
-            (a/close! cch))
-
-          (and (instance? java.sql.SQLException val)
-               (contains? #{"08003" "08006" "08001" "08004"} (.getSQLState ^java.sql.SQLException val)))
-          (do
-            (log/error "Connection error, trying resume in some instants.")
-            (a/<! (a/timeout poll-interval))
-            (recur))
-
-          (and (instance? java.sql.SQLException val)
-               (= "40001" (.getSQLState ^java.sql.SQLException val)))
-          (do
-            (log/debug "Serialization failure (retrying in some instants).")
-            (a/<! (a/timeout poll-ms))
-            (recur))
-
-          (instance? Exception val)
-          (do
-            (log/errorf val "Unexpected error ocurried on polling the database (will resume in some instants).")
-            (a/<! (a/timeout poll-ms))
-            (recur))
-
-          (= ::handled val)
-          (recur)
-
-          (= ::empty val)
-          (do
-            (a/<! (a/timeout poll-ms))
-            (recur)))))
-
-    (reify
-      java.lang.AutoCloseable
-      (close [_]
-        (a/close! cch)))))
-
-(defmethod ig/halt-key! ::worker
-  [_ instance]
-  (.close ^java.lang.AutoCloseable instance))
+  [{:keys [executor] :as cfg}]
+  (aa/thread-call executor #(event-loop-fn* cfg)))

@@ -13,6 +13,7 @@
    [app.util.time :as dt]
    [app.worker]
    [clojure.tools.logging :as log]
+   [clojure.spec.alpha :as s]
    [cuerdas.core :as str]
    [integrant.core :as ig]
    [next.jdbc :as jdbc])
@@ -25,42 +26,42 @@
    io.prometheus.client.hotspot.DefaultExports
    java.io.StringWriter))
 
-(declare instrument!)
+(declare instrument-vars!)
+(declare instrument)
 (declare create-registry)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Entry Point
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
 (defn- instrument-jdbc!
   [registry]
-  (instrument!
-   :registry registry
-   :vars [#'next.jdbc/execute-one!
-          #'next.jdbc/execute!]
-   :type :counter
-   :name "database_query_counter"
-   :help "An absolute counter of database queries."))
+  (instrument-vars!
+   [#'next.jdbc/execute-one!
+    #'next.jdbc/execute!]
+   {:registry registry
+    :type :counter
+    :name "database_query_counter"
+    :help "An absolute counter of database queries."}))
 
 (defn- instrument-workers!
   [registry]
-  (instrument!
-   :registry registry
-   :type :summary
-   :name "worker_task_checkout_millis"
-   :help "Latency measured between scheduld_at and execution time."
-   :var  #'app.worker/handle-task
-   :wrap (fn [rootf mobj]
-           (let [mdata (meta rootf)
-                 origf (::original mdata rootf)]
-             (with-meta
-               (fn [tasks item]
-                 (let [now (inst-ms (dt/now))
-                       sat (inst-ms (:scheduled-at item))]
-                   (mobj :observe (- now sat))
-                   (origf tasks item)))
-               {::original origf})))))
+  (instrument-vars!
+   [#'app.worker/run-task]
+   {:registry registry
+    :type :summary
+    :name "worker_task_checkout_millis"
+    :help "Latency measured between scheduld_at and execution time."
+    :wrap (fn [rootf mobj]
+            (let [mdata (meta rootf)
+                  origf (::original mdata rootf)]
+              (with-meta
+                (fn [tasks item]
+                  (let [now (inst-ms (dt/now))
+                        sat (inst-ms (:scheduled-at item))]
+                    (mobj :observe (- now sat))
+                    (origf tasks item)))
+                {::original origf})))}))
 
 (defn- handler
   [registry request]
@@ -78,6 +79,12 @@
     (instrument-jdbc! registry)
     {:handler (partial handler registry)
      :registry registry}))
+
+(s/def ::handler fn?)
+(s/def ::registry #(instance? CollectorRegistry %))
+(s/def ::metrics
+  (s/keys :req-un [::registry ::handler]))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Implementation
@@ -99,8 +106,9 @@
          (tdown# (/ (- (System/nanoTime) start#) 1000000))))))
 
 (defn make-counter
-  [{:keys [name help registry] :as props}]
-  (let [instance (doto (Counter/build)
+  [{:keys [name help registry reg] :as props}]
+  (let [registry (or registry reg)
+        instance (doto (Counter/build)
                    (.name name)
                    (.help help))
         instance (.register instance registry)]
@@ -113,8 +121,9 @@
         (.inc ^Counter instance)))))
 
 (defn make-gauge
-  [{:keys [name help registry] :as props}]
-  (let [instance (doto (Gauge/build)
+  [{:keys [name help registry reg] :as props}]
+  (let [registry (or registry reg)
+        instance (doto (Gauge/build)
                    (.name name)
                    (.help help))
         instance (.register instance registry)]
@@ -130,8 +139,9 @@
           :dec (.dec ^Gauge instance))))))
 
 (defn make-summary
-  [{:keys [name help registry] :as props}]
-  (let [instance (doto (Summary/build)
+  [{:keys [name help registry reg] :as props}]
+  (let [registry (or registry reg)
+        instance (doto (Summary/build)
                    (.name name)
                    (.help help)
                    (.quantile 0.5 0.05)
@@ -190,10 +200,9 @@
            :cb #(mobj :observe %))))
       (assoc mdata ::original origf))))
 
-(defn instrument!
-  [& {:keys [var vars wrap] :as props}]
-  (let [obj  (create props)
-        vars (if var [var] vars)]
+(defn instrument-vars!
+  [vars {:keys [wrap] :as props}]
+  (let [obj (create props)]
     (cond
       (instance? Counter @obj)
       (doseq [var vars]
@@ -202,6 +211,19 @@
       (instance? Summary @obj)
       (doseq [var vars]
         (alter-var-root var (or wrap wrap-summary) obj))
+
+      :else
+      (ex/raise :type :not-implemented))))
+
+(defn instrument
+  [f {:keys [wrap] :as props}]
+  (let [obj (create props)]
+    (cond
+      (instance? Counter @obj)
+      ((or wrap wrap-counter) f obj)
+
+      (instance? Summary @obj)
+      ((or wrap wrap-summary) f obj)
 
       :else
       (ex/raise :type :not-implemented))))

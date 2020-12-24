@@ -56,4 +56,3 @@
     (if-let [profile-id (retrieve-from-request pool request)]
       (handler (assoc request :profile-id profile-id))
       (handler request))))
-

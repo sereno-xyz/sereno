@@ -14,6 +14,7 @@
    [app.common.spec :as us]
    [app.config :as cfg]
    [app.db :as db]
+   [app.worker :as wrk]
    [app.tasks :as tasks]
    [app.util.async :as aa]
    [app.util.emails :as emails]
@@ -33,10 +34,10 @@
 (defonce queue-fn identity)
 
 (s/def ::http-client fn?)
-(s/def ::uri (s/nilable ::us/uri))
 
 (defmethod ig/pre-init-spec ::instance [_]
-  (s/keys :req-un [::aa/executor ::uri ::http-client]))
+  (s/keys :req-un [::wrk/executor ::http-client]
+          :opt-un [::us/uri]))
 
 (defmethod ig/init-key ::instance
   [_ {:keys [executor uri] :as cfg}]
