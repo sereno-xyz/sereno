@@ -55,7 +55,7 @@
 
 (defn- on-error
   [form error]
-  (let [msg "Invalid token!"]
+  (let [msg "Token is invalid or is expired."]
     (ev/show-message {:content msg :type :error})))
 
 (defn- on-submit
@@ -70,7 +70,7 @@
 ;; --- Recovery Request Page
 
 (mf/defc recovery-page
-  [{:keys [locale params] :as props}]
+  [{:keys [params] :as props}]
   (let [form (fm/use-form :spec ::recovery-form
                           :validators [password-equality]
                           :initial params)]

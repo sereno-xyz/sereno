@@ -116,7 +116,7 @@
       (i18n/set-default-locale!))))
 
 (def logout
-  (ptk/reify :logout
+  (ptk/reify ::logout
     ptk/WatchEvent
     (watch [_ state stream]
       (rx/of clear-user-data
@@ -181,9 +181,7 @@
                   on-success identity}} (meta data)]
         (->> (rp/req! :recover-profile data)
              (rx/tap on-success)
-             (rx/catch (fn [err]
-                         (on-error)
-                         (rx/empty))))))))
+             (rx/catch on-error))))))
 
 (defmethod ptk/resolve :cancel-email-change
   [_ params]

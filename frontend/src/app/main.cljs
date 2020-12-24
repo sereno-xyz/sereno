@@ -24,14 +24,12 @@
 
 (declare reinit)
 
-
 (defn on-navigate
   [router path]
   (let [match   (rt/match router path)
         profile (:profile storage)
         authed? (and (not (nil? profile))
                      (not= (:id profile) uuid/zero))]
-
     (cond
       (and (or (= path "")
                (nil? match))

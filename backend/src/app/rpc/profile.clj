@@ -355,7 +355,7 @@
 (s/def ::retrieve-profile
   (s/keys :opt-un [::profile-id]))
 
-(sv/defmethod ::retrieve-profile
+(sv/defmethod ::retrieve-profile {:auth false}
   [{:keys [pool]} {:keys [profile-id] :as params}]
   (if profile-id
     (let [data (get-profile pool profile-id)]
