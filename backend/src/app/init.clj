@@ -62,11 +62,11 @@
     :min-pool-size 0
     :max-pool-size 20}
 
-   :app.config/secrets
-   {:key (:secret-key cfg/config "default")}
+   :app.secrets/secrets
+   {:key (:secret-key cfg/config)}
 
    :app.tokens/instance
-   {:secrets (ig/ref :app.config/secrets)}
+   {:secrets (ig/ref :app.secrets/secrets)}
 
    :app.msgbus/instance
    {:pool (ig/ref :app.db/pool)

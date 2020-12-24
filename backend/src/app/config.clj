@@ -111,19 +111,5 @@
        (merge defaults)
        (us/conform ::config)))
 
-
 (def config (read-config env))
 (def version (v/parse "%version%"))
-
-(defmethod ig/init-key ::secrets
-  [type {:keys [key] :as opts}]
-  (when (= key "default")
-    (log/warn "Using default SECRET-KEY, system will generate insecure tokens."))
-  {:key key
-   :factory
-   (fn [salt length]
-     (let [engine (bk/engine {:key key
-                              :salt (name salt)
-                              :alg :hkdf
-                              :digest :blake2b-512})]
-       (bk/get-bytes engine length)))})

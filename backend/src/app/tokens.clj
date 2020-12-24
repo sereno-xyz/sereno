@@ -22,14 +22,14 @@
 
 ;; --- Public API
 
-(s/def ::secrets map?)
+(s/def ::secrets fn?)
 
 (defmethod ig/pre-init-spec ::instance [_]
   (s/keys :req-un [::secrets]))
 
 (defmethod ig/init-key ::instance
   [type {:keys [secrets] :as opts}]
-  (let [key ((:factory secrets) :tokens 32)]
+  (let [key (secrets :tokens 32)]
     {:key key
      :create (partial create key)
      :verify (partial verify key)}))
