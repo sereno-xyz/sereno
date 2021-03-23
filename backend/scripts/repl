@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
-set -ex
 
-# clojure -Ojmx-remote -A:dev -e "(set! *warn-on-reflection* true)" -m rebel-readline.main
-# clojure -Ojmx-remote -A:dev -J-XX:+UnlockExperimentalVMOptions -J-XX:+UseZGC -J-Xms1g -J-Xmx1g -m rebel-readline.main
-clojure -J-Xms128m -J-Xmx128m -A:dev -M -e "(set! *warn-on-reflection* true)" -m rebel-readline.main
+export SERENO_ASSERTS_ENABLED=true
+
+export OPTIONS="-A:jmx-remote:dev -J-Dclojure.tools.logging.factory=clojure.tools.logging.impl/log4j2-factory -J-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager -J-Xms512m -J-Xmx512m -J-Dlog4j2.configurationFile=./resources/log4j2-devenv.xml"
+
+export OPTIONS_EVAL="nil"
+# export OPTIONS_EVAL="(set! *warn-on-reflection* true)"
+
+set -ex
+exec clojure $OPTIONS -M -e "$OPTIONS_EVAL" -m rebel-readline.main
 

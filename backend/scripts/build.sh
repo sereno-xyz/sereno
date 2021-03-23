@@ -15,7 +15,7 @@ for item in $(echo $CLASSPATH | tr ":" "\n"); do
 done
 
 
-cp ./resources/log4j2-bundle.xml ./target/dist/log4j2.xml
+cp ./resources/log4j2.xml ./target/dist/log4j2.xml
 
 cp -r ../common ./target/dist/common
 cp -r ./src ./target/dist/main
@@ -49,10 +49,7 @@ if [ -f ./environ ]; then
 fi
 
 set -x
-exec \$JAVA_CMD \$JVM_OPTS -classpath \$CP -Dlog4j.configurationFile=log4j2.xml "\$@" clojure.main -m app.init
+exec \$JAVA_CMD \$JVM_OPTS -classpath \$CP -Dclojure.tools.logging.factory=clojure.tools.logging.impl/log4j2-factory -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager -Dlog4j.configurationFile=log4j2.xml "\$@" clojure.main -m app.init
 EOF
 
 chmod +x ./target/dist/run.sh
-
-
-
