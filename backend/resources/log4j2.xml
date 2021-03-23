@@ -1,38 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="info" monitorInterval="30" packages="log4j2_clojure">
+<Configuration status="info" monitorInterval="60">
   <Appenders>
     <Console name="console" target="SYSTEM_OUT">
       <PatternLayout pattern="[%d{YYYY-MM-dd HH:mm:ss.SSS}] [%t] %level{length=1} %logger{36} - %msg%n"/>
     </Console>
-
-    <RollingFile name="file-main" fileName="logs/main.log" filePattern="logs/main-%i.log">
-      <PatternLayout pattern="[%d{YYYY-MM-dd HH:mm:ss.SSS}] [%t] %level{length=1} %logger{36} - %msg%n"/>
-      <Policies>
-        <SizeBasedTriggeringPolicy size="50M"/>
-      </Policies>
-      <DefaultRolloverStrategy max="9"/>
-    </RollingFile>
-
-    <CljFn name="error-reporter" ns="app.error-reporter" fn="queue-fn">
-      <PatternLayout pattern="[%d{YYYY-MM-dd HH:mm:ss.SSS}] [%t] %level{length=1} %logger{36} - %msg%n"/>
-    </CljFn>
   </Appenders>
 
   <Loggers>
-    <Logger name="com.zaxxer.hikari" level="error" additivity="false"></Logger>
-
-    <Logger name="org.eclipse.jetty" level="info" additivity="false">
-      <AppenderRef ref="file-main" />
-    </Logger>
+    <Logger name="com.zaxxer.hikari" level="error" />
+    <Logger name="org.eclipse.jetty" level="error" />
 
     <Logger name="app" level="debug" additivity="false">
-      <AppenderRef ref="file-main" level="debug" />
-      <AppenderRef ref="error-reporter" level="error" />
+      <AppenderRef ref="console" />
     </Logger>
 
     <Root level="info">
-      <AppenderRef ref="file-main" />
-      <!-- <AppenderRef ref="console"/> -->
+      <AppenderRef ref="console" />
     </Root>
   </Loggers>
 </Configuration>
