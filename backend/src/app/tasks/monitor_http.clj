@@ -67,12 +67,13 @@
                    :code :no-route
                    :hint "Unable to find a correct route to host.")}
 
-    (instance? org.eclipse.jetty.client.HttpResponseException e)
-    {:status "down"
-     :retry true
-     :cause (assoc (ex/->map e)
-                   :code :http
-                   :hint "Unable to complete http request.")}
+    ;; TODO: fixme
+    ;; (instance? org.eclipse.jetty.client.HttpResponseException e)
+    ;; {:status "down"
+    ;;  :retry true
+    ;;  :cause (assoc (ex/->map e)
+    ;;                :code :http
+    ;;                :hint "Unable to complete http request.")}
 
     (or (instance? java.util.concurrent.TimeoutException e)
         (instance? java.net.SocketTimeoutException e))

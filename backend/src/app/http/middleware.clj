@@ -5,29 +5,37 @@
 ;; This Source Code Form is "Incompatible With Secondary Licenses", as
 ;; defined by the Mozilla Public License, v. 2.0.
 ;;
-;; Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
+;; Copyright (c) 2020-2021 UXBOX Labs SL
 
 (ns app.http.middleware
   (:require
-   [app.common.exceptions :as ex]
-   [app.common.data :as d]
-   [app.config :as cfg]
+   [app.metrics :as mtx]
+   [app.util.json :as json]
    [app.util.transit :as t]
-   [clojure.data.json :as json]
+   [buddy.core.codecs :as bc]
+   [buddy.core.hash :as bh]
    [clojure.java.io :as io]
-   [clojure.tools.logging :as log]
-   [ring.util.codec :as codec]
-   [ring.middleware.keyword-params :refer [wrap-keyword-params]]
    [ring.middleware.cookies :refer [wrap-cookies]]
+   [ring.middleware.keyword-params :refer [wrap-keyword-params]]
    [ring.middleware.multipart-params :refer [wrap-multipart-params]]
-   [ring.middleware.params :refer [wrap-params]]
-   [ring.middleware.resource :refer [wrap-resource]]))
+   [ring.middleware.params :refer [wrap-params]]))
 
-(defn- wrap-parse-request-body
+(defn wrap-server-timing
+  [handler]
+  (let [seconds-from #(float (/ (- (System/nanoTime) %) 1000000000))]
+    (fn [request]
+      (let [start    (System/nanoTime)
+            response (handler request)]
+        (update response :headers
+                (fn [headers]
+                  (assoc headers "Server-Timing" (str "total;dur=" (seconds-from start)))))))))
+
+(defn wrap-parse-request-body
   [handler]
   (letfn [(parse-transit [body]
             (let [reader (t/reader body)]
               (t/read! reader)))
+
           (parse-json [body]
             (let [reader (io/reader body)]
               (json/read reader)))
@@ -38,13 +46,14 @@
                 :json (parse-json body)
                 :transit (parse-transit body))
               (catch Exception e
-                (let [type (if (:debug cfg/config) :json-verbose :json)
-                      data {:type :parse
-                            :hint "Unable to parse request body"
+                (let [data {:type :parse
+                            :hint "unable to parse request body"
                             :message (ex-message e)}]
                   {:status 400
-                   :body (t/encode-str data {:type type})}))))]
-    (fn [{:keys [headers body request-method] :as request}]
+                   :headers {"content-type" "application/transit+json"}
+                   :body (t/encode-str data {:type :json-verbose})}))))]
+
+    (fn [{:keys [headers body] :as request}]
       (let [ctype (get headers "content-type")]
         (handler
          (case ctype
@@ -67,8 +76,9 @@
    :compile (constantly wrap-parse-request-body)})
 
 (defn- impl-format-response-body
-  [response type]
-  (let [body (:body response)]
+  [response]
+  (let [body (:body response)
+        type :json-verbose]
     (cond
       (coll? body)
       (-> response
@@ -85,46 +95,39 @@
 
 (defn- wrap-format-response-body
   [handler]
-  (let [type (if (:debug cfg/config) :json-verbose :json)]
-    (fn [request]
-      (let [response (handler request)]
-        (cond-> response
-          (map? response) (impl-format-response-body type))))))
+  (fn [request]
+    (let [response (handler request)]
+      (cond-> response
+        (map? response) (impl-format-response-body)))))
 
 (def format-response-body
   {:name ::format-response-body
    :compile (constantly wrap-format-response-body)})
 
-(defn- wrap-errors
+(defn wrap-errors
   [handler on-error]
   (fn [request]
     (try
       (handler request)
-      (catch Exception e
+      (catch Throwable e
         (on-error e request)))))
 
 (def errors
   {:name ::errors
    :compile (constantly wrap-errors)})
 
+(def metrics
+  {:name ::metrics
+   :wrap (fn [handler]
+           (mtx/wrap-counter handler {:id "http__requests_counter"
+                                      :help "Absolute http requests counter."}))})
 (def cookies
   {:name ::cookies
    :compile (constantly wrap-cookies)})
 
-(defn- wrap-query-params
-  [handler]
-  (fn [{:keys [query-string] :as request}]
-    (let [params (some-> query-string
-                         (codec/form-decode "UTF-8"))
-          params (if (map? params) params {})]
-      (-> request
-          (update :query-params merge params)
-          (update :params merge params)
-          (handler)))))
-
-(def query-params
+(def params
   {:name ::params
-   :compile (constantly wrap-query-params)})
+   :compile (constantly wrap-params)})
 
 (def multipart-params
   {:name ::multipart-params
@@ -133,3 +136,32 @@
 (def keyword-params
   {:name ::keyword-params
    :compile (constantly wrap-keyword-params)})
+
+(def server-timing
+  {:name ::server-timing
+   :compile (constantly wrap-server-timing)})
+
+(defn wrap-etag
+  [handler]
+  (letfn [(generate-etag [{:keys [body] :as response}]
+            (str "W/\"" (-> body bh/blake2b-128 bc/bytes->hex) "\""))
+          (get-match [{:keys [headers] :as request}]
+            (get headers "if-none-match"))]
+    (fn [request]
+      (let [response (handler request)]
+        (if (= :get (:request-method request))
+          (let [etag     (generate-etag response)
+                match    (get-match request)
+                response (update response :headers #(assoc % "ETag" etag))]
+            (cond-> response
+              (and (string? match)
+                   (= :get (:request-method request))
+                   (= etag match))
+              (-> response
+                  (assoc :body "")
+                  (assoc :status 304))))
+          response)))))
+
+(def etag
+  {:name ::etag
+   :compile (constantly wrap-etag)})

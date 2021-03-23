@@ -5,50 +5,36 @@
 ;; This Source Code Form is "Incompatible With Secondary Licenses", as
 ;; defined by the Mozilla Public License, v. 2.0.
 ;;
-;; Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
+;; Copyright (c) 2020 UXBOX Labs SL
 
 (ns app.util.emails
   (:require
+   [app.common.data :as d]
+   [app.common.exceptions :as ex]
+   [app.common.spec :as us]
+   [app.util.template :as tmpl]
    [clojure.java.io :as io]
    [clojure.spec.alpha :as s]
-   [cuerdas.core :as str]
-   [app.common.spec :as us]
-   [app.common.exceptions :as ex]
-   [app.util.template :as tmpl])
+   [cuerdas.core :as str])
   (:import
    java.util.Properties
-   javax.mail.Message
-   javax.mail.Transport
-   javax.mail.Message$RecipientType
-   javax.mail.PasswordAuthentication
-   javax.mail.Session
-   javax.mail.internet.InternetAddress
-   javax.mail.internet.MimeMultipart
-   javax.mail.internet.MimeBodyPart
-   javax.mail.internet.MimeMessage))
+   jakarta.mail.Message$RecipientType
+   jakarta.mail.Session
+   jakarta.mail.Transport
+   jakarta.mail.internet.InternetAddress
+   jakarta.mail.internet.MimeBodyPart
+   jakarta.mail.internet.MimeMessage
+   jakarta.mail.internet.MimeMultipart))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Email Building
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn build-address
-  [v charset]
-  (try
-    (cond
-      (string? v)
-      (InternetAddress. v nil charset)
+(defn- parse-address
+  [v]
+  (InternetAddress/parse ^String v))
 
-      (map? v)
-      (InternetAddress. (:addr v)
-                        (:name v)
-                        (:charset v charset))
-
-      :else
-      (throw (ex-info "Invalid address" {:data v})))
-    (catch Exception e
-      (throw (ex-info "Invalid address" {:data v} e)))))
-
-(defn- resolve-recipient-type
+(defn- ^Message$RecipientType resolve-recipient-type
   [type]
   (case type
     :to  Message$RecipientType/TO
@@ -56,33 +42,33 @@
     :bcc Message$RecipientType/BCC))
 
 (defn- assign-recipient
-  [^MimeMessage mmsg type address charset]
+  [^MimeMessage mmsg type address]
   (if (sequential? address)
-    (reduce #(assign-recipient %1 type %2 charset) mmsg address)
-    (let [address (build-address address charset)
+    (reduce #(assign-recipient %1 type %2) mmsg address)
+    (let [address (parse-address address)
           type    (resolve-recipient-type type)]
-      (.addRecipient mmsg type address)
+      (.addRecipients mmsg type address)
       mmsg)))
 
 (defn- assign-recipients
-  [mmsg {:keys [to cc bcc charset] :or {charset "utf-8"} :as params}]
+  [mmsg {:keys [to cc bcc] :as params}]
   (cond-> mmsg
-    (some? to)  (assign-recipient :to to charset)
-    (some? cc)  (assign-recipient :cc cc charset)
-    (some? bcc) (assign-recipient :bcc bcc charset)))
+    (some? to)  (assign-recipient :to to)
+    (some? cc)  (assign-recipient :cc cc)
+    (some? bcc) (assign-recipient :bcc bcc)))
 
 (defn- assign-from
-  [mmsg {:keys [from charset] :or {charset "utf-8"}}]
-  (when from
-    (let [from (build-address from charset)]
-      (.setFrom ^MimeMessage mmsg ^InternetAddress from))))
+  [mmsg {:keys [default-from]} {:keys [from] :as props}]
+  (let [from (or from default-from)]
+    (when from
+      (let [from (parse-address from)]
+        (.addFrom ^MimeMessage mmsg from)))))
 
 (defn- assign-reply-to
-  [mmsg {:keys [defaut-reply-to]} {:keys [reply-to charset] :or {charset "utf-8"}}]
-  (let [reply-to (or reply-to defaut-reply-to)]
+  [mmsg {:keys [default-reply-to] :as cfg} {:keys [reply-to] :as params}]
+  (let [reply-to (or reply-to default-reply-to)]
     (when reply-to
-      (let [reply-to (build-address reply-to charset)
-            reply-to (into-array InternetAddress [reply-to])]
+      (let [reply-to (parse-address reply-to)]
         (.setReplyTo ^MimeMessage mmsg reply-to)))))
 
 (defn- assign-subject
@@ -93,8 +79,8 @@
                ^String charset))
 
 (defn- assign-extra-headers
-  [^MimeMessage mmsg {:keys [headers custom-data] :as params}]
-  (let [headers (assoc headers "X-Sereno-Custom-Data" custom-data)]
+  [^MimeMessage mmsg {:keys [headers extra-data] :as params}]
+  (let [headers (assoc headers "X-Penpot-Data" extra-data)]
     (reduce-kv (fn [^MimeMessage mmsg k v]
                  (doto mmsg
                    (.addHeader (name k) (str v))))
@@ -109,6 +95,18 @@
       (let [bpart (MimeBodyPart.)]
         (.setContent bpart ^String body (str "text/plain; charset=" charset))
         (.addBodyPart mpart bpart))
+
+      (vector? body)
+      (let [mmp (MimeMultipart. "alternative")
+            mbp (MimeBodyPart.)]
+        (.addBodyPart mpart mbp)
+        (.setContent mbp mmp)
+        (doseq [item body]
+          (let [mbp (MimeBodyPart.)]
+            (.setContent mbp
+                         ^String (:content item)
+                         ^String (str (:type item "text/plain") "; charset=" charset))
+            (.addBodyPart mmp mbp))))
 
       (map? body)
       (let [bpart (MimeBodyPart.)]
@@ -126,7 +124,7 @@
   [cfg session params]
   (let [mmsg (MimeMessage. ^Session session)]
     (assign-recipients mmsg params)
-    (assign-from mmsg params)
+    (assign-from mmsg cfg params)
     (assign-reply-to mmsg cfg params)
     (assign-subject mmsg params)
     (assign-extra-headers mmsg params)
@@ -144,14 +142,15 @@
        props
        (doto props (.put ^String k  ^String (str v)))))
    (Properties.)
-   {"mail.smtp.auth" (boolean username)
+   {"mail.user" username
+    "mail.host" host
+    "mail.from" default-from
+    "mail.smtp.auth" (boolean username)
     "mail.smtp.starttls.enable" tls
+    "mail.smtp.starttls.required" tls
     "mail.smtp.host" host
     "mail.smtp.port" port
-    "mail.smtp.from" default-from
     "mail.smtp.user" username
-    "mail.user" username
-    "mail.host" host
     "mail.smtp.timeout" timeout
     "mail.smtp.connectiontimeout" timeout}))
 
@@ -162,7 +161,7 @@
     (.setDebug session debug)
     session))
 
-(defn smtp-message
+(defn ^MimeMessage smtp-message
   [cfg message]
   (let [^Session session (smtp-session cfg)]
     (build-message cfg session message)))
@@ -172,7 +171,9 @@
 (defn send!
   [cfg message]
   (let [^MimeMessage message (smtp-message cfg message)]
-    (Transport/send message (:username cfg) (:password cfg))
+    (Transport/send message
+                    (:username cfg)
+                    (:password cfg))
     nil))
 
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -192,12 +193,21 @@
 
 (defn- build-email-template
   [id context]
-  (let [lang (:lang context :en)
-        subj (render-email-template-part :subj id context)
-        text (render-email-template-part :txt id context)]
+  (let [subj (render-email-template-part :subj id context)
+        text (render-email-template-part :txt id context)
+        html (render-email-template-part :html id context)]
+    (when (or (not subj)
+              (and (not text)
+                   (not html)))
+      (ex/raise :type :internal
+                :code :missing-email-templates))
     {:subject subj
-     :body {:type "text/plain"
-            :content text}}))
+     :body (d/concat
+            [{:type "text/plain"
+              :content text}]
+            (when html
+              [{:type "text/html"
+                :content html}]))}))
 
 (s/def ::priority #{:high :low})
 (s/def ::to (s/or :sigle ::us/email
@@ -205,11 +215,11 @@
 (s/def ::from ::us/email)
 (s/def ::reply-to ::us/email)
 (s/def ::lang string?)
-(s/def ::custom-data ::us/string)
+(s/def ::extra-data ::us/string)
 
 (s/def ::context
   (s/keys :req-un [::to]
-          :opt-un [::reply-to ::from ::lang ::priority ::custom-data]))
+          :opt-un [::reply-to ::from ::lang ::priority ::extra-data]))
 
 (defn template-factory
   ([id] (template-factory id {}))
@@ -231,8 +241,8 @@
                    :hint "seems like the template is wrong or does not exists."
                    :context {:id id}))
        (cond-> (assoc email :id (name id))
-         (:custom-data context)
-         (assoc :custom-data (:custom-data context))
+         (:extra-data context)
+         (assoc :extra-data (:extra-data context))
 
          (:from context)
          (assoc :from (:from context))

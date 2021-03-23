@@ -5,89 +5,96 @@
 ;; This Source Code Form is "Incompatible With Secondary Licenses", as
 ;; defined by the Mozilla Public License, v. 2.0.
 ;;
-;; Copyright (c) 2020-2021 Andrey Antukh <niwi@niwi.nz>
+;; Copyright (c) 2020 UXBOX Labs SL
 
 (ns app.http.errors
   "A errors handling for the http server."
   (:require
-   [app.common.exceptions :as ex]
+   [app.common.uuid :as uuid]
+   [app.util.log4j :refer [update-thread-context!]]
    [clojure.tools.logging :as log]
    [cuerdas.core :as str]
-   [expound.alpha :as expound]
-   [io.aviso.exception :as e]))
+   [expound.alpha :as expound]))
 
-(defn get-context-string
-  [request edata]
-  (str "=| uri:          " (pr-str (:uri request)) "\n"
-       "=| method:       " (pr-str (:request-method request)) "\n"
-       "=| params:  " (pr-str (:params request)) "\n"
+(defn- explain-error
+  [error]
+  (with-out-str
+    (expound/printer (:data error))))
 
-       (when (map? edata)
-         (str "=| ex-data:      " (pr-str edata) "\n"))
-
-       "\n"))
+(defn get-error-context
+  [request error]
+  (let [edata (ex-data error)]
+    (merge
+     {:id      (uuid/next)
+      :path    (:uri request)
+      :method  (:request-method request)
+      :params  (:params request)
+      :data    edata}
+     (let [headers (:headers request)]
+       {:user-agent (get headers "user-agent")
+        :frontend-version (get headers "x-frontend-version" "unknown")})
+     (when (and (map? edata) (:data edata))
+       {:explain (explain-error edata)}))))
 
 (defmulti handle-exception
-  (fn [err & rest]
-    (:type (ex-data err))))
+  (fn [err & _rest]
+    (let [edata (ex-data err)]
+      (or (:type edata)
+          (class err)))))
+
+(defmethod handle-exception :authentication
+  [err _]
+  {:status 401 :body (ex-data err)})
+
+
+(defmethod handle-exception :restriction
+  [err _]
+  {:status 400 :body (ex-data err)})
 
 (defmethod handle-exception :validation
-  [error request]
-  (let [header (get-in request [:headers "accept"])
-        edata  (ex-data error)]
-    (cond
-      (= :spec-validation (:code edata))
-      (if (str/starts-with? header "text/html")
-        {:status 400
-         :headers {"content-type" "text/html"}
-         :body (str "<pre style='font-size:14px'>"
-                    (with-out-str
-                      (expound/printer (:data edata)))
-                    "</pre>\n")}
-        ;; Dissoc the error data because it is not serializable.
-        {:status 400
-         :body (assoc edata :explain (with-out-str (expound/printer (:data edata))))})
-
-      :else
+  [err req]
+  (let [header (get-in req [:headers "accept"])
+        edata  (ex-data err)]
+    (if (and (= :spec-validation (:code edata))
+             (str/starts-with? header "text/html"))
       {:status 400
-       :body edata})))
+       :headers {"content-type" "text/html"}
+       :body (str "<pre style='font-size:16px'>"
+                  (explain-error edata)
+                  "</pre>\n")}
+      {:status 400
+       :body   (cond-> edata
+                 (map? (:data edata))
+                 (-> (assoc :explain (explain-error edata))
+                     (dissoc :data)))})))
 
 (defmethod handle-exception :assertion
   [error request]
-  (let [edata (ex-data error)]
-    (log/errorf error
-                (str "Assertion error\n"
-                     (get-context-string request edata)
-                     (with-out-str (expound/printer (:data edata)))))
+  (let [edata (ex-data error)
+        cdata (get-error-context request error)]
+    (update-thread-context! cdata)
+    (log/errorf error "internal error: assertion (id: %s)" (str (:id cdata)))
     {:status 500
-     :body (assoc edata :explain (with-out-str (expound/printer (:data edata))))}))
-
-(defmethod handle-exception :not-authenticated
-  [err req]
-  {:status 401
-   :body ""})
+     :body {:type :server-error
+            :data (-> edata
+                      (assoc :explain (explain-error edata))
+                      (dissoc :data))}}))
 
 (defmethod handle-exception :not-found
-  [error request]
-  {:status 404
-   :body (ex-data error)})
-
-(defmethod handle-exception :service-error
-  [err req]
-  (handle-exception (.getCause ^Throwable err) req))
+  [err _]
+  {:status 404 :body (ex-data err)})
 
 (defmethod handle-exception :default
   [error request]
-  (let [edata (ex-data error)]
-    (log/errorf error
-                (str "Internal Error\n"
-                     (get-context-string request edata)))
-    (if (nil? edata)
-      {:status 500
-       :body {:type :server-error
-              :hint (ex-message error)}}
-      {:status 500
-       :body (dissoc edata :data)})))
+  (let [cdata (get-error-context request error)]
+    (update-thread-context! cdata)
+    (log/errorf error "internal error: %s (id: %s)"
+                (ex-message error)
+                (str (:id cdata)))
+    {:status 500
+     :body {:type :server-error
+            :hint (ex-message error)
+            :data (ex-data error)}}))
 
 (defn handle
   [error req]

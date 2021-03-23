@@ -5,7 +5,7 @@
 ;; This Source Code Form is "Incompatible With Secondary Licenses", as
 ;; defined by the Mozilla Public License, v. 2.0.
 ;;
-;; Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
+;; Copyright (c) Andrey Antukh <niwi@niwi.nz>
 
 (ns app.db
   (:require
@@ -13,10 +13,14 @@
    [app.common.spec :as us]
    [app.util.transit :as t]
    [app.util.time :as dt]
+   [app.util.migrations :as mg]
+   [app.db.sql :as sql]
+   [app.metrics :as mtx]
    [clojure.data.json :as json]
    [clojure.spec.alpha :as s]
    [clojure.string :as str]
    [clojure.java.io :as io]
+   [clojure.tools.logging :as log]
    [integrant.core :as ig]
    [next.jdbc :as jdbc]
    [next.jdbc.date-time :as jdbc-dt]
@@ -24,6 +28,7 @@
    [next.jdbc.sql :as jdbc-sql]
    [next.jdbc.sql.builder :as jdbc-bld])
   (:import
+   java.lang.AutoCloseable
    com.zaxxer.hikari.HikariConfig
    com.zaxxer.hikari.HikariDataSource
    com.zaxxer.hikari.metrics.prometheus.PrometheusMetricsTrackerFactory
@@ -41,6 +46,7 @@
 
 (declare open)
 (declare create-pool)
+(declare instrument-jdbc!)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Initialization
@@ -50,30 +56,44 @@
 (s/def ::name ::us/not-empty-string)
 (s/def ::min-pool-size ::us/integer)
 (s/def ::max-pool-size ::us/integer)
-(s/def ::migrations fn?)
+(s/def ::migrations map?)
 
 (defmethod ig/pre-init-spec ::pool [_]
-  (s/keys :req-un [::uri ::name ::min-pool-size ::max-pool-size ::migrations]))
+  (s/keys :req-un [::uri ::name ::min-pool-size ::max-pool-size ::migrations ::mtx/metrics]))
 
 (defmethod ig/init-key ::pool
-  [_ {:keys [migrations] :as cfg}]
+  [_ {:keys [migrations metrics] :as cfg}]
+  (log/infof "initialize connection pool '%s' with uri '%s'" (:name cfg) (:uri cfg))
+  (instrument-jdbc! (:registry metrics))
   (let [pool (create-pool cfg)]
-    (when migrations
-      (with-open [conn (open pool)]
-        (migrations conn)))
+    (when (seq migrations)
+      (with-open [conn ^AutoCloseable (open pool)]
+        (mg/setup! conn)
+        (doseq [[mname steps] migrations]
+          (mg/migrate! conn {:name (name mname) :steps steps}))))
     pool))
 
 (defmethod ig/halt-key! ::pool
   [_ pool]
   (.close ^com.zaxxer.hikari.HikariDataSource pool))
 
+(defn- instrument-jdbc!
+  [registry]
+  (mtx/instrument-vars!
+   [#'next.jdbc/execute-one!
+    #'next.jdbc/execute!]
+   {:registry registry
+    :type :counter
+    :name "database_query_total"
+    :help "An absolute counter of database queries."}))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; API & Impl
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def initsql
-  (str "SET statement_timeout = 10000;\n"
-       "SET idle_in_transaction_session_timeout = 30000;"))
+  (str "SET statement_timeout = 120000;\n"
+       "SET idle_in_transaction_session_timeout = 120000;"))
 
 (defn- create-datasource-config
   [{:keys [metrics] :as cfg}]
@@ -107,44 +127,6 @@
 (defn unwrap
   [conn klass]
   (.unwrap ^Connection conn klass))
-
-(defn lobj-manager
-  [conn]
-  (let [conn (unwrap conn org.postgresql.PGConnection)]
-    (.getLargeObjectAPI ^PGConnection conn)))
-
-(defn lobj-create
-  [manager]
-  (.createLO ^LargeObjectManager manager LargeObjectManager/READWRITE))
-
-(defn lobj-open
-  ([manager oid]
-   (lobj-open manager oid {}))
-  ([manager oid {:keys [mode] :or {mode :rw}}]
-   (let [mode (case mode
-                (:r :read) LargeObjectManager/READ
-                (:w :write) LargeObjectManager/WRITE
-                (:rw :read+write) LargeObjectManager/READWRITE)]
-     (.open ^LargeObjectManager manager (long oid) mode))))
-
-(defn lobj-unlink
-  [manager oid]
-  (.unlink ^LargeObjectManager manager (long oid)))
-
-(extend-type LargeObject
-  io/IOFactory
-  (make-reader [lobj opts]
-    (let [^InputStream is (.getInputStream ^LargeObject lobj)]
-      (io/make-reader is opts)))
-  (make-writer [lobj opts]
-    (let [^OutputStream os (.getOutputStream ^LargeObject lobj)]
-      (io/make-writer os opts)))
-  (make-input-stream [lobj opts]
-    (let [^InputStream is (.getInputStream ^LargeObject lobj)]
-      (io/make-input-stream is opts)))
-  (make-output-stream [lobj opts]
-    (let [^OutputStream os (.getOutputStream ^LargeObject lobj)]
-      (io/make-output-stream os opts))))
 
 (s/def ::pool pool?)
 
@@ -187,44 +169,39 @@
   ([ds sv]
    (exec! ds sv {}))
   ([ds sv opts]
-   (jdbc/execute! ds sv (assoc opts :builder-fn as-kebab-maps))))
+   (jdbc/execute! ds sv (assoc opts :builder-fn sql/as-kebab-maps))))
 
 (defn exec-one!
   ([ds sv] (exec-one! ds sv {}))
   ([ds sv opts]
-   (jdbc/execute-one! ds sv (assoc opts :builder-fn as-kebab-maps))))
-
-(def ^:private default-options
-  {:table-fn snake-case
-   :column-fn snake-case
-   :builder-fn as-kebab-maps})
+   (jdbc/execute-one! ds sv (assoc opts :builder-fn sql/as-kebab-maps))))
 
 (defn insert!
-  [ds table params]
-  (jdbc-sql/insert! ds table params default-options))
-
-(defn insert-multi!
-  [ds table fields params]
-  (jdbc-sql/insert-multi! ds table fields params default-options))
+  ([ds table params] (insert! ds table params nil))
+  ([ds table params opts]
+   (exec-one! ds
+              (sql/insert table params opts)
+              (assoc opts :return-keys true))))
 
 (defn update!
-  [ds table params where]
-  (let [opts (assoc default-options :return-keys true)]
-    (jdbc-sql/update! ds table params where opts)))
+  ([ds table params where] (update! ds table params where nil))
+  ([ds table params where opts]
+   (exec-one! ds
+              (sql/update table params where opts)
+              (assoc opts :return-keys true))))
 
 (defn delete!
-  [ds table params]
-  (let [opts (assoc default-options :return-keys true)]
-    (jdbc-sql/delete! ds table params opts)))
+  ([ds table params] (delete! ds table params nil))
+  ([ds table params opts]
+   (exec-one! ds
+              (sql/delete table params opts)
+              (assoc opts :return-keys true))))
 
 (defn get-by-params
   ([ds table params]
    (get-by-params ds table params nil))
   ([ds table params opts]
-   (let [opts (cond-> (merge default-options opts)
-                (:for-update opts)
-                (assoc :suffix "for update"))]
-     (exec-one! ds (jdbc-bld/for-query table params opts) opts))))
+   (exec-one! ds (sql/select table params opts))))
 
 (defn get-by-id
   ([ds table id]
@@ -236,10 +213,7 @@
   ([ds table params]
    (query ds table params nil))
   ([ds table params opts]
-   (let [opts (cond-> (merge default-options opts)
-                (:for-update opts)
-                (assoc :suffix "for update"))]
-     (exec! ds (jdbc-bld/for-query table params opts) opts))))
+   (exec! ds (sql/select table params opts))))
 
 (defn savepoint
   ([^Connection conn]
@@ -264,6 +238,13 @@
 (defn pgarray->array
   [v]
   (.getArray ^PgArray v))
+
+(defn create-array
+  [conn type objects]
+  (let [^PGConnection conn (unwrap conn org.postgresql.PGConnection)]
+    (if (coll? objects)
+      (.createArrayOf conn ^String type (into-array Object objects))
+      (.createArrayOf conn ^String type objects))))
 
 (defn pginterval?
   [v]

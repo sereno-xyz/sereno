@@ -5,31 +5,48 @@
 ;; This Source Code Form is "Incompatible With Secondary Licenses", as
 ;; defined by the Mozilla Public License, v. 2.0.
 ;;
-;; Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
+;; Copyright (c) Andrey Antukh <niwi@niwi.nz>
 
 (ns app.emails
   "Main api for send emails."
   (:require
    [clojure.spec.alpha :as s]
-   [app.config :as cfg]
+   [integrant.core :as ig]
+   [app.tasks :as tasks]
    [app.common.exceptions :as ex]
    [app.common.spec :as us]
-   [app.tasks :as tasks]
+   [app.worker :as wrk]
+   [app.db :as db]
    [app.util.emails :as emails]))
 
-;; --- Public API
+;; TODO
+(defn get-or-create-factory
+  [cache id])
+
+(defmethod ig/pre-init-spec ::emails [_]
+  (s/keys :req-un [::db/pool ::wrk/worker]))
+
+(defmethod ig/init-key ::emails
+  [_ {:keys [pool] :as cfg}]
+  (let [cache   (atom {})
+        submit! (:worker cfg)]
+    (with-meta
+      (fn sendmail
+        ([id context] (sendmail pool id context))
+        ([conn id context]
+         (let [factory (get-or-create-factory cache id)
+               email   (factory context)]
+           (submit! conn {:name "sendmail"
+                          :delay 0
+                          :max-retries 1
+                          :priority 200
+                          :props email}))))
+      {:cache cache})))
+
+
 
 (defn send!
-  "Schedule the email for sending."
-  [conn email-factory context]
-  (us/verify fn? email-factory)
-  (us/verify map? context)
-  (let [email (email-factory context)]
-    (tasks/submit! conn {:name "sendmail"
-                         :delay 0
-                         :max-retries 1
-                         :priority 200
-                         :props email})))
+  [& args])
 
 (def register
   (emails/template-factory ::register))

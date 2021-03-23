@@ -74,17 +74,18 @@
              (next colls))
       (persistent! result))))
 
+
 (defn enumerate
   ([items] (enumerate items 0))
   ([items start]
-   (loop [idx start
+   (loop [idx   start
           items items
-          res []]
+          res   (transient [])]
      (if (empty? items)
-       res
+       (persistent! res)
        (recur (inc idx)
               (rest items)
-              (conj res [idx (first items)]))))))
+              (conj! res [idx (first items)]))))))
 
 (defn seek
   ([pred coll]
@@ -121,6 +122,12 @@
   (index-of-pred coll #(= % v)))
 
 (defn remove-nil-vals
+  "Given a map, return a map removing key-value
+  pairs when value is `nil`."
+  [data]
+  (into {} (remove (comp nil? second) data)))
+
+(defn without-nils
   "Given a map, return a map removing key-value
   pairs when value is `nil`."
   [data]
@@ -190,6 +197,14 @@
       (persistent! res)
       (recur (reduce-kv assoc! res (first maps))
              (next maps)))))
+
+(defn deep-merge
+  ([a b]
+   (if (map? a)
+     (merge-with deep-merge a b)
+     b))
+  ([a b & rest]
+   (reduce deep-merge a (cons b rest))))
 
 (defn keywordize
   "A helper that adapts database style row to clojure style map,

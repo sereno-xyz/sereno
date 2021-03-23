@@ -22,8 +22,8 @@
    [clojure.spec.alpha :as s]
    [cuerdas.core :as str]))
 
-(defonce password-hash-semaphore
-  (sem/semaphore (:password-hashing-permits cfg/config)))
+;; (defonce password-hash-semaphore
+;;   (sem/semaphore (:password-hashing-permits cfg/config)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Profile & Auth
@@ -47,9 +47,9 @@
       (ex/raise :type :validation
                 :code :wrong-credentials))))
 
-(alter-var-root
- #'check-password!
- #(sem/wrap % password-hash-semaphore))
+;; (alter-var-root
+;;  #'check-password!
+;;  #(sem/wrap % password-hash-semaphore))
 
 (sv/defmethod ::login {:auth false}
   [{:keys [pool]} {:keys [email password] :as params}]
@@ -126,9 +126,9 @@
               :iterations 20
               :parallelism 2}))
 
-(alter-var-root
- #'derive-password
- #(sem/wrap % password-hash-semaphore))
+;; (alter-var-root
+;;  #'derive-password
+;;  #(sem/wrap % password-hash-semaphore))
 
 (defn create-profile
   "Create the profile entry on the database with limited input

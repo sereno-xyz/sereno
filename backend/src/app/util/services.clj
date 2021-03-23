@@ -5,7 +5,7 @@
 ;; This Source Code Form is "Incompatible With Secondary Licenses", as
 ;; defined by the Mozilla Public License, v. 2.0.
 ;;
-;; Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
+;; Copyright (c) 2020-2021 Andrey Antukh <niwi@niwi.nz>
 
 (ns app.util.services
   "A helpers and macros for define rpc like registry based services."
@@ -21,7 +21,7 @@
                      ::spec sname
                      ::name (name sname))
 
-        sym   (symbol (str "service-method-" (name sname)))]
+        sym   (symbol (str "sm$" (name sname)))]
     `(do
        (def ~sym (fn ~args ~@body))
        (reset-meta! (var ~sym) ~mdata))))

@@ -2,7 +2,7 @@
 ;; License, v. 2.0. If a copy of the MPL was not distributed with this
 ;; file, You can obtain one at http://mozilla.org/MPL/2.0/.
 ;;
-;; Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
+;; Copyright (c) Andrey Antukh <niwi@niwi.nz>
 
 (ns app.common.exceptions
   "A helpers for work with exceptions."
@@ -46,7 +46,6 @@
 (defmacro try
   [& exprs]
   `(try* (^:once fn* [] ~@exprs) identity))
-
 
 (defn ex-info?
   [v]

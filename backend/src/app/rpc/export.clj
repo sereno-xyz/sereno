@@ -149,16 +149,18 @@
             (let [fields  [:monitor-id :created-at :cause :metadata :latency :status]
                   index   (:monitors state)
                   optjson (fn [v] (if (nil? v) v (db/tjson v)))]
-              (db/insert-multi! conn :monitor-entry
-                                fields
-                                (->> items
-                                     (map (fn [row]
-                                            (let [monitor-id (get index (:monitor-id row))]
-                                              (-> row
-                                                  (assoc :monitor-id monitor-id)
-                                                  (update :cause optjson)
-                                                  (update :metadata optjson)))))
-                                     (map (apply juxt fields))))
+
+              ;; TODO: fixme
+              #_(db/insert-multi! conn :monitor-entry
+                                  fields
+                                  (->> items
+                                       (map (fn [row]
+                                              (let [monitor-id (get index (:monitor-id row))]
+                                                (-> row
+                                                    (assoc :monitor-id monitor-id)
+                                                    (update :cause optjson)
+                                                    (update :metadata optjson)))))
+                                       (map (apply juxt fields))))
               state))
 
           (handle-monitor-status [id]
@@ -226,15 +228,15 @@
   (letfn [(generate-csv [items out]
             (csv/write-csv out [["created_at", "finished_at", "status"]])
             (doseq [row items]
-              (csv/write-csv out [[(dt/instant->isoformat (:created-at row))
-                                   (dt/instant->isoformat (:finished-at row))
+              (csv/write-csv out [[(dt/format-instant (:created-at row) :iso)
+                                   (dt/format-instant (:finished-at row) :iso)
                                    (:status row)]])))
 
           (generate-json [items out]
             (doseq [row items]
               (-> {:id (str (:id row))
-                   :created_at  (dt/instant->isoformat (:created-at row))
-                   :finished-at (dt/instant->isoformat (:finished-at row))
+                   :created_at  (dt/format-instant (:created-at row) :iso)
+                   :finished-at (dt/format-instant (:finished-at row) :iso)
                    :status (:status row)
                    :cause (:cause row)}
                   (json/write out))
@@ -286,7 +288,7 @@
   (letfn [(generate-csv [items out]
             (csv/write-csv out [["created_at", "status", "latency", "cause_code", "cause_hint"]])
             (doseq [row items]
-              (csv/write-csv out [[(dt/instant->isoformat (:created-at row))
+              (csv/write-csv out [[(dt/format-instant (:created-at row) :iso)
                                    (:status row)
                                    (:latency row)
                                    (name (get-in row [:cause :code] ""))
@@ -295,7 +297,7 @@
           (generate-json [items out]
             (doseq [row items]
               (-> {:id (str (:id row))
-                   :created_at  (dt/instant->isoformat (:created-at row))
+                   :created_at  (dt/format-instant (:created-at row) :iso)
                    :status (:status row)
                    :latency (:latency row)
                    :cause (:cause row)}

@@ -33,7 +33,7 @@
 
 ;; --- Conformers
 
-(defn- uuid-conformer
+(defn uuid-conformer
   [v]
   (if (uuid? v)
     v
@@ -178,13 +178,14 @@
   [spec x message context]
   (if (s/valid? spec x)
     x
-    (let [data (s/explain-data spec x)
-          hint (with-out-str (s/explain-out data))]
+    (let [data    (s/explain-data spec x)
+          explain (with-out-str (s/explain-out data))]
       (ex/raise :type :assertion
+                :code :spec-validation
+                :hint message
                 :data data
-                :hint hint
+                :explain explain
                 :context context
-                :message message
                 #?@(:cljs [:stack (.-stack (ex-info message {}))])))))
 
 (defmacro assert
@@ -212,20 +213,19 @@
         message (str "Spec Assertion: '" (pr-str spec) "'")]
     `(spec-assert* ~spec ~x ~message ~context)))
 
-
 ;; --- Public Api
 
 (defn conform
   [spec data]
   (let [result (s/conform spec data)]
     (when (= result ::s/invalid)
-      (let [data (s/explain-data spec data)
-            hint (with-out-str
-                   (s/explain-out data))]
+      (let [data    (s/explain-data spec data)
+            explain (with-out-str
+                      (s/explain-out data))]
         (throw (ex/error :type :validation
                          :code :spec-validation
-                         :data data
-                         :hint hint))))
+                         :explain explain
+                         :data data))))
     result))
 
 (defmacro instrument!

@@ -9,7 +9,7 @@
 
 (ns app.init
   (:require
-   [app.config :as cfg]
+   [app.config :as cf]
    [app.common.data :as d]
    [app.util.time :as dt]
    [clojure.tools.logging :as log]
@@ -29,47 +29,76 @@
 (defmethod ig/prep-key :default [_ data]
   (d/remove-nil-vals data))
 
-(Thread/setDefaultUncaughtExceptionHandler
- (reify Thread$UncaughtExceptionHandler
-   (uncaughtException [_ thread throwable]
-     (cond
-       (instance? java.lang.OutOfMemoryError throwable)
-       (do
-         (log/error throwable)
-         (System/exit 1))
+;; (Thread/setDefaultUncaughtExceptionHandler
+;;  (reify Thread$UncaughtExceptionHandler
+;;    (uncaughtException [_ thread throwable]
+;;      (cond
+;;        (instance? java.lang.OutOfMemoryError throwable)
+;;        (do
+;;          (log/error throwable)
+;;          (System/exit 1))
 
-       :else
-       (do
-         (log/error throwable "Uncaught exception")
-         (System/exit 1))))))
+;;        :else
+;;        (do
+;;          (log/error throwable "Uncaught exception")
+;;          (System/exit 1))))))
 
 ;; --- Entry point
 
 (def system-config
   {:app.metrics/metrics
-   {}
+   {:definitions
+    {:profile-register
+     {:name "actions_profile_register_count"
+      :help "A global counter of user registrations."
+      :type :counter}
+     :profile-activation
+     {:name "actions_profile_activation_count"
+      :help "A global counter of profile activations"
+      :type :counter}}}
 
-   :app.migrations/migrations
-   {}
+   :app.migrations/all
+   {:main (ig/ref :app.migrations/migrations)}
 
    :app.db/pool
-   {:uri         (:database-uri cfg/config)
-    :username    (:database-username cfg/config)
-    :password    (:database-password cfg/config)
+   {:uri         (:database-uri cf/config)
+    :username    (:database-username cf/config)
+    :password    (:database-password cf/config)
     :metrics     (ig/ref :app.metrics/metrics)
-    :migrations  (ig/ref :app.migrations/migrations)
+    :migrations  (ig/ref :app.migrations/all)
     :name "main"
     :min-pool-size 0
     :max-pool-size 20}
 
+   :app.setup/props
+   {:pool (ig/ref :app.db/pool)}
+
    :app.secrets/secrets
-   {:key (:secret-key cfg/config)}
+   {:key (:secret-key cf/config)}
 
    :app.tokens/instance
    {:secrets (ig/ref :app.secrets/secrets)}
 
+   ;; :app.loggers.zmq/receiver
+   ;; {:endpoint (:loggers-zmq-uri config)}
+
+   ;; :app.loggers.loki/reporter
+   ;; {:uri      (:loggers-loki-uri config)
+   ;;  :receiver (ig/ref :app.loggers.zmq/receiver)
+   ;;  :executor (ig/ref :app.worker/executor)}
+
+   ;; :app.loggers.mattermost/reporter
+   ;; {:uri      (:error-report-webhook config)
+   ;;  :receiver (ig/ref :app.loggers.zmq/receiver)
+   ;;  :pool     (ig/ref :app.db/pool)
+   ;;  :executor (ig/ref :app.worker/executor)}
+
+   ;; :app.loggers.mattermost/handler
+   ;; {:pool (ig/ref :app.db/pool)}
+
+
    :app.msgbus/instance
-   {:pool (ig/ref :app.db/pool)
+   {:pool     (ig/ref :app.db/pool)
     :executor (ig/ref :app.worker/executor)}
 
    :app.ws/notifications-handler
@@ -82,8 +111,8 @@
     :http-client (ig/ref :app.http/client)
     :metrics     (ig/ref :app.metrics/metrics)
 
-    :public-uri  (:public-uri cfg/config)
-    :default-profile-type (:default-profile-type cfg/config "default")}
+    :public-uri  (cf/get :public-uri)
+    :default-profile-type (:default-profile-type cf/config "default")}
 
    :app.http.auth/handlers
    {:http-client (ig/ref :app.http/client)
@@ -91,9 +120,9 @@
     :pool        (ig/ref :app.db/pool)
     :rpc         (ig/ref :app.rpc/rpc)
 
-    :public-uri           (:public-uri cfg/config)
-    :google-client-id     (:google-client-id cfg/config)
-    :google-client-secret (:google-client-secret cfg/config)}
+    :public-uri           (:public-uri cf/config)
+    :google-client-id     (:google-client-id cf/config)
+    :google-client-secret (:google-client-secret cf/config)}
 
    :app.http/router
    {:rpc      (ig/ref :app.rpc/rpc)
@@ -104,7 +133,7 @@
     :metrics  (ig/ref :app.metrics/metrics)}
 
    :app.error-reporter/instance
-   {:uri (:error-reporter-webhook-uri cfg/config)
+   {:uri (:error-reporter-webhook-uri cf/config)
     :http-client (ig/ref :app.http/client)
     :executor (ig/ref :app.worker/executor)}
 
@@ -112,14 +141,14 @@
    {:executor (ig/ref :app.worker/executor)}
 
    :app.http/server
-   {:port (:http-server-port cfg/config)
+   {:port (:http-server-port cf/config)
     :ws {"/ws/notifications" (ig/ref :app.ws/notifications-handler)}
     :router (ig/ref :app.http/router)}
 
    :app.repl/server
    {:name "default"
-    :port (:repl-server-port cfg/config)
-    :host (:repl-server-host cfg/config)}
+    :port (:repl-server-port cf/config)
+    :host (:repl-server-host cf/config)}
 
    :app.worker/executor
    {:name "worker"
@@ -175,30 +204,30 @@
    {:pool        (ig/ref :app.db/pool)
     :tokens      (ig/ref :app.tokens/instance)
     :telegram    (ig/ref :app.telegram/service)
-    :public-uri  (:public-uri cfg/config)
+    :public-uri  (:public-uri cf/config)
     :http-client (ig/ref :app.http/client)}
 
    :app.tasks.sendmail/handler
-   {:host     (:smtp-host cfg/config)
-    :port     (:smtp-port cfg/config)
-    :enabled  (:smtp-enabled cfg/config)
-    :tls      (:smtp-tls cfg/config)
-    :username (:smtp-username cfg/config)
-    :password (:smtp-password cfg/config)
+   {:host     (:smtp-host cf/config)
+    :port     (:smtp-port cf/config)
+    :enabled  (:smtp-enabled cf/config)
+    :tls      (:smtp-tls cf/config)
+    :username (:smtp-username cf/config)
+    :password (:smtp-password cf/config)
     :metrics  (ig/ref :app.metrics/metrics)
-    :default-reply-to (:smtp-default-reply-to cfg/config)
-    :default-from     (:smtp-default-from cfg/config)}
+    :default-reply-to (:smtp-default-reply-to cf/config)
+    :default-from     (:smtp-default-from cf/config)}
 
    :app.telegram/service
-   {:id (:telegram-id cfg/config)
-    :token (:telegram-token cfg/config)
+   {:id (:telegram-id cf/config)
+    :token (:telegram-token cf/config)
     :http-client (ig/ref :app.http/client)
     :pool (ig/ref :app.db/pool)}
 
    :app.telegram/webhook
    {:telegram    (ig/ref :app.telegram/service)
     :pool        (ig/ref :app.db/pool)
-    :shared-key  (:webhook-shared-key cfg/config "sample-key")}
+    :shared-key  (:webhook-shared-key cf/config "sample-key")}
 
    :app.webhooks/handlers
    {:awssns      (ig/ref :app.webhooks.awssns/handler)
@@ -209,7 +238,7 @@
    :app.webhooks.awssns/handler
    {:pool        (ig/ref :app.db/pool)
     :http-client (ig/ref :app.http/client)
-    :shared-key  (:webhook-shared-key cfg/config "sample-key")}
+    :shared-key  (:webhook-shared-key cf/config "sample-key")}
 
    :app.webhooks.healthcheck/handler
    {:pool        (ig/ref :app.db/pool)
@@ -234,7 +263,7 @@
                              (-> system-config
                                  (ig/prep)
                                  (ig/init))))
-  (log/infof "Welcome to sereno! Version: '%s'." (:full cfg/version)))
+  (log/infof "Welcome to sereno! Version: '%s'." (:full cf/version)))
 
 (defn refresh-and-restart
   []

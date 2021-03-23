@@ -5,19 +5,20 @@
 ;; This Source Code Form is "Incompatible With Secondary Licenses", as
 ;; defined by the Mozilla Public License, v. 2.0.
 ;;
-;; Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
+;; Copyright (c) Andrey Antukh <niwi@niwi.nz>
 
 (ns app.config
+  (:refer-clojure :exclude [get])
   (:require
    [app.common.exceptions :as ex]
    [app.common.spec :as us]
    [app.common.version :as v]
-   [app.util.time :as tm]
+   [app.util.time :as dt]
+   [clojure.core :as c]
    [buddy.core.codecs :as bc]
    [buddy.core.kdf :as bk]
    [clojure.spec.alpha :as s]
    [clojure.tools.logging :as log]
-   [cuerdas.core :as str]
    [cuerdas.core :as str]
    [environ.core :refer [env]]
    [integrant.core :as ig]))
@@ -28,15 +29,12 @@
 (s/def ::debug ::us/boolean)
 (s/def ::default-profile-type ::us/string)
 (s/def ::error-reporter-webhook-uri ::us/string)
-(s/def ::google-client-id ::us/string)
-(s/def ::google-client-secret ::us/string)
 (s/def ::host ::us/string)
 (s/def ::http-server-port ::us/integer)
-(s/def ::password-hashing-permits ::us/integer)
 (s/def ::public-uri ::us/string)
-(s/def ::secret-key ::us/string)
-(s/def ::smtp-default-from ::us/email)
-(s/def ::smtp-default-reply-to ::us/email)
+
+(s/def ::smtp-default-from ::us/string)
+(s/def ::smtp-default-reply-to ::us/string)
 (s/def ::smtp-enabled ::us/boolean)
 (s/def ::smtp-host ::us/string)
 (s/def ::smtp-password (s/nilable ::us/string))
@@ -44,23 +42,62 @@
 (s/def ::smtp-ssl ::us/boolean)
 (s/def ::smtp-tls ::us/boolean)
 (s/def ::smtp-username (s/nilable ::us/string))
+
+(s/def ::smtp-username (s/nilable ::us/string))
 (s/def ::telegram-id ::us/integer)
 (s/def ::telegram-token ::us/string)
+(s/def ::srepl-host ::us/string)
+(s/def ::srepl-port ::us/integer)
+(s/def ::rlimits-password ::us/integer)
+
+(s/def ::loggers-zmq-uri ::us/string)
+(s/def ::error-report-webhook ::us/string)
+
+(s/def ::github-client-id ::us/string)
+(s/def ::github-client-secret ::us/string)
+(s/def ::gitlab-base-uri ::us/string)
+(s/def ::gitlab-client-id ::us/string)
+(s/def ::gitlab-client-secret ::us/string)
+(s/def ::google-client-id ::us/string)
+(s/def ::google-client-secret ::us/string)
+
+(s/def ::profile-bounce-max-age ::dt/duration)
+(s/def ::profile-bounce-threshold ::us/integer)
+(s/def ::profile-complaint-max-age ::dt/duration)
+(s/def ::profile-complaint-threshold ::us/integer)
+(s/def ::tenant ::us/string)
 
 (s/def ::config
   (s/keys :opt-un [::database-password
                    ::database-uri
+                   ::error-report-webhook
                    ::database-username
-                   ::debug
-                   ::default-profile-type
-                   ::error-reporter-webhook-uri
+                   ::tenant
+                   ::github-client-id
+                   ::github-client-secret
+                   ::gitlab-base-uri
+                   ::gitlab-client-id
+                   ::gitlab-client-secret
                    ::google-client-id
                    ::google-client-secret
+                   ::debug
+                   ::tenant
+                   ::profile-bounce-max-age
+                   ::loggers-zmq-uri
+                   ::profile-bounce-threshold
+                   ::profile-complaint-max-age
+                   ::profile-complaint-threshold
+                   ::http-session-idle-max-age
+                   ::http-session-updater-batch-max-age
+                   ::http-session-updater-batch-max-size
+                   ::default-profile-type
+                   ::error-reporter-webhook-uri
                    ::host
                    ::http-server-port
-                   ::password-hashing-permits
+                   ::srepl-host
+                   ::srepl-port
+                   ::rlimits-password
                    ::public-uri
-                   ::secret-key
                    ::sendmail-backend
                    ::smtp-enabled
                    ::smtp-default-from
@@ -77,21 +114,33 @@
                    ::telegram-username]))
 
 (def defaults
-  {:debug true
+  {:http-server-port 4460
+
    :host "devenv"
-   :smtp-enabled false
-   :smtp-host "localhost"
-   :smtp-port 25
-   :smtp-default-reply-to "no-reply@example.com"
-   :smtp-default-from "no-reply@example.com"
-   :public-uri "http://localhost:4449"
-   :password-hashing-permits 3
+   :tenant "dev"
+
    :database-uri "postgresql://postgres:5432/sereno"
    :database-username "sereno"
    :database-password "sereno"
-   :repl-server-host "localhost"
-   :repl-server-port 4461
-   :http-server-port 4460})
+
+   :smtp-enabled false
+   :smtp-default-reply-to "Sereno <no-reply@example.com>"
+   :smtp-default-from "Sereno <no-reply@example.com>"
+   :public-uri "http://localhost:4449"
+
+   :rlimits-password 10
+   :rlimits-image 2
+
+   :profile-complaint-max-age (dt/duration {:days 7})
+   :profile-complaint-threshold 2
+
+   :loggers-zmq-uri "tcp://localhost:45556"
+
+   :profile-bounce-max-age (dt/duration {:days 7})
+   :profile-bounce-threshold 10
+
+   :srepl-host "127.0.0.1"
+   :srepl-port 4461})
 
 (defn- env->config
   [env]
@@ -111,5 +160,12 @@
        (merge defaults)
        (us/conform ::config)))
 
-(def config (read-config env))
+(def config  (atom (read-config env)))
 (def version (v/parse "%version%"))
+
+(defn get
+  "A configuration getter. Helps code be more testable."
+  ([key]
+   (c/get @config key))
+  ([key default]
+   (c/get @config key default)))

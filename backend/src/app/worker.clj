@@ -5,14 +5,13 @@
 ;; This Source Code Form is "Incompatible With Secondary Licenses", as
 ;; defined by the Mozilla Public License, v. 2.0.
 ;;
-;; Copyright (c) 2020 Andrey Antukh <niwi@niwi.nz>
+;; Copyright (c) Andrey Antukh <niwi@niwi.nz>
 
 (ns app.worker
   "Async tasks abstraction (impl)."
   (:require
    [app.common.spec :as us]
    [app.common.uuid :as uuid]
-   [app.config :as cfg]
    [app.db :as db]
    [app.util.async :as aa]
    [app.util.time :as dt]
@@ -67,18 +66,18 @@
   [_ instance]
   (.stop ^QueuedThreadPool instance))
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Worker
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(declare submit-task)
 (declare event-loop-fn)
 
 (s/def ::queue ::us/string)
 (s/def ::parallelism ::us/integer)
 (s/def ::batch-size ::us/integer)
-(s/def ::tasks (s/map-of string? ::us/fn))
 (s/def ::poll-interval ::dt/duration)
+(s/def ::tasks (s/map-of string? ::us/fn))
 
 (defmethod ig/pre-init-spec ::worker [_]
   (s/keys :req-un [::executor
@@ -95,25 +94,26 @@
           :name "worker"
           :poll-interval (dt/duration {:seconds 5})
           :queue "default"}
+         ;; TODO: remove nils
          cfg))
 
 (defmethod ig/init-key ::worker
   [_ {:keys [pool poll-interval name queue] :as cfg}]
   (log/infof "Starting worker '%s' on queue '%s'." name queue)
-  (let [cch     (a/chan 1)
-        poll-ms (inst-ms poll-interval)]
+  (let [close-ch (a/chan 1)
+        poll-ms  (inst-ms poll-interval)]
     (a/go-loop []
-      (let [[val port] (a/alts! [cch (event-loop-fn cfg)] :priority true)]
+      (let [[val port] (a/alts! [close-ch (event-loop-fn cfg)] :priority true)]
         (cond
           ;; Terminate the loop if close channel is closed or
           ;; event-loop-fn returns nil.
-          (or (= port cch) (nil? val))
+          (or (= port close-ch) (nil? val))
           (log/infof "Stop condition found. Shutdown worker: '%s'" name)
 
           (db/pool-closed? pool)
           (do
             (log/info "Worker eventloop is aborted because pool is closed.")
-            (a/close! cch))
+            (a/close! close-ch))
 
           (and (instance? java.sql.SQLException val)
                (contains? #{"08003" "08006" "08001" "08004"} (.getSQLState ^java.sql.SQLException val)))
@@ -143,16 +143,49 @@
             (a/<! (a/timeout poll-ms))
             (recur)))))
 
-    (reify
-      java.lang.AutoCloseable
-      (close [_]
-        (a/close! cch)))))
-
+    (with-meta
+      (fn submit
+        ([opts] (submit-task pool opts))
+        ([conn opts] (submit-task conn opts)))
+      {::close-ch close-ch})))
 
 (defmethod ig/halt-key! ::worker
-  [_ instance]
-  (.close ^java.lang.AutoCloseable instance))
+  [_ v]
+  (let [mdata (meta v)]
+    (a/close! (::close-ch mdata))))
 
+;; --- SUBMIT
+
+(s/def ::name ::us/string)
+(s/def ::delay
+  (s/or :int ::us/integer
+        :duration dt/duration?))
+(s/def ::queue ::us/string)
+(s/def ::props map?)
+
+(s/def ::task-options
+  (s/keys :req-un [::name]
+          :opt-un [::delay ::props ::queue]))
+
+(def ^:private sql:insert-new-task
+  "insert into task (id, name, props, queue, priority, max_retries, scheduled_at)
+   values (?, ?, ?, ?, ?, ?, clock_timestamp() + ?)
+   returning id")
+
+(defn- submit-task
+  [conn {:keys [name delay props queue key priority max-retries]
+         :or {delay 0 props {} queue "default" priority 100 max-retries 1}
+         :as options}]
+  (us/verify ::task-options options)
+  (let [duration  (dt/duration delay)
+        interval  (db/interval duration)
+        props     (db/tjson props)
+        id        (uuid/next)]
+    ;; (log/debugf "submit task %s to be executed in %s" name duration)
+    (db/exec-one! conn [sql:insert-new-task id name props queue priority max-retries interval])
+    id))
+
+;; --- RUNNER
 
 (def ^:private
   sql:mark-as-retry

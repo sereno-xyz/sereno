@@ -20,6 +20,8 @@
    java.time.format.DateTimeFormatter
    java.time.temporal.Temporal
    java.time.temporal.TemporalAmount
+   java.time.ZonedDateTime
+   java.time.ZoneId
    java.util.Date
    org.apache.logging.log4j.core.util.CronExpression))
 
@@ -27,59 +29,16 @@
 ;; Instant & Duration
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(declare duration)
-
-(defn instant?
-  [v]
-  (instance? Instant v))
-
-(defn is-after?
-  [da db]
-  (.isAfter ^Instant da ^Instant db))
-
-(defn is-before?
-  [da db]
-  (.isBefore ^Instant da ^Instant db))
-
-(defn plus
-  [d ta]
-  (cond
-    (instance? Temporal d)
-    (.plus ^Temporal d ^TemporalAmount ta)
-
-    (instance? Duration d)
-    (.plus ^Duration d ^TemporalAmount ta)
-
-    :else
-    (ex/raise :type :not-implemented)))
-
-(defn minus
-  [d ta]
-  (.minus ^Temporal d ^TemporalAmount ta))
-
-(defn instant->isoformat
-  [v]
-  (when v
-    (.format DateTimeFormatter/ISO_INSTANT ^Instant v)))
-
-(defn now
-  ([]
-   (Instant/now))
-  ([^Clock clock]
-   (Instant/now clock)))
-
-(defn in-future
-  [d]
-  (plus (now) (duration d)))
+;; --- DURATION
 
 (defn- obj->duration
   [{:keys [days minutes seconds hours nanos millis]}]
   (cond-> (Duration/ofMillis (if (int? millis) ^long millis 0))
-    (int? days) (.plusDays ^long days)
-    (int? hours) (.plusHours ^long hours)
+    (int? days)    (.plusDays ^long days)
+    (int? hours)   (.plusHours ^long hours)
     (int? minutes) (.plusMinutes ^long minutes)
     (int? seconds) (.plusSeconds ^long seconds)
-    (int? nanos) (.plusNanos ^long nanos)))
+    (int? nanos)   (.plusNanos ^long nanos)))
 
 (defn duration?
   [v]
@@ -104,34 +63,6 @@
   [t1 t2]
   (Duration/between t1 t2))
 
-(defn parse-duration
-  [s]
-  (Duration/parse s))
-
-(defn duration->str
-  [d]
-  (str/lower (subs (str d) 2)))
-
-(extend-protocol clojure.core/Inst
-  java.time.Duration
-  (inst-ms* [v] (.toMillis ^Duration v)))
-
-(letfn [(conformer [v]
-          (cond
-            (instant? v) v
-
-            (string? v)
-            (try
-              (Instant/from (.parse DateTimeFormatter/ISO_INSTANT v))
-              (catch Exception e
-                ::s/invalid))
-
-            :else
-            ::s/invalid))
-        (unformer [v]
-          (.format DateTimeFormatter/ISO_INSTANT v))]
-  (s/def ::instant (s/conformer conformer unformer)))
-
 
 (letfn [(conformer [v]
           (cond
@@ -140,7 +71,7 @@
             (string? v)
             (try
               (duration v)
-              (catch java.time.format.DateTimeParseException e
+              (catch java.time.format.DateTimeParseException _e
                 ::s/invalid))
 
             :else
@@ -149,6 +80,82 @@
           (subs (str v) 2))]
   (s/def ::duration (s/conformer conformer unformer)))
 
+(extend-protocol clojure.core/Inst
+  java.time.Duration
+  (inst-ms* [v] (.toMillis ^Duration v)))
+
+(defmethod print-method Duration
+  [mv ^java.io.Writer writer]
+  (.write writer (str "#app/duration \"" (str/lower (subs (str mv) 2)) "\"")))
+
+(defmethod print-dup Duration [o w]
+  (print-method o w))
+
+;; --- INSTANT
+
+(defn instant
+  ([s]
+   (if (int? s)
+     (Instant/ofEpochMilli s)
+     (Instant/parse s)))
+  ([s fmt]
+   (case fmt
+     :rfc1123 (Instant/from (.parse DateTimeFormatter/RFC_1123_DATE_TIME ^String s))
+     :iso     (Instant/from (.parse DateTimeFormatter/ISO_INSTANT ^String s))
+     :iso8601 (Instant/from (.parse DateTimeFormatter/ISO_INSTANT ^String s)))))
+
+(defn instant?
+  [v]
+  (instance? Instant v))
+
+(s/def ::instant instant?)
+
+(defn is-after?
+  [da db]
+  (.isAfter ^Instant da ^Instant db))
+
+(defn is-before?
+  [da db]
+  (.isBefore ^Instant da ^Instant db))
+
+(defn plus
+  [d ta]
+  (.plus d ^TemporalAmount (duration ta)))
+
+(defn minus
+  [d ta]
+  (.minus d ^TemporalAmount (duration ta)))
+
+(defn now
+  []
+  (Instant/now))
+
+(defn in-future
+  [v]
+  (plus (now) (duration v)))
+
+(defn in-past
+  [v]
+  (minus (now) (duration v)))
+
+(defn instant->zoned-date-time
+  [v]
+  (ZonedDateTime/ofInstant v (ZoneId/of "UTC")))
+
+(defn format-instant
+  ([v] (.format DateTimeFormatter/ISO_INSTANT ^Instant v))
+  ([v fmt]
+   (case fmt
+     :iso (.format DateTimeFormatter/ISO_INSTANT ^Instant v)
+     :rfc1123 (.format DateTimeFormatter/RFC_1123_DATE_TIME
+                       ^ZonedDateTime (instant->zoned-date-time v)))))
+
+(defmethod print-method Instant
+  [mv ^java.io.Writer writer]
+  (.write writer (str "#app/instant \"" (format-instant mv) "\"")))
+
+(defmethod print-dup Instant [o w]
+  (print-method o w))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Cron Expression
@@ -278,6 +285,13 @@
         drt    (duration-between t2 next-t)]
     (plus now-t drt)))
 
+(defmethod print-method CronExpression
+  [mv ^java.io.Writer writer]
+  (.write writer (str "#app/cron \"" (.toString ^CronExpression mv) "\"")))
+
+(defmethod print-dup CronExpression
+  [o w]
+  (print-ctor o (fn [o w] (print-dup (.toString ^CronExpression o) w)) w))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Clock
@@ -290,29 +304,3 @@
   (let [^Duration offset (duration offset)]
     (Clock/offset base offset)))
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Print
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defmethod print-method Instant
-  [mv ^java.io.Writer writer]
-  (.write writer (str "#app/instant \"" (.toString ^Instant mv) "\"")))
-
-(defmethod print-dup Instant [o w]
-  (print-method o w))
-
-(defmethod print-method Duration
-  [mv ^java.io.Writer writer]
-  (.write writer (str "#app/duration \"" (subs (str mv) 2) "\"")))
-
-(defmethod print-dup Duration [o w]
-  (print-method o w))
-
-(defmethod print-method CronExpression
-  [mv ^java.io.Writer writer]
-  (.write writer (str "#app/cron \"" (.toString ^CronExpression mv) "\"")))
-
-(defmethod print-dup CronExpression
-  [o w]
-  (print-ctor o (fn [o w] (print-dup (.toString ^CronExpression o) w)) w))
